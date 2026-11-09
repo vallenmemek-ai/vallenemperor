@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kopi Vallen — Kopi Susu, Manual Brew, Camilan</title>
+<style>
+:root{
+  --parchment:#f5f4ed;
+  --ivory:#faf9f5;
+  --white:#ffffff;
+  --sand:#e8e6dc;
+  --ink:#141413;
+  --charcoal:#4d4c48;
+  --olive:#5e5d59;
+  --stone:#87867f;
+  --dark:#30302e;
+  --terracotta:#c96442;
+  --coral:#d97757;
+  --border:#f0eee6;
+  --border-warm:#e8e6dc;
+  --ring:#d1cfc5;
+  --serif:Georgia,"Times New Roman",serif;
+  --sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--parchment);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.6;
+}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+
+/* NAV */
+nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(245,244,237,.96);
+  backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--border-warm);
+}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{font-family:var(--serif);font-size:21px;letter-spacing:.2px}
+.brand span{color:var(--terracotta)}
+.nav-links{display:flex;gap:28px;font-size:15px;color:var(--olive)}
+.nav-links a:hover{color:var(--ink)}
+.cart-btn{
+  font-family:var(--sans);font-size:14px;cursor:pointer;
+  background:var(--terracotta);color:var(--ivory);
+  border:none;border-radius:8px;padding:9px 16px;
+  box-shadow:0 0 0 1px var(--terracotta);
+}
+.cart-btn:hover{background:#b8592f}
+
+/* HERO — editorial, not centered SaaS stack */
+header{padding:88px 0 72px}
+.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:end}
+.overline{font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--terracotta)}
+h1{
+  font-family:var(--serif);font-weight:500;
+  font-size:64px;line-height:1.10;margin:18px 0 20px;
+  text-wrap:pretty;
+}
+h1 em{font-style:italic;color:var(--terracotta)}
+.lead{font-size:20px;line-height:1.6;color:var(--olive);max-width:34em}
+.cta-row{display:flex;gap:14px;margin-top:32px;flex-wrap:wrap}
+.btn{
+  font-size:15px;padding:12px 22px;border-radius:12px;cursor:pointer;
+  border:1px solid transparent;min-height:44px;font-family:var(--sans);
+}
+.btn-primary{background:var(--terracotta);color:var(--ivory);box-shadow:0 0 0 1px var(--terracotta)}
+.btn-primary:hover{background:#b8592f}
+.btn-ghost{background:var(--sand);color:var(--charcoal);box-shadow:0 0 0 1px var(--ring)}
+.btn-ghost:hover{box-shadow:0 0 0 1px var(--dark)}
+.hero-card{
+  background:var(--ink);color:var(--ivory);
+  border-radius:32px;padding:36px 34px;
+}
+.hero-card .k{font-family:var(--serif);font-size:38px;line-height:1.15;color:var(--coral)}
+.hero-card p{color:#b0aea5;font-size:15px;margin-top:12px}
+.hero-card hr{border:none;border-top:1px solid var(--dark);margin:24px 0}
+.hours{display:flex;justify-content:space-between;font-size:14px;color:#b0aea5;padding:7px 0}
+.hours b{color:var(--ivory);font-weight:500}
+
+/* SECTIONS */
+section{padding:64px 0;border-top:1px solid var(--border-warm)}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:24px;flex-wrap:wrap;margin-bottom:36px}
+h2{font-family:var(--serif);font-weight:500;font-size:42px;line-height:1.2}
+.sec-head p{color:var(--olive);font-size:15px;max-width:36em}
+
+/* MENU grid */
+.filters{display:flex;gap:10px;margin-bottom:28px;flex-wrap:wrap}
+.chip{
+  font-size:14px;padding:8px 16px;border-radius:24px;cursor:pointer;
+  background:var(--ivory);border:1px solid var(--border-warm);color:var(--olive);
+  min-height:36px;
+}
+.chip:hover{border-color:var(--dark);color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ivory)}
+.menu{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.item{
+  background:var(--ivory);border:1px solid var(--border);
+  border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:8px;
+}
+.item:hover{box-shadow:rgba(0,0,0,.05) 0 4px 24px}
+.item h3{font-family:var(--serif);font-weight:500;font-size:22px;line-height:1.25}
+.item .desc{font-size:14px;color:var(--olive);flex:1}
+.item .foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.price{font-size:17px;letter-spacing:.3px}
+.tag{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--terracotta);border:1px solid var(--border-warm);border-radius:24px;padding:3px 10px;align-self:flex-start}
+.add{
+  font-size:14px;background:var(--sand);color:var(--charcoal);
+  border:none;border-radius:8px;padding:9px 14px;cursor:pointer;min-height:40px;
+  box-shadow:0 0 0 1px var(--ring);
+}
+.add:hover{box-shadow:0 0 0 1px var(--dark);color:var(--ink)}
+.add.added{background:var(--ink);color:var(--ivory);box-shadow:0 0 0 1px var(--ink)}
+
+/* CERITA — dark chapter, image-free organic texture */
+.chapter{background:var(--ink);color:var(--ivory);border-radius:32px;padding:64px 56px;margin:0 auto}
+.chapter h2{color:var(--ivory);max-width:14em}
+.chapter p{color:#b0aea5;font-size:17px;line-height:1.7;max-width:40em;margin-top:20px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:44px}
+.step .n{font-family:var(--serif);font-size:34px;color:var(--coral)}
+.step h4{font-size:15px;font-weight:500;margin:8px 0 6px}
+.step p{font-size:14px;margin:0;color:#87867f}
+
+/* KONTAK */
+.contact{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.contact .lines p{color:var(--olive);font-size:15px;margin-bottom:10px}
+.contact .lines b{color:var(--ink);font-weight:500}
+form{background:var(--ivory);border:1px solid var(--border-warm);border-radius:16px;padding:28px;display:grid;gap:14px}
+label{font-size:13px;color:var(--olive);display:grid;gap:6px}
+input,textarea,select{
+  font-family:var(--sans);font-size:15px;color:var(--ink);
+  background:var(--white);border:1px solid var(--border-warm);
+  border-radius:12px;padding:11px 13px;min-height:44px;
+}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#3898ec;box-shadow:0 0 0 3px rgba(56,152,236,.18)}
+textarea{min-height:96px;resize:vertical}
+
+footer{border-top:1px solid var(--border-warm);padding:32px 0;color:var(--stone);font-size:13px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* CART drawer */
+.overlay{position:fixed;inset:0;background:rgba(20,20,19,.4);opacity:0;pointer-events:none;transition:opacity .25s;z-index:90}
+.overlay.open{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;height:100%;width:min(420px,100%);
+  background:var(--parchment);z-index:100;transform:translateX(100%);
+  transition:transform .3s cubic-bezier(.22,1,.36,1);display:flex;flex-direction:column;
+  border-left:1px solid var(--border-warm);
+}
+.drawer.open{transform:translateX(0)}
+.drawer-head{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--border-warm)}
+.drawer-head h3{font-family:var(--serif);font-weight:500;font-size:24px}
+.close{background:none;border:none;font-size:24px;cursor:pointer;color:var(--olive);line-height:1;min-width:44px;min-height:44px}
+.drawer-body{flex:1;overflow-y:auto;padding:8px 24px}
+.line{display:flex;gap:12px;align-items:center;padding:16px 0;border-bottom:1px solid var(--border)}
+.line .info{flex:1}
+.line .info .n{font-size:15px}
+.line .info .p{font-size:13px;color:var(--stone)}
+.qty{display:flex;align-items:center;gap:2px;background:var(--white);border:1px solid var(--border-warm);border-radius:8px}
+.qty button{background:none;border:none;font-size:16px;cursor:pointer;width:32px;min-height:36px;color:var(--charcoal)}
+.qty button:hover{color:var(--terracotta)}
+.qty span{min-width:24px;text-align:center;font-size:14px}
+.empty{color:var(--stone);font-size:14px;padding:32px 0;text-align:center}
+.drawer-foot{padding:20px 24px;border-top:1px solid var(--border-warm);background:var(--ivory)}
+.total{display:flex;justify-content:space-between;margin-bottom:14px;font-size:16px}
+.total b{font-weight:500}
+.drawer-foot .btn-primary{width:100%}
+
+/* toast */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translate(-50%,80px);
+  background:var(--ink);color:var(--ivory);font-size:14px;
+  padding:12px 20px;border-radius:12px;z-index:120;
+  transition:transform .3s;opacity:0;
+}
+.toast.show{transform:translate(-50%,0);opacity:1}
+
+@media (max-width:991px){
+  .hero{grid-template-columns:1fr}
+  h1{font-size:44px}
+  .menu,.steps{grid-template-columns:repeat(2,1fr)}
+  .contact{grid-template-columns:1fr}
+  .nav-links{display:none}
+  .chapter{padding:44px 28px}
+}
+@media (max-width:640px){
+  h1{font-size:34px}
+  h2{font-size:32px}
+  .menu,.steps{grid-template-columns:1fr}
+  header{padding:56px 0 48px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .drawer,.overlay,.toast{transition:none}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <div class="brand">Kopi <span>Vallen</span></div>
+    <div class="nav-links">
+      <a href="#menu">Menu</a>
+      <a href="#cerita">Cerita</a>
+      <a href="#kontak">Kontak</a>
+    </div>
+    <button class="cart-btn" id="openCart" aria-haspopup="dialog">Keranjang (<span id="cartCount">0</span>)</button>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap hero">
+    <div>
+      <div class="overline">Kopi nusantara · disangrai mingguan</div>
+      <h1>Kopi susu gula aren yang <em>nggak kemanisan.</em></h1>
+      <p class="lead">Biji kopi dari Gayo, Toraja, dan Kintamani. Disangrai di belakang toko, diseduh dalam 10 menit setelah kamu pesan. Buka tiap hari, 07.00–22.00.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#menu">Lihat menu</a>
+        <a class="btn btn-ghost" href="#kontak">Pesan rombongan</a>
+      </div>
+    </div>
+    <div class="hero-card">
+      <div class="k">Rp18.000</div>
+      <p>Kopi susu Vallen, ukuran regular. Tanpa sirup, susu segar, gula aren asli.</p>
+      <hr>
+      <div class="hours"><span>Senin–Jumat</span><b>07.00 – 22.00</b></div>
+      <div class="hours"><span>Sabtu–Minggu</span><b>08.00 – 23.00</b></div>
+      <hr>
+      <div class="hours"><span>Alamat</span><b>Jl. Cempaka No. 12</b></div>
+    </div>
+  </div>
+</header>
+
+<section id="menu">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="overline">Daftar menu</div>
+        <h2>Menu hari ini</h2>
+      </div>
+      <p>Harga sudah termasuk pajak. Semua menu bisa dingin tanpa biaya tambahan.</p>
+    </div>
+
+    <div class="filters" role="group" aria-label="Filter kategori menu">
+      <button class="chip" data-f="all" aria-pressed="true">Semua</button>
+      <button class="chip" data-f="kopi" aria-pressed="false">Kopi</button>
+      <button class="chip" data-f="non" aria-pressed="false">Non-kopi</button>
+      <button class="chip" data-f="makan" aria-pressed="false">Camilan</button>
+    </div>
+
+    <div class="menu" id="menuGrid">
+      <article class="item" data-cat="kopi">
+        <span class="tag">Terlaris</span>
+        <h3>Kopi Susu Vallen</h3>
+        <p class="desc">Espresso, susu segar, gula aren. Resep rumah yang paling dicari.</p>
+        <div class="foot"><span class="price">Rp18.000</span>
+          <button class="add" data-name="Kopi Susu Vallen" data-price="18000">Tambah</button></div>
+      </article>
+      <article class="item" data-cat="kopi">
+        <span class="tag">Manual brew</span>
+        <h3>V60 Gayo</h3>
+        <p class="desc">Single origin Gayo, catatan jeruk dan cokelat. Diseduh satu-satu.</p>
+        <div class="foot"><span class="price">Rp25.000</span>
+          <button class="add" data-name="V60 Gayo" data-price="25000">Tambah</button></div>
+      </article>
+      <article class="item" data-cat="kopi">
+        <span class="tag">Panas & dingin</span>
+        <h3>Es Kopi Tubruk Toraja</h3>
+        <p class="desc">Tubruk pekat, tanpa ampas di gelas. Biji Toraja disangrai medium.</p>
+        <div class="foot"><span class="price">Rp16.000</span>
+          <button class="add" data-name="Es Kopi Tubruk Toraja" data-price="16000">Tambah</button></div>
+      </article>
+      <article class="item" data-cat="non">
+        <span class="tag">Non-kopi</span>
+        <h3>Matcha Latte</h3>
+        <p class="desc">Matcha upacara kelas satu, susu segar, tanpa gula tambahan.</p>
+        <div class="foot"><span class="price">Rp24.000</span>
+          <button class="add" data-name="Matcha Latte" data-price="24000">Tambah</button></div>
+      </article>
+      <article class="item" data-cat="non">
+        <span class="tag">Musiman</span>
+        <h3>Es Teh Piji</h3>
+        <p class="desc">Teh pucuk pelangi diseduh dingin, iris limau di tempat.</p>
+        <div class="foot"><span class="price">Rp12.000</span>
+          <button class="add" data-name="Es Teh Piji" data-price="12000">Tambah</button></div>
+      </article>
+      <article class="item" data-cat="makan">
+        <span class="tag">Panggang pagi</span>
+        <h3>Croissant Mentega</h3>
+        <p class="desc">Dipanggang ulang tiap pagi, mentega Prancis. Hangat jam 07.00–10.00.</p>
+        <div class="foot"><span class="price">Rp22.000</span>
+          <button class="add" data-name="Croissant Mentega" data-price="22000">Tambah</button></div>
+      </article>
+      <article class="item" data-cat="makan">
+        <span class="tag">Gorengan</span>
+        <h3>Pisang Goreng Karamel</h3>
+        <p class="desc">Pisang kepok, gula aren cair, saus vanila. Berdua cukup.</p>
+        <div class="foot"><span class="price">Rp19.000</span>
+          <button class="add" data-name="Pisang Goreng Karamel" data-price="19000">Tambah</button></div>
+      </article>
+      <article class="item" data-cat="makan">
+        <span class="tag">Berat</span>
+        <h3>Nasi Kucing Telur</h3>
+        <p class="desc">Nasi, telur mata sapi, sambal terasi, kerupuk. Enak buat kerja lama.</p>
+        <div class="foot"><span class="price">Rp27.000</span>
+          <button class="add" data-name="Nasi Kucing Telur" data-price="27000">Tambah</button></div>
+      </article>
+      <article class="item" data-cat="kopi">
+        <span class="tag">Bawa pulang</span>
+        <h3>Botol Cold Brew 250ml</h3>
+        <p class="desc">Rendam 16 jam, tahan 5 hari di kulkas. Stok terbatas tiap Jumat.</p>
+        <div class="foot"><span class="price">Rp30.000</span>
+          <button class="add" data-name="Botol Cold Brew 250ml" data-price="30000">Tambah</button></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="cerita">
+  <div class="wrap">
+    <div class="chapter">
+      <div class="overline">Cerita kami</div>
+      <h2>Dari kebun di Gayo ke meja kamu, sembilan hari.</h2>
+      <p>Kami beli langsung dari koperasi petani, bukan lewat perantara. Setiap Sabtu kami sangrai di belakang toko — satu batch kecil, cukup untuk seminggu. Kalau bijinya sudah tua lebih dari sebulan, tidak kami seduh.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="n">01</div>
+          <h4>Belanja dari petani</h4>
+          <p>Harga di atas pasar dibayar langsung ke koperasi, tunai saat panen.</p>
+        </div>
+        <div class="step">
+          <div class="n">02</div>
+          <h4>Sangrai Sabtu pagi</h4>
+          <p>Batch 5 kg, profil disesuaikan tiap asal bahan. Disimpan di kantong katup.</p>
+        </div>
+        <div class="step">
+          <div class="n">03</div>
+          <h4>Seduh saat kamu pesan</h4>
+          <p>Tidak ada kopi yang didiamkan di mesin lebih dari 30 menit.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="kontak">
+  <div class="wrap contact">
+    <div class="lines">
+      <div class="overline">Kontak</div>
+      <h2>Pesan tempat atau kirim untuk acara.</h2>
+      <p style="margin-top:18px">Untuk pesanan di atas 10 cup, kasih tahu 1 hari sebelumnya. Kami siapkan dan kirim sendiri area dalam kota.</p>
+      <p><b>WhatsApp</b> — 0812-3456-7890</p>
+      <p><b>Email</b> — halo@kopivallen.id</p>
+      <p><b>Instagram</b> — @kopivallen</p>
+      <p><b>Alamat</b> — Jl. Cempaka No. 12, Bandung</p>
+    </div>
+    <form id="orderForm">
+      <label>Nama<input type="text" name="nama" required placeholder="Nama kamu"></label>
+      <label>Nomor WhatsApp<input type="tel" name="wa" required placeholder="08xx xxxx xxxx"></label>
+      <label>Perkiraan jumlah cup
+        <select name="jumlah">
+          <option>10–20 cup</option>
+          <option>21–50 cup</option>
+          <option>Lebih dari 50 cup</option>
+        </select>
+      </label>
+      <label>Catatan<textarea name="catatan" placeholder="Menu pilihan, jam pengiriman, alamat..."></textarea></label>
+      <button class="btn btn-primary" type="submit">Kirim pesanan</button>
+    </form>
+  </div>
+</section>
+
+<footer class="wrap">
+  <span>© 2026 Kopi Vallen — Jl. Cempaka No. 12, Bandung</span>
+  <span>Buka tiap hari, tidak libur kecuali Lebaran</span>
+</footer>
+
+<!-- CART -->
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-label="Keranjang belanja" aria-modal="true">
+  <div class="drawer-head">
+    <h3>Keranjang</h3>
+    <button class="close" id="closeCart" aria-label="Tutup keranjang">&times;</button>
+  </div>
+  <div class="drawer-body" id="cartLines"><p class="empty">Kosong. Pilih menu dulu.</p></div>
+  <div class="drawer-foot">
+    <div class="total"><span>Total</span><b id="cartTotal">Rp0</b></div>
+    <button class="btn btn-primary" id="checkout">Pesan via WhatsApp</button>
+  </div>
+</aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const rp=n=>"Rp"+n.toLocaleString("id-ID");
+const cart=new Map();
+
+const grid=document.getElementById("menuGrid");
+const lines=document.getElementById("cartLines");
+const totalEl=document.getElementById("cartTotal");
+const countEl=document.getElementById("cartCount");
+const drawer=document.getElementById("drawer");
+const overlay=document.getElementById("overlay");
+const toast=document.getElementById("toast");
+
+function say(msg){
+  toast.textContent=msg;
+  toast.classList.add("show");
+  clearTimeout(say.t);
+  say.t=setTimeout(()=>toast.classList.remove("show"),1800);
+}
+
+function render(){
+  if(cart.size===0){
+    lines.innerHTML='<p class="empty">Kosong. Pilih menu dulu.</p>';
+  }else{
+    let html="",sum=0,count=0;
+    for(const [name,{price,qty}] of cart){
+      sum+=price*qty; count+=qty;
+      html+=`<div class="line">
+        <div class="info"><div class="n">${name}</div><div class="p">${rp(price)}</div></div>
+        <div class="qty">
+          <button data-a="-" data-n="${name}" aria-label="Kurangi ${name}">−</button>
+          <span>${qty}</span>
+          <button data-a="+" data-n="${name}" aria-label="Tambah ${name}">+</button>
+        </div></div>`;
+    }
+    lines.innerHTML=html;
+    totalEl.textContent=rp(sum);
+    countEl.textContent=count;
+    return;
+  }
+  totalEl.textContent="Rp0";
+  countEl.textContent="0";
+}
+
+grid.addEventListener("click",e=>{
+  const b=e.target.closest(".add"); if(!b)return;
+  const {name,price}=b.dataset;
+  const cur=cart.get(name);
+  cart.set(name,{price:+price,qty:(cur?cur.qty:0)+1});
+  b.classList.add("added"); b.textContent="Ditambahkan ✓";
+  setTimeout(()=>{b.classList.remove("added");b.textContent="Tambah";},1100);
+  render(); say(name+" masuk keranjang");
+});
+
+lines.addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  const it=cart.get(b.dataset.n); if(!it)return;
+  if(b.dataset.a==="+")it.qty++;
+  else it.qty--;
+  if(it.qty<=0)cart.delete(b.dataset.n);
+  render();
+});
+
+function toggle(open){
+  drawer.classList.toggle("open",open);
+  overlay.classList.toggle("open",open);
+  if(open)document.getElementById("closeCart").focus();
+}
+document.getElementById("openCart").addEventListener("click",()=>toggle(true));
+document.getElementById("closeCart").addEventListener("click",()=>toggle(false));
+overlay.addEventListener("click",()=>toggle(false));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")toggle(false)});
+
+document.getElementById("checkout").addEventListener("click",()=>{
+  if(cart.size===0){say("Keranjang masih kosong");return}
+  let sum=0,items=[];
+  for(const [name,{price,qty}] of cart){sum+=price*qty;items.push(`${qty}× ${name}`)}
+  const text=encodeURIComponent("Halo Kopi Vallen, mau pesan:\n"+items.join("\n")+"\nTotal: "+rp(sum));
+  window.open("https://wa.me/6281234567890?text="+text,"_blank");
+  say("Dibuka di WhatsApp");
+});
+
+document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
+  document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));
+  c.setAttribute("aria-pressed","true");
+  const f=c.dataset.f;
+  grid.querySelectorAll(".item").forEach(it=>{
+    it.style.display=(f==="all"||it.dataset.cat===f)?"":"none";
+  });
+}));
+
+document.getElementById("orderForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  say("Pesan terkirim. Kami balas via WhatsApp.");
+  e.target.reset();
+});
+
+render();
+</script>
+</body>
+</html>

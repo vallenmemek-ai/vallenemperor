@@ -104,6 +104,10 @@ vallenemperor --resume session-1794163801765
 vallenemperor --model gpt-4o-mini --approval dangerous
 ```
 
+One-shot runs have nobody to answer an approval prompt, so a risky tool call is
+**refused** and the process exits non-zero. Add `--approval off` for trusted
+scripts that must run shell commands unattended.
+
 Configure a provider without hand-editing JSON:
 
 ```bash

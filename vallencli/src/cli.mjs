@@ -844,6 +844,7 @@ export async function runConfigCommand(core, parsed) {
     console.log(`active provider: ${active}${model ? ` · model ${model}` : ''}`)
     console.log(`base_url: ${baseUrl || '(unset)'}`)
     console.log(`api_key: ${hasKey ? 'set in config.json' : 'not set (use the provider env var)'}`)
+    console.log(`approval: ${core.approvalMode(config.agentApproval)}`)
     const report = core.validateProviderConfig(config)
     for (const warning of report.warnings) console.log(`warning: ${warning}`)
     for (const error of report.errors) console.error(`error: ${error}`)
@@ -881,7 +882,8 @@ export async function runConfigCommand(core, parsed) {
   }
 
   if (parsed.configAction === 'set-approval') {
-    core.saveConfig({ approval: parsed.configApproval })
+    // Everything reads config.agentApproval; writing `approval` here used to be a no-op.
+    core.saveConfig({ agentApproval: parsed.configApproval })
     console.log(`approval mode: ${parsed.configApproval}`)
     return 0
   }
@@ -890,12 +892,89 @@ export async function runConfigCommand(core, parsed) {
   return 2
 }
 
+/**
+ * One-shot runs have no approval UI, and `runTurn` only installs the approval gate
+ * when a `requestApproval` callback exists — so before this, `--approval
+ * off|dangerous|all` were all equivalent to "run everything silently".
+ * A scripted run cannot ask a human, so it refuses the risky call and says how to
+ * allow it. `--approval off` still means "allow everything" (explicit opt-in).
+ */
+export function createOneShotApproval(core, agent, { onBlocked } = {}) {
+  const mode = core.approvalMode(agent.config?.agentApproval)
+  const denied = []
+  const requestApproval = async request => {
+    const server = core.mcpServerFromTool?.(request.name) || null
+    const trusted = server ? agent.config?.mcpServers?.[server]?.trusted === true : false
+    if (!core.requiresApproval({ name: request.name, args: request.args }, mode, trusted)) return true
+    if (server && core.isMcpApproved?.(agent.getSessionId(), server)) return true
+    denied.push(String(request.name))
+    onBlocked?.(request.name, mode)
+    return false
+  }
+  return { requestApproval, denied }
+}
+
 /** One-shot run: send one prompt, print the answer, shut down. */
-async function runOneShot(agent, prompt) {
-  const result = await agent.runTurn({ message: prompt, surfaceId: 'cli' }, {})
+async function runOneShot(agent, prompt, { core } = {}) {
+  const gate = core
+    ? createOneShotApproval(core, agent, {
+        onBlocked: (name, mode) => process.stderr.write(`Blocked risky tool "${name}" (approval mode: ${mode}, no approval prompt in one-shot mode). Re-run with --approval off to allow it.\n`)
+      })
+    : { requestApproval: undefined, denied: [] }
+  const result = await agent.runTurn({ message: prompt, surfaceId: 'cli' }, { requestApproval: gate.requestApproval })
   process.stdout.write(`${String(result.response || '').trim()}\n`)
   if (result.artifacts?.summary) process.stdout.write(`${result.artifacts.summary}\n`)
-  return result
+  return { result, denied: gate.denied }
+}
+
+// "/help" is a command; "/home/me/app" is a path, so the token must end here.
+const SLASH_LINE = /^\/[a-z][\w-]*(?:\s|$)/i
+
+export function isSlashCommandLine(text) {
+  return SLASH_LINE.test(String(text || '').trim())
+}
+
+/**
+ * `-p` used to forward anything starting with "/" straight to the model, which then
+ * invented command output. Dispatch the real CLI/shared handlers instead.
+ */
+export async function runOneShotCommand(core, agent, text, io = {}) {
+  const out = io.out || process.stdout
+  const err = io.err || process.stderr
+  const line = String(text || '').trim()
+  const cmd = line.split(/\s+/, 1)[0].toLowerCase()
+  if (cmd === '/exit' || cmd === '/quit') { out.write('Session ending.\n'); return 0 }
+  if (cmd === '/help') { out.write(`${HELP}\n`); return 0 }
+  let shared
+  try {
+    shared = await core.handleCommand?.({ channel: 'terminal', agent }, line)
+  } catch (error) {
+    err.write(`Command error: ${error instanceof Error ? error.message : String(error)}\n`)
+    return 1
+  }
+  if (shared?.handled) {
+    out.write(`${String(shared.response || '').trim()}\n`)
+    return 0
+  }
+  err.write(`Unknown command: ${cmd}. Use --help.\n`)
+  return 2
+}
+
+/**
+ * `--approval` used to write `config.approval`, but every surface reads
+ * `config.agentApproval` (that is what `/auto` writes), so the flag was dead.
+ * Keep both keys in sync so either reader sees the override.
+ */
+export function applyRuntimeOverrides(config, parsed = {}) {
+  if (parsed.approval) {
+    config.agentApproval = parsed.approval
+    config.approval = parsed.approval
+  }
+  if (parsed.model) {
+    const active = config.providers?.active
+    if (active && config.providers?.[active]) config.providers[active].model = parsed.model
+  }
+  return config
 }
 
 export function createCliAgent(core, options = {}) {
@@ -927,11 +1006,7 @@ export async function main(argv = process.argv.slice(2)) {
   try {
     const core = await import(pathToFileURL(CORE_PATH).href)
     const config = core.loadConfig()
-    if (parsed.approval) config.approval = parsed.approval
-    if (parsed.model) {
-      const active = config.providers?.active
-      if (active && config.providers?.[active]) config.providers[active].model = parsed.model
-    }
+    applyRuntimeOverrides(config, parsed)
     const createAgent = options => createCliAgent(core, { ...options, config })
 
     if (parsed.mode === 'config') return await runConfigCommand(core, parsed)
@@ -939,7 +1014,11 @@ export async function main(argv = process.argv.slice(2)) {
     if (parsed.mode === 'prompt') {
       const agent = createAgent({})
       try {
-        const result = await runOneShot(agent, parsed.prompt)
+        // Slash input must never reach the model: it used to answer as if it were the CLI.
+        if (isSlashCommandLine(parsed.prompt)) return await runOneShotCommand(core, agent, parsed.prompt)
+        const { result, denied } = await runOneShot(agent, parsed.prompt, { core })
+        // A blocked tool means the requested work did not happen; report that to the shell.
+        if (denied.length) return 1
         return result?.completionStatus === 'incomplete' ? 1 : 0
       } finally {
         try { await agent.shutdown?.() } catch {}
