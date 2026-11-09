@@ -18,6 +18,10 @@ engine.
 
 ## Usage
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/vallenmemek-ai/vallenemperor/main/icon/ui-preview.png" alt="VallenEmperor CLI screenshot: startup banner, diagnostics panel, chat card and status bar" width="100%" />
+</p>
+
 ```bash
 vallenemperor                     # interactive REPL
 vallenemperor -p "prompt"         # one-shot: print the answer and exit

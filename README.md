@@ -18,6 +18,7 @@
 
 <p align="center">
   <a href="#install">Install</a> ·
+  <a href="#preview">Preview</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#features">Features</a> ·
   <a href="#configuration">Configuration</a> ·
@@ -36,6 +37,17 @@ commands, verifies its own work, resumes interrupted sessions, and loads skills 
 | **`vallencli`** | Terminal UI — streaming cards, approval prompts, slash commands, config surface |
 
 Both ship as one installable CLI: **`vallenemperor`**.
+
+## Preview
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/vallenmemek-ai/vallenemperor/main/icon/ui-preview.png" alt="VallenEmperor CLI: startup banner, system diagnostics panel, chat card, input box and status bar" width="100%" />
+</p>
+
+<p align="center">
+  <sub>Real CLI startup: banner, health check (tools · skills · gateway), chat card and status bar.<br/>
+  <code>1 warning · 6/7 checks ok</code> is the gateway fallback doing its job, not a mockup.</sub>
+</p>
 
 ## Install
 

@@ -761,6 +761,7 @@ Catatan: `npm publish` sudah dicoba pemilik repo dan ditolak npm dengan **E403**
 2. `vallenagent/README.md` (baru) — tabel tahap turn per modul, daftar tool, model verifikasi, sesi/skill/memory, gateway, cara test.
 3. `vallencli/README.md` (baru) — flag startup, perintah `config`, daftar slash command, perilaku UI (preview diff edit besar, non-interaktif tidak menunggu approval), struktur folder.
 4. Aset ikon: `icon/vallenemperor.png` (1254×1254) dioptimasi jadi `icon/vallenemperor-512.png` (637 KB) dan `icon/vallenemperor-192.png` (84 KB) untuk dipakai README; gambar dirujuk lewat URL `raw.githubusercontent.com` absolut supaya tetap tampil di halaman npm, bukan hanya di GitHub.
+5. `icon/ui-preview.png` (1000×461, 116 KB) — screenshot CLI asli (banner, panel diagnostik, chat card, input, status bar) dipakai di seksi **Preview** README root dan di README `vallencli`. Screenshot mentah dipangkas (menu bar + baris prompt shell dibuang) dan nilai path home di baris "Persistent Stores" di-blur, supaya username/home path tidak ikut publik. File mentah tidak di-commit.
 
 Selesai: 2026-11-09
 File: README.md, vallenagent/README.md (baru), vallencli/README.md (baru), icon/vallenemperor-512.png, icon/vallenemperor-192.png
