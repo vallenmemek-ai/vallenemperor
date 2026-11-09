@@ -53,3 +53,24 @@ test('a budget skip is logged as skipped, not as a review error', async () => {
     rmSync(home, { recursive: true, force: true })
   }
 })
+
+test('a no-op review reports onReviewSkipped so the CLI is not silent', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'vallen-review-skip-'))
+  const previous = process.env.VALLENEMPEROR_HOME
+  process.env.VALLENEMPEROR_HOME = home
+  try {
+    const skipped = []
+    await new Promise(resolve => {
+      spawnBackgroundReview(
+        [{ role: 'user', content: 'hi' }],
+        async () => 'No updates needed',
+        { onReviewSkipped: reason => skipped.push(reason), onReviewFinished: () => resolve() }
+      )
+    })
+    assert.deepEqual(skipped, ['no durable update was justified'], 'a silent no-op is why /review looked dead')
+  } finally {
+    if (previous === undefined) delete process.env.VALLENEMPEROR_HOME
+    else process.env.VALLENEMPEROR_HOME = previous
+    rmSync(home, { recursive: true, force: true })
+  }
+})

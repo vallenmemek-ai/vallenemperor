@@ -76,6 +76,8 @@ export interface AgentCallbacks {
   onTelemetry?: (telemetry: AgentUsage) => void
   onReviewComplete?: (summary: string) => void
   onReviewError?: (error: string) => void
+  /** The review ran and finished without changing anything. */
+  onReviewSkipped?: (reason: string) => void
   onSubagentProgress?: (event: { taskId: string; goal: string; status: 'started' | 'thinking' | 'tool_start' | 'tool_end' | 'completed' | 'failed'; message?: string }) => void
   onChunk?: (chunk: string) => void
 }
@@ -93,6 +95,7 @@ export type AgentTurnEvent =
   | { type: 'telemetry'; sessionId: string; surfaceId: string; usage: AgentUsage }
   | { type: 'review_complete'; sessionId: string; surfaceId: string; summary: string }
   | { type: 'review_error'; sessionId: string; surfaceId: string; error: string }
+  | { type: 'review_skipped'; sessionId: string; surfaceId: string; reason: string }
   | { type: 'error'; sessionId: string; surfaceId: string; error: string }
   | { type: 'chunk'; sessionId: string; surfaceId: string; chunk: string }
   | { type: 'subagent_progress'; sessionId: string; surfaceId: string; taskId: string; goal: string; status: 'started' | 'thinking' | 'tool_start' | 'tool_end' | 'completed' | 'failed'; message?: string }

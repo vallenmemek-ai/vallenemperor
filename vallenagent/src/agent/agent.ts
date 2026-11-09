@@ -345,6 +345,7 @@ export class AIAgent {
       onTelemetry: usage => emit({ type: 'telemetry', usage }),
       onReviewComplete: summary => emit({ type: 'review_complete', summary }),
       onReviewError: error => emit({ type: 'review_error', error }),
+      onReviewSkipped: reason => emit({ type: 'review_skipped', reason }),
       onSubagentProgress: event => emit({ type: 'subagent_progress', ...event }),
       ...(surface.stream ? { onChunk: (chunk: string) => emit({ type: 'chunk', chunk }) } : {}),
       ...(surface.requestApproval ? {
@@ -1182,6 +1183,7 @@ export class AIAgent {
       {
         onReviewComplete: callbacks?.onReviewComplete,
         onReviewError: callbacks?.onReviewError,
+        onReviewSkipped: callbacks?.onReviewSkipped,
         onReviewFinished: () => {
           if (this.backgroundReviewTimeout) clearTimeout(this.backgroundReviewTimeout)
           this.backgroundReviewTimeout = null

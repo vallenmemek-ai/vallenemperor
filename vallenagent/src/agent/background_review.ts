@@ -7,6 +7,8 @@ export interface ReviewCallbacks {
   onReviewComplete?: (summary: string) => void
   onReviewError?: (error: string) => void
   onReviewFinished?: () => void
+  /** The review completed without a durable change; the reason says why. */
+  onReviewSkipped?: (reason: string) => void
 }
 
 const REVIEW_SYSTEM_PROMPT = `You are a background review agent. Review one completed conversation and decide whether a reusable skill procedure or a stable user/environment fact needs updating.
@@ -126,9 +128,11 @@ export async function spawnBackgroundReview(
       }
       if (!trimmed || /^no updates needed[.!]?$/i.test(trimmed)) {
         log('no-op', 'No durable update was justified.')
+        callbacks?.onReviewSkipped?.('no durable update was justified')
       } else if (/^review budget reached/i.test(trimmed)) {
         // Budget exhaustion is a deliberate skip, not a failed review.
         log('skipped', trimmed)
+        callbacks?.onReviewSkipped?.(trimmed)
       } else {
         let notice = ''
         let invalidOutput = false

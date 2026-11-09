@@ -653,6 +653,7 @@ export async function runCli(options = {}) {
             } else if (event.type === 'terminal_output') captureTerminalOutput(event.output)
             else if (event.type === 'review_complete') displayLine(event.summary)
             else if (event.type === 'review_error') displayLine(color(`Review error: ${event.error}`, ANSI.yellow))
+            else if (event.type === 'review_skipped') { if (interactive) displayLine(`💾 review: ${event.reason}`) }
             else if (event.type === 'telemetry') { noteTokens(); refreshStatus('WORKING') }
           }
         })
