@@ -96,6 +96,35 @@ logika itu. Duplikasi itulah sumber 6 divergensi:
 - [x] **Pipeline cron dipindah ke `gateway/cron_actions.ts`** supaya bisa diuji tanpa token
       Telegram — sekaligus menghapus `void main()` yang membuat daemon mustahil diimpor.
 
+## Fase 6 — satu referensi perintah, satu /review
+
+- [x] **`/help` punya dua sumber.** REPL memakai `HELP` dari `cli-ui.mjs` (70 baris, Inggris,
+      plus flag), sedangkan `-p "/help"` memakai `terminalHelp` di core (17 baris, Indonesia,
+      tanpa `/schedule`, `/output`, `/todos`, dan lain-lain). Sekarang satu
+      `COMMAND_REFERENCE` di core (42 perintah, berkelompok) yang dirender oleh:
+      `/help` di REPL, `-p "/help"`, dan `--help`. Handler `/help` di CLI dihapus.
+- [x] **`/review` ditangani dua kali.** REPL punya handler sendiri (meneruskan `focus` +
+      callbacks), core punya versi lain. Sekarang core yang punya, dan CLI hanya mengirim
+      `reviewCallbacks` lewat `CommandContext` supaya hasil review tetap tampil di REPL.
+- [x] **`/settings` dan `/gateway` punya handler tapi tidak ada di dropdown** → ditambahkan.
+- [x] Penjaga baru: setiap perintah di dropdown **wajib** ada di `COMMAND_REFERENCE`, dan
+      `COMMAND_REFERENCE` **wajib** muncul utuh di teks `/help`.
+
+### Bukti uji Fase 6
+
+`2026-11-09T18:55Z`
+
+| Uji | Perintah | Hasil |
+|---|---|---|
+| Typecheck | `npm run typecheck` | ✅ bersih |
+| Test core | `node ../scripts/run-tests.mjs tests` | ✅ **296 pass, 0 fail** |
+| Test CLI | `node ../scripts/run-tests.mjs tests` | ✅ **82 pass, 0 fail** |
+| Node 24 | `npx -y node@24.22.1 ../scripts/run-tests.mjs tests` | ✅ 296 + 82, 0 fail |
+| `/help` konsisten | `-p "/help"` vs REPL `/help` vs `--help` | ✅ teks referensi identik (61 baris) |
+| `/review` tunggal | `grep "cmd === '/review'" cli-commands.mjs` | ✅ 0 (dulu ada handler duplikat) |
+| `/review log` | `-p "/review log"` | ✅ riwayat tampil |
+| Dropdown lengkap | test `command_wiring` | ✅ 34 perintah, semua terdokumentasi |
+
 ### Bukti uji Fase 5
 
 `2026-11-09T18:20Z`

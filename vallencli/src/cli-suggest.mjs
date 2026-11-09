@@ -21,6 +21,8 @@ export const COMMANDS = [
   { name: '/review', args: '[log]', desc: 'Run review or show review history' },
   { name: '/session', args: 'clearall', desc: 'Delete saved sessions', fillOnly: true },
   { name: '/output', desc: 'Expand the latest terminal output' },
+  { name: '/gateway', args: '[wa|tel ...]', desc: 'Gateway status and control' },
+  { name: '/settings', desc: 'Display settings' },
   { name: '/schedule', args: '[list|history|add|remove]', desc: 'Manage scheduled agent jobs' },
   { name: '/plan', args: '[task]', desc: 'Create a read-only implementation plan', fillOnly: true },
   { name: '/plans', desc: 'List saved plans' },

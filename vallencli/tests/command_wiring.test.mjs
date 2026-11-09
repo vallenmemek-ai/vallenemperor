@@ -30,8 +30,14 @@ test('the CLI keeps the commands that need CLI-only state', () => {
   }
 })
 
-test('/review stays local but forwards its focus text to the agent', () => {
-  assert.match(source, /requestBackgroundReview\([\s\S]*?,\s*focus\)/, 'the focus argument must be forwarded')
+test('/review and /help are owned by core, not re-implemented in the CLI', () => {
+  assert.doesNotMatch(source, /cmd === '\/review'/, 'core owns /review; the CLI only passes callbacks')
+  assert.doesNotMatch(source, /cmd === '\/help'/, 'core owns /help; one command reference')
+})
+
+test('the CLI passes review callbacks so core can run /review for it', () => {
+  const cli = readFileSync(new URL('../src/cli.mjs', import.meta.url), 'utf8')
+  assert.match(cli, /reviewCallbacks:\s*{/, 'without callbacks a REPL /review would be silent')
 })
 
 test('the CLI reaches core through the public barrel, never internal dist paths', () => {
@@ -41,7 +47,23 @@ test('the CLI reaches core through the public barrel, never internal dist paths'
 test('commands that exist are also discoverable in the dropdown', async () => {
   const { COMMANDS } = await import('../src/cli-suggest.mjs')
   const names = new Set(COMMANDS.flatMap(command => [command.name, ...(command.aliases || [])]))
-  for (const command of ['/output', '/schedule', '/status', '/context']) {
+  for (const command of ['/output', '/schedule', '/status', '/context', '/settings', '/gateway']) {
     assert.equal(names.has(command), true, `${command} must be suggested`)
+  }
+})
+
+test('every suggested command is documented in the core help reference', async () => {
+  const { COMMANDS } = await import('../src/cli-suggest.mjs')
+  const core = await import('../../vallenagent/dist/index.js')
+  const reference = new Set(core.COMMAND_REFERENCE.map(entry => entry.name))
+  const missing = COMMANDS.flatMap(command => [command.name, ...(command.aliases || [])]).filter(name => !reference.has(name))
+  assert.deepEqual(missing, [], `these commands are not in COMMAND_REFERENCE: ${missing.join(', ')}`)
+})
+
+test('the help text and the reference list are the same object', async () => {
+  const core = await import('../../vallenagent/dist/index.js')
+  const help = String((await core.handleCommand({ channel: 'terminal', agent: {} }, '/help')).response)
+  for (const entry of core.COMMAND_REFERENCE) {
+    assert.match(help, new RegExp(entry.name.replace(/[/-]/g, '\\$&')), `${entry.name} missing from /help`)
   }
 })

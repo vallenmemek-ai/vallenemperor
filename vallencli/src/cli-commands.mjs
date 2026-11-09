@@ -1,7 +1,7 @@
 import { rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { HELP, color, startupBox, refreshThemeColors } from './cli-ui.mjs'
+import { color, startupBox, refreshThemeColors } from './cli-ui.mjs'
 import { THEMES, getThemeName, gradientText, saveTheme, setTheme, themeNames } from './cli-theme.mjs'
 
 export function createLocalCommandHandler(context) {
@@ -9,7 +9,6 @@ export function createLocalCommandHandler(context) {
   async function localCommand(text) {
     const [cmd, ...args] = text.trim().split(/\s+/)
     const value = args.join(' ').trim()
-    if (cmd === '/help') { printResponse(HELP); return true }
     // /model, /status, /stats, /sessions, /resume, /new, /reset and /memory live in
     // core.handleCommand so every surface behaves the same. Returning false lets
     // runCli fall through to the shared handler.
@@ -103,17 +102,6 @@ export function createLocalCommandHandler(context) {
       await new Promise(resolveDelay => setTimeout(resolveDelay, 1000))
       const cpu = process.cpuUsage(before); const elapsed = Number(process.hrtime.bigint() - started) / 1e9
       printResponse(`Process CPU: ${((cpu.user + cpu.system) / 1e6 / elapsed * 100).toFixed(1)}%\nRSS: ${(rss / 1048576).toFixed(1)} MiB`)
-      return true
-    }
-    if (cmd === '/review') {
-      if (args[0]?.toLowerCase() === 'log') {
-        const rows = new core.ReviewLogStore().list(20)
-        printResponse(rows.length ? rows.map(row => `${row.at} ${row.kind} ${row.name}: ${row.change}`).join('\n') : 'No review history.')
-        return true
-      }
-      const focus = value.trim()
-      const started = agent.requestBackgroundReview({ onReviewComplete: message => displayLine(message), onReviewError: error => displayLine(`Review error: ${error}`) }, focus)
-      printResponse(started ? `Background review started${focus ? ` (focus: ${focus.slice(0, 120)})` : ''}.` : 'Background review already running.')
       return true
     }
     if (cmd === '/skills') {

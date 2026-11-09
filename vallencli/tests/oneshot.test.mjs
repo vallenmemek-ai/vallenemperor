@@ -69,16 +69,23 @@ test('slash detection separates commands from paths', () => {
   assert.equal(isSlashCommandLine(''), false)
 })
 
-test('/help is answered by the CLI, not the model', async () => {
+test('/help is answered from the command reference, never by the model', async () => {
   const out = sink()
   const err = sink()
-  let called = false
-  const core = fakeCore({ onHandle: () => { called = true } })
+  const core = fakeCore({ handled: { handled: true, response: 'Perintah VallenEmperor:\n  /help  tampilkan bantuan ini' } })
   const code = await runOneShotCommand(core, fakeAgent, '/help', { out, err })
   assert.equal(code, 0)
-  assert.match(out.text(), /Startup flags/)
-  assert.equal(called, false, 'the shared handler must not be consulted for /help')
+  assert.match(out.text(), /Perintah VallenEmperor/)
   assert.equal(err.text(), '')
+})
+
+test('/help still prints the flag list when the core is not built', async () => {
+  const out = sink()
+  const core = fakeCore({ handled: { handled: false, response: '' } })
+  delete core.handleCommand
+  const code = await runOneShotCommand(core, fakeAgent, '/help', { out })
+  assert.equal(code, 0)
+  assert.match(out.text(), /Startup flags/)
 })
 
 test('/exit ends the run without calling the model', async () => {

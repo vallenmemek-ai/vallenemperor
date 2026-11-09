@@ -729,7 +729,15 @@ export async function runCli(options = {}) {
       if (text.startsWith('/') && isSlashCommand) {
         try {
           if (await localCommand(text)) continue
-          const shared = await sharedCommand?.({ channel: 'terminal', agent }, text)
+          const shared = await sharedCommand?.({
+            channel: 'terminal',
+            agent,
+            // /review lives in core; the CLI only supplies where its result is shown.
+            reviewCallbacks: {
+              onReviewComplete: message => displayLine(message),
+              onReviewError: error => displayLine(`Review error: ${error}`)
+            }
+          }, text)
           if (shared?.handled) {
             printResponse(shared.response)
             // Commands that change session/model/cwd now live in core, so the status
@@ -963,7 +971,8 @@ export async function runOneShotCommand(core, agent, text, io = {}) {
     return 0
   }
   if (cmd === '/help') {
-    out.write(io.json ? `${JSON.stringify({ command: cmd, handled: true, help: HELP })}\n` : `${HELP}\n`)
+    const help = core.handleCommand ? String((await core.handleCommand({ channel: 'terminal', agent }, '/help'))?.response || HELP) : HELP
+    out.write(io.json ? `${JSON.stringify({ command: cmd, handled: true, help })}\n` : `${help}\n`)
     return 0
   }
   // Telemetry is the one thing scripts need in a stable shape.
@@ -1017,7 +1026,16 @@ export function createCliAgent(core, options = {}) {
 
 export async function main(argv = process.argv.slice(2)) {
   const parsed = parseArgs(argv)
-  if (parsed.mode === 'help') { console.log(HELP); return 0 }
+  if (parsed.mode === 'help') {
+    console.log(HELP)
+    // The command reference lives in core so `--help`, `/help` and `-p "/help"` cannot drift.
+    try {
+      const core = await import(pathToFileURL(CORE_PATH).href)
+      const reference = String((await core.handleCommand({ channel: 'terminal', agent: undefined }, '/help'))?.response || '')
+      if (reference) console.log(`\n${reference}`)
+    } catch { /* core not built yet: the flag help is still useful on its own */ }
+    return 0
+  }
   if (parsed.mode === 'error') { console.error(parsed.error); return 2 }
   // Version comes from the published package root; vallencli is a private workspace
   // and its own version lags behind the release tag.

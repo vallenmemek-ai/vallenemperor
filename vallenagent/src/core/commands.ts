@@ -77,25 +77,82 @@ const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', 
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
-const terminalHelp = [
-  'Perintah VallenEmperor:',
-  '/help — tampilkan bantuan ini.',
-  '/mcp — status server MCP dan project config.',
-  '/mcp add <nama> <command> [args…] — tambah server stdio; contoh: /mcp add files npx -y @modelcontextprotocol/server-filesystem@1.0.0 /home/vallenganteng/Destop.',
-  '/mcp add <nama> <http(s)://url> — tambah server Streamable HTTP.',
-  '/mcp tools [nama] — daftar tools server MCP.',
-  '/mcp reconnect <nama> — sambungkan ulang dan tampilkan error jika gagal.',
-  '/mcp enable|disable <nama> — aktifkan/nonaktifkan server.',
-  '/mcp trust|untrust <nama> — ubah kebutuhan approval tool server.',
-  '/mcp project — cek config MCP proyek; /mcp project approve — setujui setelah ditinjau.',
-  '/mcp remove <nama> — hapus server.',
-  'MCP config: ~/.vallenemperor/config.json. Jangan taruh token di command atau chat; simpan di env config. Server stdio menjalankan program lokal dengan akses sesuai direktori yang diizinkan.',
-  '/context, /compact — konteks dan kompaksi.',
-  '/project, /init, /init confirm — project memory dan simpan instruksi setelah preview.',
-  '/checkpoints, /diff, /undo — riwayat perubahan file.',
-  '/model, /sessions, /resume, /new, /stop, /stats, /tools, /skills — model, sesi, status, tools, skills.',
-  '/review [log] — jalankan review skill/memory, atau lihat riwayat perubahan. Review otomatis dapat menyimpan edit terbatas; set gateway.background_review=false untuk mematikannya (review manual tetap aktif).'
-].join(String.fromCharCode(10))
+export interface CommandReference {
+  group: string
+  name: string
+  args?: string
+  desc: string
+}
+
+/**
+ * The single command reference. `/help` in the REPL, `-p "/help"` and `--help` all
+ * render this list, so a new command cannot exist in one place and be missing in another.
+ */
+export const COMMAND_REFERENCE: CommandReference[] = [
+  { group: 'Sesi & model', name: '/help', desc: 'tampilkan bantuan ini' },
+  { group: 'Sesi & model', name: '/status', desc: 'ringkasan sesi, model, konteks, turn' },
+  { group: 'Sesi & model', name: '/stats', desc: 'telemetry token dan sesi' },
+  { group: 'Sesi & model', name: '/model', args: '[nama | save <nama>]', desc: 'lihat atau ganti model untuk sesi ini' },
+  { group: 'Sesi & model', name: '/sessions', desc: 'daftar sesi tersimpan' },
+  { group: 'Sesi & model', name: '/resume', args: '[id | nomor]', desc: 'lanjutkan sesi' },
+  { group: 'Sesi & model', name: '/new', desc: 'mulai sesi baru' },
+  { group: 'Sesi & model', name: '/reset', desc: 'kosongkan percakapan' },
+  { group: 'Sesi & model', name: '/session', args: '[clearall]', desc: 'kelola berkas sesi' },
+  { group: 'Sesi & model', name: '/stop', desc: 'hentikan turn yang berjalan' },
+  { group: 'Konteks', name: '/context', desc: 'pemakaian konteks' },
+  { group: 'Konteks', name: '/compact', desc: 'ringkas riwayat percakapan' },
+  { group: 'Konteks', name: '/search', args: '<kata>', desc: 'cari di riwayat sesi' },
+  { group: 'Konteks', name: '/todos', desc: 'daftar todo' },
+  { group: 'Konteks', name: '/memory', desc: 'isi memori jangka panjang' },
+  { group: 'Kerja', name: '/tools', desc: 'daftar tool yang tersedia' },
+  { group: 'Kerja', name: '/skills', args: '[list|search|install|...]', desc: 'kelola skill' },
+  { group: 'Kerja', name: '/plan', desc: 'mode rencana' },
+  { group: 'Kerja', name: '/plans', desc: 'daftar rencana' },
+  { group: 'Kerja', name: '/auto', desc: 'mode otomatis' },
+  { group: 'Kerja', name: '/gamedev', desc: 'alur kerja gamedev' },
+  { group: 'Kerja', name: '/review', args: '[fokus | log]', desc: 'review skill/memory di latar belakang' },
+  { group: 'Kerja', name: '/schedule', args: '[list|history|add|remove]', desc: 'jadwal agent (lokal atau Telegram)' },
+  { group: 'Berkas', name: '/checkpoints', desc: 'daftar checkpoint berkas' },
+  { group: 'Berkas', name: '/diff', args: '[turn]', desc: 'lihat perubahan checkpoint' },
+  { group: 'Berkas', name: '/undo', args: '[1-20] [--force]', desc: 'pulihkan checkpoint' },
+  { group: 'Berkas', name: '/cd', args: '<dir>', desc: 'pindah direktori kerja' },
+  { group: 'Berkas', name: '/output', desc: 'buka output terminal terakhir' },
+  { group: 'Berkas', name: '/project', desc: 'status project memory' },
+  { group: 'Berkas', name: '/init', args: '[confirm]', desc: 'tulis instruksi proyek' },
+  { group: 'MCP & gateway', name: '/mcp', args: '[add|tools|reconnect|...]', desc: 'kelola server MCP' },
+  { group: 'MCP & gateway', name: '/gateway', args: '[wa | tel ...]', desc: 'status dan kelola gateway' },
+  { group: 'MCP & gateway', name: '/token', args: '[status | set <token>]', desc: 'token provider' },
+  { group: 'Tampilan', name: '/theme', args: '[nama]', desc: 'ganti tema' },
+  { group: 'Tampilan', name: '/themes', desc: 'daftar tema' },
+  { group: 'Tampilan', name: '/settings', desc: 'pengaturan tampilan' },
+  { group: 'Tampilan', name: '/clear', desc: 'bersihkan layar' },
+  { group: 'Tampilan', name: '/health', desc: 'cek kesehatan runtime' },
+  { group: 'Tampilan', name: '/perf', desc: 'statistik performa' },
+  { group: 'Shell', name: '/sh', args: '[perintah]', desc: 'jalankan shell tanpa agent' },
+  { group: 'Shell', name: '/pty', desc: 'sesi shell interaktif' },
+  { group: 'Shell', name: '/quit', desc: 'keluar (alias /exit)' },
+  { group: 'Shell', name: '/exit', desc: 'keluar (alias /quit)' }
+]
+
+function renderCommandReference(): string {
+  const groups: string[] = []
+  for (const entry of COMMAND_REFERENCE) {
+    if (!groups.includes(entry.group)) groups.push(entry.group)
+  }
+  const lines = ['Perintah VallenEmperor:']
+  for (const group of groups) {
+    lines.push('', `[${group}]`)
+    for (const entry of COMMAND_REFERENCE.filter(item => item.group === group)) {
+      const usage = `${entry.name}${entry.args ? ` ${entry.args}` : ''}`
+      lines.push(`  ${usage.padEnd(30)} ${entry.desc}`)
+    }
+  }
+  lines.push('', 'MCP config: ~/.vallenemperor/config.json. Jangan taruh token di command atau chat; simpan lewat /token atau env config.',
+    'Review otomatis bisa menyimpan edit terbatas; set gateway.background_review=false untuk mematikannya (review manual tetap aktif).')
+  return lines.join(String.fromCharCode(10))
+}
+
+const terminalHelp = renderCommandReference()
 
 // ponytail: Help documents only implemented commands; expand when command surface changes.
 

@@ -172,6 +172,34 @@ Koreksi: klaim sebelumnya bahwa `999.999.999` adalah versi tertinggi semver itu 
 
 ---
 
+## 4b. Audit jalur remote, jadwal, dan review — selesai
+
+Rincian per temuan ada di [`wiring.md`](wiring.md) Fase 5.
+
+- [x] **`Review error: Background review stopped at 20,000 aggregate input tokens`**
+      akar masalahnya: `onTelemetry` melaporkan ukuran prompt **per panggilan**, dan tiap
+      iterasi mengirim ulang seluruh percakapan → konteks yang sama ditagih berkali-kali.
+      Sekarang `ReviewInputBudget` hanya menagih **pertumbuhan** antar panggilan.
+- [x] **Budget habis bukan error lagi.** Dulu `throw` → tampil sebagai `Review error`.
+      Sekarang mengembalikan `Review budget reached (n/limit tokens)` dan dicatat `skipped`.
+      Bukti: review sungguhan menulis log `no-op` (bukan `error`).
+- [x] **Approval Telegram tadinya dua implementasi** (daemon + router) dengan teks berbeda →
+      satu `createRemoteApprovalGate()`.
+- [x] **Job `/schedule` dari terminal tidak pernah jalan** (authorize mensyaratkan owner
+      Telegram). Sekarang job `local` dijalankan daemon, hasil ke `gateway/cron-local.log`,
+      tool berisiko ditolak karena tak ada approver.
+- [x] **`whatsapp` ditawarkan sebagai delivery padahal tak ada adapter** → ditolak saat dibuat.
+- [x] **Tool `schedule` bisa bikin job Telegram tanpa owner** (tak akan pernah terkirim) →
+      sekarang hanya `local`.
+- [x] **Pipeline cron dipindah ke `gateway/cron_actions.ts`** supaya bisa diuji tanpa token
+      Telegram (`daemon.ts` hanya urusan proses).
+- [x] **`/geteway` typo di teks bantuan** → `/gateway` (alias lama tetap jalan).
+
+Test: **296 core + 82 CLI**, 0 gagal. Registry 32 tool, tanpa duplikat, semua punya handler.
+Audit dropdown: 32 perintah, semuanya punya handler.
+
+---
+
 ## 5. Uji terakhir
 
 Dijalankan `2026-11-09T15:35Z`, semua dari perintah nyata:
@@ -207,7 +235,7 @@ conhost fallback, build native Termux. Penjaganya: CI matrix + job `termux-shape
 cd /home/vallenganteng/Destop/vallenemperor
 
 npm run typecheck            # tipe
-npm test                     # 247 + 57 test
+npm test                     # 296 + 82 test
 node bin/vallenemperor --version
 node bin/vallenemperor config show
 
