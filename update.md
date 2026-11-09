@@ -751,3 +751,18 @@ Test: vallencli/tests/cli.test.mjs — "the CLI still runs when invoked through 
 npm test: vallenagent 236/236, vallencli 57/57
 Bukti end-to-end: `npm pack` → 1.6 MB, 785 file (dist + CLI + 385 file skill) → `npm install -g --prefix /tmp/... ./vallenemperor-0.1.0.tgz` (197 paket) → `vallenemperor --version` = `vallenemperor v0.1.0`, `--help`, `config show`, dan `config set provider ollama` semuanya jalan dari paket terpasang.
 Catatan: `npm publish` sudah dicoba pemilik repo dan ditolak npm dengan **E403** ("Two-factor authentication or granular access token with bypass 2fa enabled is required") — auth-nya valid, hanya akun mewajibkan 2FA. Disediakan `scripts/release.sh` (test → bump versi → publish) yang meneruskan `--otp=<kode>` atau memakai `NPM_TOKEN` dari environment/.env; token tidak pernah dicetak atau ditulis ke config npm. Root juga diberi `publishConfig.access = "public"` supaya `npm publish` tidak perlu flag `--access`. Publish percobaan pertama (token granular dari `.env`) berhasil masuk **staging**: registry membuat placeholder `vallenemperor@0.0.0-stage` dan versi 0.1.0 menunggu approval 2FA (npm staged publishing, butuh npm CLI 11.15+/Node 22.14+ untuk `npm stage approve`, atau tombol Approve di npmjs.com → Staged Packages). `scripts/release.sh` sekarang mendeteksi ini dan mencetak instruksi approval, bukan mengklaim sudah tayang. Approval dilakukan pemilik repo lewat npmjs.com, dan **vallenemperor@0.1.0 sudah tayang** — diverifikasi dari registry publik: `npm install -g --prefix /tmp/vem-reg3 vallenemperor` memasang bin `vallenemperor`/`vallenemperorcli`, lalu `--version` = `vallenemperor v0.1.0`, `--help` dan `config show` jalan (66 MB terpasang termasuk dependency). Akun npm pemilik memakai 2FA **security key (WebAuthn)**, jadi `--otp=<kode>` tidak berlaku; rilis berikutnya: stage lewat `./scripts/release.sh patch` lalu approve di browser, atau tambahkan authenticator app (TOTP) agar bisa `--otp`. `"type": "module"` sengaja TIDAK dipasang di root karena `vallenagent/dist/*.js` masih CommonJS — memasangnya membuat `config show` gagal dengan "exports is not defined in ES module scope".
+
+## [x] 18. README modern + ikon brand
+
+**Bukti**: README root masih berupa dokumen teks datar tanpa ikon/badge, dan `vallenagent/` serta `vallencli/` belum punya README sendiri.
+
+**Perbaikan**:
+1. `README.md` root ditulis ulang gaya dev-repo: ikon di tengah, judul + tagline, badge (npm version, downloads, CI, Node, license), daftar fitur, quick start flag CLI, tabel konfigurasi, peta arsitektur per tahap turn, dan bagian development/rilis.
+2. `vallenagent/README.md` (baru) — tabel tahap turn per modul, daftar tool, model verifikasi, sesi/skill/memory, gateway, cara test.
+3. `vallencli/README.md` (baru) — flag startup, perintah `config`, daftar slash command, perilaku UI (preview diff edit besar, non-interaktif tidak menunggu approval), struktur folder.
+4. Aset ikon: `icon/vallenemperor.png` (1254×1254) dioptimasi jadi `icon/vallenemperor-512.png` (637 KB) dan `icon/vallenemperor-192.png` (84 KB) untuk dipakai README; gambar dirujuk lewat URL `raw.githubusercontent.com` absolut supaya tetap tampil di halaman npm, bukan hanya di GitHub.
+
+Selesai: 2026-11-09
+File: README.md, vallenagent/README.md (baru), vallencli/README.md (baru), icon/vallenemperor-512.png, icon/vallenemperor-192.png
+Test: tidak ada perubahan kode; `npm test` tetap 236/236 + 57/57 (dijalankan sebelum commit dokumen)
+Catatan: README di halaman npm baru ikut terbarui pada rilis berikutnya (perlu publish versi baru). Ikon 1254×1254 asli tetap disimpan sebagai sumber.
