@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VallenCLI — Test Report</title>
+<style>
+  :root {
+    --bg: #020617;
+    --panel: #0f172a;
+    --line: #1e293b;
+    --fg: #e2e8f0;
+    --muted: #94a3b8;
+    --ok: #34d399;
+    --cyan: #22d3ee;
+    --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding: clamp(1.5rem, 5vw, 4rem);
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .dot {
+    display: inline-block;
+    width: .6rem; height: .6rem;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, .6);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    70% { box-shadow: 0 0 0 .6rem rgba(52, 211, 153, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+  }
+  h1 {
+    margin: 0 0 .4rem;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    letter-spacing: -.03em;
+    display: flex; align-items: center; gap: .7rem;
+  }
+  .sub { margin: 0 0 2rem; color: var(--muted); font-size: .95rem; }
+  .sub code { color: var(--cyan); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.15rem 1.25rem;
+    transition: border-color .15s, transform .15s;
+  }
+  .card:hover { border-color: var(--cyan); transform: translateY(-2px); }
+  .card-head {
+    display: flex; align-items: center; gap: .55rem;
+    margin-bottom: .75rem;
+  }
+  .card-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--cyan); }
+  .card-dot.ok { background: var(--ok); }
+  .card-dot.warn { background: var(--warn); }
+  .card h2 {
+    margin: 0;
+    font-size: .95rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .big {
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: -.03em;
+    line-height: 1;
+    margin: 0 0 .3rem;
+    color: var(--fg);
+  }
+  .big span { font-size: .95rem; color: var(--muted); font-weight: 400; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  li {
+    font-size: .875rem;
+    color: var(--muted);
+    padding: .3rem 0;
+    border-bottom: 1px dashed var(--line);
+    display: flex; justify-content: space-between; gap: 1rem;
+  }
+  li:last-child { border-bottom: 0; }
+  li b { color: var(--fg); font-weight: 500; }
+  li b.ok { color: var(--ok); }
+  li code { color: var(--cyan); font-size: .82rem; }
+  .wide { grid-column: 1 / -1; }
+  pre {
+    margin: .5rem 0 0;
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: .9rem 1rem;
+    overflow-x: auto;
+    font-size: .8rem;
+    line-height: 1.6;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  pre .g { color: var(--ok); }
+  footer {
+    margin-top: 2rem;
+    color: var(--muted);
+    font-size: .8rem;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem;
+  }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="dot"></span>VallenCLI</h1>
+  <p class="sub">Test report — <code>npm test</code> · node --test · v0.1.0</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-head"><div class="card-dot ok"></div><h2>Test suite</h2></div>
+      <p class="big">45<span>/45 pass</span></p>
+      <ul>
+        <li><span>Failed</span><b class="ok">0</b></li>
+        <li><span>Skipped</span><b>0</b></li>
+        <li><span>Duration</span><b>2430 ms</b></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-dot"></div><h2>Source</h2></div>
+      <p class="big">2293<span> lines</span></p>
+      <ul>
+        <li><span>Modules</span><b>7 .mjs</b></li>
+        <li><span>Build check</span><code>node --check</code></li>
+        <li><span>Dependencies</span><b>0 runtime</b></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-dot"></div><h2>Tests code</h2></div>
+      <p class="big">641<span> lines</span></p>
+      <ul>
+        <li><span>Files</span><b>4</b></li>
+        <li><span>Runner</span><code>node --test</code></li>
+        <li><span>Framework</span><b>none</b></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-dot"></div><h2>Commands</h2></div>
+      <p class="big">45<span> slash</span></p>
+      <ul>
+        <li><span>Agent</span><code>/model /plan /review</code></li>
+        <li><span>Session</span><code>/resume /memory</code></li>
+        <li><span>Workspace</span><code>/diff /patch /tool</code></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-dot"></div><h2>Binaries</h2></div>
+      <p class="big">2<span> names</span></p>
+      <ul>
+        <li><span>Primary</span><code>vallenemperor</code></li>
+        <li><span>Alias</span><code>vallenemperorcli</code></li>
+        <li><span>Entry</span><code>src/cli.mjs</code></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-dot ok"></div><h2>Coverage areas</h2></div>
+      <p class="big">6<span> groups</span></p>
+      <ul>
+        <li><span>Agent turn</span><b>drives real core</b></li>
+        <li><span>Approval</span><b>deny keeps deny</b></li>
+        <li><span>Security</span><b>token no echo</b></li>
+      </ul>
+    </div>
+
+    <div class="card wide">
+      <div class="card-head"><div class="card-dot warn"></div><h2>Last run output</h2></div>
+<pre>$ <span class="g">cd vallencli &amp;&amp; npm test</span>
+✔ VallenCLI drives real AIAgent.runTurn with deterministic in-process provider
+✔ CLI waits for explicit approval answer before continuing agent turn
+✔ CLI refuses inline API tokens because terminal input may echo secrets
+✔ CLI shuts the agent down on exit so MCP child processes do not leak
+✔ status line stays within terminal width when model and workspace path are long
+✔ markdown table and code render without overflow
+
+i tests 45   i pass 45   i fail 0   i duration_ms 2430.6</pre>
+    </div>
+  </div>
+
+  <footer>
+    <span>generated by vallen · plain html, zero dependencies</span>
+    <span><a href="hello.html">← hello.html</a></span>
+  </footer>
+</div>
+</body>
+</html>

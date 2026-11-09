@@ -1,0 +1,61 @@
+node_modules/
+dist/
+out/
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Local config & credentials
+*.local
+.env
+*.env
+*.token
+.vallenemperor/config.json
+.vallenemperor/memories/
+.vallenemperor/sessions/
+.vallenemperor/gateway/
+.vallenemperor/logs/
+.vallenemperor/checkpoints/
+.vallenemperor/skills_hub/
+.vallenemperor/cli_history
+.vallenemperor/cli_theme
+.vallenemperor/skill-stats.json
+.vallenemperor/session-search.sqlite*
+.vallenemperor/review-log.json
+.vallenemperor/**/session/
+*.session
+refrensi*/
+update.bat
+
+# Dev/build reports local (nothing to publish)
+FIX_REPORT.md
+FIX_REPORT.md.local-*
+bugs/
+*.report.md
+
+# Local app (separate product, own repo)
+vallenprd/
+vallenprd/node_modules/
+vallenprd/dist/
+
+# Hermes reference checkout (read-only study copy, never published)
+hermes-agent-main/
+
+# Skills hub cache (regenerated on demand)
+.vallenemperor/skills/index-cache/
+
+# Temp
+.cache/
+tmp/
+*.bak
+*.orig.*
+*.corrupt-*
+
+.vallenemperor/escaped/
+
+# Local git helper (reads token from .env; never published)
+update.sh

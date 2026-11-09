@@ -1,0 +1,23 @@
+{
+  "name": "vallenemperor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Autonomous AI Agent Core & CLI",
+  "workspaces": [
+    "vallenagent",
+    "vallencli"
+  ],
+  "scripts": {
+    "build": "npm -w vallenagent run build && npm -w vallencli run build",
+    "typecheck": "npm -w vallenagent run typecheck",
+    "cli": "npm -w vallenagent run build && npm -w vallencli run start",
+    "test": "NO_COLOR=1 npm -w vallenagent run test && NO_COLOR=1 npm -w vallencli run test"
+  },
+  "keywords": [
+    "ai-agent",
+    "cli",
+    "autonomous-agent"
+  ],
+  "author": "vallenganteng",
+  "license": "MIT"
+}
