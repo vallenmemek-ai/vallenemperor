@@ -234,7 +234,9 @@ export function registerFileTools(): void {
           content: keptLines.join('\n'),
           total_lines: allLines.length,
           offset,
-          limit
+          limit,
+          // Lets the agent pass expected_hash to patch and detect a concurrent edit.
+          sha256: createHash('sha256').update(fileContent).digest('hex')
         }
 
         if (truncated) {
@@ -356,7 +358,8 @@ export function registerFileTools(): void {
         path: { type: 'string', description: 'File path to edit' },
         old_string: { type: 'string', description: 'Exact text to find and replace. Must be unique unless replace_all=true.' },
         new_string: { type: 'string', description: 'Changed replacement text' },
-        replace_all: { type: 'boolean', description: 'Replace all occurrences instead of requiring a unique match (default: false)' }
+        replace_all: { type: 'boolean', description: 'Replace all occurrences instead of requiring a unique match (default: false)' },
+        expected_hash: { type: 'string', description: 'Optional sha256 returned by read_file. When set, the patch is refused if the file changed since that read — use it when another agent may edit the same file.' }
       },
       required: ['path', 'old_string', 'new_string']
     }
@@ -382,6 +385,17 @@ export function registerFileTools(): void {
         const bytes = readFileSync(fullPath)
         if (bytes.includes(0)) return JSON.stringify({ error: 'Cannot patch binary file' })
         const content = bytes.toString('utf-8')
+        const expectedHash = typeof args.expected_hash === 'string' ? args.expected_hash.trim().toLowerCase() : ''
+        if (expectedHash) {
+          const actualHash = createHash('sha256').update(content).digest('hex')
+          if (actualHash !== expectedHash) {
+            return JSON.stringify({
+              error: 'File changed since read: expected_hash does not match. Read the file again and retry.',
+              expected_hash: expectedHash,
+              actual_hash: actualHash
+            })
+          }
+        }
         const readStatus = fileReadStatus(context, fullPath, content)
         if (readStatus === 'unread') return JSON.stringify({ error: 'Refusing to patch existing file: read it with read_file first.' })
         if (readStatus === 'stale') return JSON.stringify({ error: 'File changed since read_file; read the current version again before patching.' })
@@ -791,3 +805,86 @@ function applyPatchBatch(files: any, baseDir: string, context: ToolContext): Rec
     return { error: err.message || 'Batch patch failed; no files were changed.' }
   }
 }
+
+/**
+ * `list_dir` — structured directory listing so the agent does not have to shell out
+ * to `ls`/`find` just to orient itself. Read-only and parallel-safe.
+ */
+export function registerListTools(): void {
+  const schema: ToolSchema = {
+    name: 'list_dir',
+    description: "List a directory (directories first, then files) without a shell. Optional glob filter, optional recursion with a depth cap. Hidden entries are included unless include_hidden=false.",
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Directory (or single file) to list (default: current working directory)', default: '.' },
+        pattern: { type: 'string', description: "Glob filter applied to entry names, e.g. '*.ts'" },
+        recursive: { type: 'boolean', description: 'Walk subdirectories (default: false)', default: false },
+        depth: { type: 'integer', description: 'Maximum recursion depth (default: 2)', default: 2 },
+        include_hidden: { type: 'boolean', description: 'Include entries starting with a dot (default: true)', default: true },
+        limit: { type: 'integer', description: 'Maximum entries to return (default: 200)', default: 200 }
+      },
+      required: []
+    }
+  }
+
+  registry.register({
+    name: 'list_dir',
+    schema,
+    toolset: 'file',
+    parallelSafe: true,
+    handler: async (args, context) => {
+      const basePath = context.workingDir || process.cwd()
+      let rawPath = String(args.path || '.')
+      if (rawPath.startsWith('~/')) rawPath = join(homedir(), rawPath.slice(2))
+      const target = isAbsolute(rawPath) ? rawPath : resolve(basePath, rawPath)
+      const limit = Math.max(1, Math.min(1000, Number(args.limit) || 200))
+      const maxDepth = Math.max(0, Math.min(8, Number(args.depth) || 2))
+      const includeHidden = args.include_hidden !== false
+      const pattern = typeof args.pattern === 'string' && args.pattern.trim() ? globToRegex(args.pattern.trim()) : null
+      const skipDirs = ['.git', 'node_modules', 'dist', 'build', '.next']
+
+      let stats
+      try { stats = statSync(target) } catch { return JSON.stringify({ error: `Path not found: ${rawPath}` }) }
+
+      type Entry = { name: string; path: string; type: 'file' | 'dir'; size?: number }
+      const entries: Entry[] = []
+      let truncated = false
+
+      const accept = (name: string) => (includeHidden || !name.startsWith('.')) && (!pattern || pattern.test(name))
+      const push = (full: string, name: string, type: 'file' | 'dir', size?: number) => {
+        if (entries.length >= limit) { truncated = true; return }
+        entries.push({ name, path: full, type, ...(size === undefined ? {} : { size }) })
+      }
+
+      const walk = (dir: string, depth: number) => {
+        if (entries.length >= limit) { truncated = true; return }
+        let names: string[]
+        try { names = readdirSync(dir) } catch { return }
+        for (const name of names.sort()) {
+          if (entries.length >= limit) { truncated = true; return }
+          const full = join(dir, name)
+          let info
+          try { info = lstatSync(full) } catch { continue }
+          const isDir = info.isDirectory()
+          if (isDir && skipDirs.includes(name)) continue
+          if (!accept(name)) continue
+          push(full, name, isDir ? 'dir' : 'file', isDir ? undefined : info.size)
+          if (isDir && args.recursive === true && depth < maxDepth) walk(full, depth + 1)
+        }
+      }
+
+      if (stats.isFile()) {
+        const name = basename(target)
+        if (accept(name)) push(target, name, 'file', stats.size)
+      } else {
+        walk(target, 0)
+      }
+
+      // Directories first, then files, each alphabetically — stable for diffing.
+      entries.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'dir' ? -1 : 1))
+      return JSON.stringify({ path: target, entries, total: entries.length, truncated })
+    }
+  })
+}
+

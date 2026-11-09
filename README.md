@@ -102,6 +102,10 @@ vallenemperor --resume session-1794163801765
 
 # per-run overrides
 vallenemperor --model gpt-4o-mini --approval dangerous
+
+# machine-readable telemetry / clean output for scripts
+vallenemperor --json -p "/stats"
+vallenemperor --quiet
 ```
 
 One-shot runs have nobody to answer an approval prompt, so a risky tool call is

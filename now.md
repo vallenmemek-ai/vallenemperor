@@ -1,7 +1,7 @@
 # now.md — status pekerjaan
 
-Terakhir diperbarui: `2026-11-09T15:40Z` · HEAD `b369fb3` · rilis publik `vallenemperor@999.999.999`
-(versi publik itu **belum** memuat perbaikan one-shot di bagian 3)
+Terakhir diperbarui: `2026-11-09T16:05Z` · HEAD setelah commit "P1/P2 telemetry & tool surface"
+· rilis publik `vallenemperor@999.999.999` (versi publik itu **belum** memuat bagian 3 & 4)
 
 Cara baca: `[x]` = selesai **dan sudah diuji**, `[ ]` = belum. Jangan centang tanpa bukti
 perintah yang benar-benar dijalankan — itu aturan mainnya.
@@ -116,19 +116,33 @@ Koreksi: klaim sebelumnya bahwa `999.999.999` adalah versi tertinggi semver itu 
 
 ---
 
-## 4. Sisa backlog
+## 4. Telemetry & permukaan tool — selesai
 
 ### P1
-- [ ] `--json` / `--format` untuk `/stats` dan `/context` (telemetry machine-readable).
-- [ ] `--quiet` / `--no-banner` untuk mode interaktif.
+- [x] **`--json`** untuk telemetry. `core.contextTelemetry(agent)` jadi satu sumber data;
+      `--json -p "/stats"` mencetak satu objek JSON stabil (session, model, token, persen,
+      turns, skills). Command lain dibungkus `{command, handled, response}`.
+- [x] **`--quiet` / `--no-banner`.** Startup box + health probe + status line non-interaktif
+      semuanya dilewati. Diverifikasi: `printf '/exit\n' | vallenemperor --quiet` → output kosong.
 
-### P2 — permukaan tool (POV agent)
-- [ ] `list_dir` + `glob` (pengganti `ls`/`find` yang aman & ter-parse)
+### P2 — permukaan tool
+- [x] **`list_dir`** (tool baru, total tool 28 → 30). Daftar direktori terstruktur, dirs dulu,
+      filter glob, `recursive` + `depth`, `include_hidden`, `limit`. Read-only, parallel-safe.
+- [x] **`typecheck`** (tool baru). Men-dispatch `captureTypeScriptDiagnostics` yang sudah ada di
+      core tapi belum punya wrapper. Mengembalikan `ok`, `errors`, `warnings`, `files_checked`,
+      daftar diagnostik per file — tanpa shell. Kalau tidak ada `tsconfig.json`, error-nya jelas.
+- [x] **`expected_hash` di `patch`.** `read_file` sekarang mengembalikan `sha256`; `patch`
+      menolak kalau hash tidak cocok (menghentikan silent overwrite antar-agent).
+- [x] **`include_hidden` di `search_files`** — **tidak dikerjakan karena klaimnya salah.**
+      Diuji langsung: `search_files` sudah menemukan `.secret/config.txt` di mode `files`
+      maupun `content`. Jadi tidak ada filter dotfile yang perlu dibuka. Fitur
+      `include_hidden` tetap ada di `list_dir` (untuk menyembunyikan, bukan membuka).
+
+### Sisa backlog
 - [ ] `multi_edit` lintas-file (memotong N roundtrip + N full-read)
-- [ ] Wire `checkpoint`/`undo`, `typescript_diagnostics`, `cron_scheduler` sebagai tool
-- [ ] `include_hidden` di `search_files`
-- [ ] `expected_hash` opsional di `patch` (hentikan silent overwrite antar-agent)
+- [ ] Wire `checkpoint`/`undo` dan `cron_scheduler` sebagai tool
 - [ ] Pre-flight health di `tool_search` untuk tool deferred (`playwright`, jaringan, dsb)
+
 
 
 ---
@@ -140,8 +154,11 @@ Dijalankan `2026-11-09T15:35Z`, semua dari perintah nyata:
 | Uji | Perintah | Hasil |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ bersih |
-| Test suite (Node 20.19.2) | `npm test` | ✅ **247 + 69 pass, 0 fail** |
-| Test suite (Node 24.22.1) | `npx node@24.22.1 ../scripts/run-tests.mjs tests` | ✅ **247 + 69 pass, 0 fail** |
+| Test suite (Node 20.19.2) | `npm test` | ✅ **256 + 72 pass, 0 fail** |
+| Test suite (Node 24.22.1) | `npx node@24.22.1 ../scripts/run-tests.mjs tests` | ✅ **256 + 72 pass, 0 fail** |
+| Tool terdaftar | `registry.list().length` | ✅ **30** (`list_dir`, `typecheck` baru) |
+| `--json` telemetry | `vallenemperor --json -p "/stats"` | ✅ satu objek JSON, exit 0 |
+| `--quiet` | `printf '/exit\n' \| vallenemperor --quiet` | ✅ output kosong |
 | `-p` slash: `/help` | `vallenemperor -p "/help"` | ✅ help CLI asli, exit 0 |
 | `-p` slash: `/exit` | `vallenemperor -p "/exit"` | ✅ `Session ending.`, exit 0 |
 | `-p` slash: unknown | `vallenemperor -p "/zzz-not-a-command-999"` | ✅ `Unknown command`, exit 2 |

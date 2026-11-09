@@ -232,6 +232,8 @@ export async function runCli(options = {}) {
 
   function refreshStatus(activity = state.pendingApproval ? 'APPROVAL' : state.busy ? 'WORKING' : 'VALLENEMPEROR') {
     state.mcpServers = agent.mcpManager?.getStatus?.() || state.mcpServers
+    // --quiet on a non-interactive run means no status chrome at all.
+    if (options.quiet && !interactive) return
     if (state.busy) {
       showRobot(activity)
       return
@@ -568,8 +570,13 @@ export async function runCli(options = {}) {
     try { state.lastTokens = Number(agent.getContextStats?.()?.promptTokens) || state.lastTokens } catch {}
   }
 
-  out(`${startupBox(agent, bannerText, await healthCheck(agent, state.mcpServers), output.columns || 80, { fancy: interactive && supportsAnsi, compact: compactUi })}\n`)
-  if (interactive) { if (!compactUi) out(`${formatTip()}\n`); if (supportsAnsi) output.write('\x1b[22;0t'); setTitle('VallenEmperor') }
+  // --quiet/--no-banner: skip the startup box (and its network health probe) so
+  // scripted or embedded runs get clean output.
+  if (!options.quiet) {
+    out(`${startupBox(agent, bannerText, await healthCheck(agent, state.mcpServers), output.columns || 80, { fancy: interactive && supportsAnsi, compact: compactUi })}\n`)
+    if (interactive && !compactUi) out(`${formatTip()}\n`)
+  }
+  if (interactive) { if (supportsAnsi) output.write('\x1b[22;0t'); setTitle('VallenEmperor') }
   state.started = true
   if (interactive) {
     // readline reads from a proxy so the dropdown keys (Tab/arrows/Esc/Enter) and bracketed paste can be handled first.
@@ -792,11 +799,13 @@ function parseConfigArgs(args) {
  *   --model <name>                   → model override for this run
  */
 export function parseArgs(argv) {
-  const result = { mode: 'run', prompt: null, resumeId: null, approval: null, model: null, error: null }
+  const result = { mode: 'run', prompt: null, resumeId: null, approval: null, model: null, json: false, quiet: false, error: null }
   for (let index = 0; index < argv.length; index++) {
     const arg = String(argv[index])
     if (arg === '--help' || arg === '-h') return { ...result, mode: 'help' }
     if (arg === '--version' || arg === '-v' || arg === '-versi') return { ...result, mode: 'version' }
+    if (arg === '--json') { result.json = true; continue }
+    if (arg === '--quiet' || arg === '--no-banner') { result.quiet = true; continue }
     if (arg === '-p' || arg === '--prompt') {
       const value = argv[index + 1]
       if (!value || String(value).startsWith('-')) return { ...result, mode: 'error', error: `${arg} needs a prompt value. See --help.` }
@@ -943,8 +952,19 @@ export async function runOneShotCommand(core, agent, text, io = {}) {
   const err = io.err || process.stderr
   const line = String(text || '').trim()
   const cmd = line.split(/\s+/, 1)[0].toLowerCase()
-  if (cmd === '/exit' || cmd === '/quit') { out.write('Session ending.\n'); return 0 }
-  if (cmd === '/help') { out.write(`${HELP}\n`); return 0 }
+  if (cmd === '/exit' || cmd === '/quit') {
+    out.write(io.json ? `${JSON.stringify({ command: cmd, handled: true, exiting: true })}\n` : 'Session ending.\n')
+    return 0
+  }
+  if (cmd === '/help') {
+    out.write(io.json ? `${JSON.stringify({ command: cmd, handled: true, help: HELP })}\n` : `${HELP}\n`)
+    return 0
+  }
+  // Telemetry is the one thing scripts need in a stable shape.
+  if (io.json && ['/stats', '/status', '/context'].includes(cmd)) {
+    const telemetry = core.contextTelemetry?.(agent)
+    if (telemetry) { out.write(`${JSON.stringify(telemetry)}\n`); return 0 }
+  }
   let shared
   try {
     shared = await core.handleCommand?.({ channel: 'terminal', agent }, line)
@@ -953,7 +973,8 @@ export async function runOneShotCommand(core, agent, text, io = {}) {
     return 1
   }
   if (shared?.handled) {
-    out.write(`${String(shared.response || '').trim()}\n`)
+    const response = String(shared.response || '').trim()
+    out.write(io.json ? `${JSON.stringify({ command: cmd, handled: true, response })}\n` : `${response}\n`)
     return 0
   }
   err.write(`Unknown command: ${cmd}. Use --help.\n`)
@@ -1015,7 +1036,7 @@ export async function main(argv = process.argv.slice(2)) {
       const agent = createAgent({})
       try {
         // Slash input must never reach the model: it used to answer as if it were the CLI.
-        if (isSlashCommandLine(parsed.prompt)) return await runOneShotCommand(core, agent, parsed.prompt)
+        if (isSlashCommandLine(parsed.prompt)) return await runOneShotCommand(core, agent, parsed.prompt, { json: parsed.json })
         const { result, denied } = await runOneShot(agent, parsed.prompt, { core })
         // A blocked tool means the requested work did not happen; report that to the shell.
         if (denied.length) return 1
@@ -1028,6 +1049,7 @@ export async function main(argv = process.argv.slice(2)) {
     const result = await runCli({
       core,
       createAgent,
+      quiet: parsed.quiet,
       resumeSessionId: parsed.mode === 'resume' ? parsed.resumeId : null,
       resumeLatest: parsed.mode === 'resume' && !parsed.resumeId
     })

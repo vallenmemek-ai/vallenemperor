@@ -11,6 +11,52 @@ export { formatMcpStatus, formatMcpReconnect } from './commands/mcp'
 import { CronStore } from './cron_scheduler'
 import { ReviewLogStore } from '../skills/skill_history'
 
+/**
+ * Machine-readable telemetry for `/stats`, `/context` and `vallenemperor --json`.
+ * The text renderers stay as they are; this is the single source both read from.
+ */
+export interface ContextTelemetry {
+  session_id: string
+  model: string
+  provider: string
+  base_url: string
+  working_dir: string
+  prompt_tokens: number
+  context_window: number
+  percent: number
+  estimated: boolean
+  messages: number
+  turns: number
+  system_prompt_tokens: number
+  history_tokens: number
+  session_prompt_total: number
+  session_completion_total: number
+  skills: number
+}
+
+export function contextTelemetry(agent: AIAgent): ContextTelemetry {
+  const stats = agent.getContextStats()
+  const providerName = String(agent.config?.providers?.active || '')
+  return {
+    session_id: agent.getSessionId(),
+    model: String(agent.provider?.model || ''),
+    provider: providerName,
+    base_url: String(agent.provider?.baseURL || ''),
+    working_dir: String(agent.config?.terminal?.cwd || process.cwd()),
+    prompt_tokens: stats.promptTokens,
+    context_window: stats.contextWindow,
+    percent: stats.percent,
+    estimated: Boolean(stats.estimated),
+    messages: stats.messages,
+    turns: stats.turns,
+    system_prompt_tokens: stats.systemPromptTokens,
+    history_tokens: stats.historyTokens,
+    session_prompt_total: stats.sessionPromptTotal,
+    session_completion_total: stats.sessionCompletionTotal,
+    skills: agent.skillLoader?.list?.().length || 0
+  }
+}
+
 export interface CommandContext {
   channel: 'terminal' | 'remote'
   agent: AIAgent

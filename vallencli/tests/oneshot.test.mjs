@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { applyRuntimeOverrides, createOneShotApproval, isSlashCommandLine, runOneShotCommand } from '../src/cli.mjs'
+import { applyRuntimeOverrides, createOneShotApproval, isSlashCommandLine, parseArgs, runOneShotCommand } from '../src/cli.mjs'
 
 function sink() {
   const chunks = []
@@ -127,4 +127,35 @@ test('applyRuntimeOverrides leaves the config alone when no flags are given', ()
   applyRuntimeOverrides(config, { approval: null, model: null })
   assert.equal(config.agentApproval, 'off')
   assert.equal(config.providers.p.model, 'keep')
+})
+
+test('--json and --quiet are parsed and default to off', () => {
+  assert.equal(parseArgs([]).json, false)
+  assert.equal(parseArgs([]).quiet, false)
+  assert.equal(parseArgs(['--json']).json, true)
+  assert.equal(parseArgs(['--quiet']).quiet, true)
+  assert.equal(parseArgs(['--no-banner']).quiet, true)
+  assert.equal(parseArgs(['--json', '-p', 'hi']).mode, 'prompt')
+})
+
+test('--json prints telemetry as one JSON object for /stats', async () => {
+  const out = sink()
+  const core = fakeCore()
+  core.contextTelemetry = () => ({ session_id: 's1', model: 'm', prompt_tokens: 10, context_window: 100, percent: 10 })
+  const code = await runOneShotCommand(core, fakeAgent, '/stats', { out, err: sink(), json: true })
+  assert.equal(code, 0)
+  const parsed = JSON.parse(out.text())
+  assert.equal(parsed.session_id, 's1')
+  assert.equal(parsed.percent, 10)
+})
+
+test('--json wraps other command results in an envelope', async () => {
+  const out = sink()
+  const core = fakeCore({ handled: { handled: true, response: 'plain text answer' } })
+  const code = await runOneShotCommand(core, fakeAgent, '/model', { out, err: sink(), json: true })
+  assert.equal(code, 0)
+  const parsed = JSON.parse(out.text())
+  assert.equal(parsed.command, '/model')
+  assert.equal(parsed.handled, true)
+  assert.equal(parsed.response, 'plain text answer')
 })

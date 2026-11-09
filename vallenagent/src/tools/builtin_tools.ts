@@ -6,7 +6,8 @@ import { MemoryStore } from '../memory/memory'
 import { TodoStore } from '../session/todo'
 import { registerStateTools } from './builtin_tools/state_tools'
 import { registerSessionTools } from './builtin_tools/session_tools'
-import { registerFileTools, registerPatchTools } from './builtin_tools/file_tools'
+import { registerFileTools, registerPatchTools, registerListTools } from './builtin_tools/file_tools'
+import { registerDiagnosticsTools } from './builtin_tools/diagnostics_tools'
 import { registerTerminalTools } from './builtin_tools/terminal_tools'
 import { registerSkillsTools } from './builtin_tools/skills_tools'
 import { registerMediaTools } from './builtin_tools/media_tools'
@@ -33,6 +34,10 @@ export function registerBuiltinTools(
   const todo = todoStore || new TodoStore()
 
   registerFileTools()
+
+  registerListTools()
+
+  registerDiagnosticsTools()
 
   registerSessionTools()
 
