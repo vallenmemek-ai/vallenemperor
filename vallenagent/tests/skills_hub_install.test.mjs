@@ -62,7 +62,7 @@ test('installFromQuarantine installs files and records a lock entry', () => {
   assert.ok(installed.some(entry => entry.name === 'demo-skill'))
   const lockFile = join(home, 'skills_hub', '.lock.json')
   assert.ok(existsSync(lockFile))
-  assert.equal(statSync(lockFile).mode & 0o777, 0o600, 'lock file is owner-only')
+  if (process.platform !== 'win32') assert.equal(statSync(lockFile).mode & 0o777, 0o600, 'lock file is owner-only')
 })
 
 test('installing the same skill twice requires an explicit overwrite', () => {

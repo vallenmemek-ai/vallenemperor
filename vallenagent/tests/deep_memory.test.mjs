@@ -136,8 +136,11 @@ test('the memory file is written owner-only with no temp file left behind', t =>
 
   const dir = join(home, 'memories')
   const file = join(dir, 'DEEP_MEMORY.json')
-  assert.equal(statSync(dir).mode & 0o777, 0o700)
-  assert.equal(statSync(file).mode & 0o777, 0o600)
+  // Windows has no POSIX permission bits; the values below are meaningless there.
+  if (process.platform !== 'win32') {
+    assert.equal(statSync(dir).mode & 0o777, 0o700)
+    assert.equal(statSync(file).mode & 0o777, 0o600)
+  }
   assert.deepEqual(readdirSync(dir).filter(name => name.endsWith('.tmp')), [])
   const parsed = JSON.parse(readFileSync(file, 'utf8'))
   assert.equal(parsed.entries.length, 1)

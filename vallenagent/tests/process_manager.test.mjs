@@ -1,12 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { startBackgroundProcess, manageProcess } from '../dist/core/process_manager.js'
 
 const cwd = process.cwd()
+// `sleep` does not exist on Windows, so every long-running process here is a
+// node script instead. Quoted so a space in process.execPath still works.
+const sleepDir = mkdtempSync(join(tmpdir(), 'vallen-sleeper-'))
+const sleepScript = join(sleepDir, 'sleeper.mjs')
+writeFileSync(sleepScript, 'setTimeout(() => {}, 30000)\n')
+const LONG_RUNNING = `"${process.execPath}" "${sleepScript}"`
 
 test('a background process from another session is visible, not silently hidden', async () => {
-  const started = startBackgroundProcess('sleep 30', cwd, 'session-a')
+  const started = startBackgroundProcess(LONG_RUNNING, cwd, 'session-a')
   assert.ok(started.session_id, JSON.stringify(started))
 
   const listed = await manageProcess({ action: 'list' }, 'session-b')
@@ -19,7 +28,7 @@ test('a background process from another session is visible, not silently hidden'
 })
 
 test('killing another session process requires explicit confirmation', async () => {
-  const started = startBackgroundProcess('sleep 30', cwd, 'session-a')
+  const started = startBackgroundProcess(LONG_RUNNING, cwd, 'session-a')
 
   const refused = await manageProcess({ action: 'kill', session_id: started.session_id }, 'session-b')
   assert.match(String(refused.error), /belongs to session session-a/)
@@ -35,7 +44,7 @@ test('killing another session process requires explicit confirmation', async () 
 })
 
 test('a session still polls, waits for, and kills its own processes', async () => {
-  const started = startBackgroundProcess('sleep 30', cwd, 'session-own')
+  const started = startBackgroundProcess(LONG_RUNNING, cwd, 'session-own')
 
   const polled = await manageProcess({ action: 'poll', session_id: started.session_id }, 'session-own')
   assert.equal(polled.running, true)

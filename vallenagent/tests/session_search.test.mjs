@@ -104,5 +104,5 @@ test('ensureSessionDir creates the directory with owner-only permissions', t => 
   const home = tempHome(t)
   const dir = join(home, 'nested', 'sessions')
   assert.equal(ensureSessionDir(dir), dir)
-  assert.equal(statSync(dir).mode & 0o777, 0o700)
+  if (process.platform !== 'win32') assert.equal(statSync(dir).mode & 0o777, 0o700)
 })
