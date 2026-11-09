@@ -6,6 +6,7 @@ import { registry, ToolSchema } from '../tools'
 import { getVallenHome } from '../../core/config'
 import { browserProfilePath, browserSessionBootstrap } from '../../core/browser_sessions'
 import { truncateOutput } from './tool_output'
+import { SUPPORTS_PROCESS_GROUPS, killTree, resolvePython } from '../../core/platform'
 
 export function registerBrowserTools(): void {
   // 13. browser_exec
@@ -43,6 +44,8 @@ export function registerBrowserTools(): void {
       }
       const workdir = context.workingDir || process.cwd()
       const timeout = (Number(args.timeout_s) || 300) * 1000
+      const python = resolvePython()
+      if (!python) return JSON.stringify({ exit_code: 127, output: '', error: 'Python interpreter not found (tried py -3, python3, python).' })
 
       return new Promise<string>((resolveResult) => {
         let child: any = null
@@ -50,13 +53,13 @@ export function registerBrowserTools(): void {
         let settled = false
         let timedOut = false
         let timeoutTimer: NodeJS.Timeout | undefined
-        const abortChild = () => { try { if (child?.pid) process.kill(-child.pid, 'SIGKILL') } catch { try { child?.kill?.('SIGKILL') } catch {} } }
-        const argsList = ['-c', code]
+        const abortChild = () => { killTree(child?.pid, 'SIGKILL') }
+        const argsList = [...python.args, '-c', code]
         if (Buffer.byteLength(code) > 100_000) {
           try {
             tempDir = mkdtempSync(join(tmpdir(), 'vallenemperor-browser-'))
             writeFileSync(join(tempDir, 'script.py'), code, { mode: 0o600 })
-            argsList.splice(0, argsList.length, join(tempDir, 'script.py'))
+            argsList.splice(python.args.length, argsList.length, join(tempDir, 'script.py'))
           } catch (err: any) {
             return resolveResult(JSON.stringify({ exit_code: 1, output: '', error: `Could not stage code: ${err.message}` }))
           }
@@ -82,7 +85,7 @@ export function registerBrowserTools(): void {
           }
           if (chunk.length > available && !bufferExceeded) { bufferExceeded = true; abortChild() }
         }
-        child = spawn('python3', argsList, { cwd: workdir, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+        child = spawn(python.command, argsList, { cwd: workdir, env, detached: SUPPORTS_PROCESS_GROUPS, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
         child.stdout.on('data', collect(stdoutParts))
         child.stderr.on('data', collect(stderrParts))
         child.on('close', (code: number | null, closeSignal: string | null) => {

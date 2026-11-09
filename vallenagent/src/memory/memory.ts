@@ -1,7 +1,8 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync, renameSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'fs'
 import { join, resolve } from 'path'
 import { createHash } from 'crypto'
 import { getVallenHome } from '../core/config'
+import { chmodSafe } from '../core/platform'
 
 export interface MemoryOperation {
   action: 'add' | 'replace' | 'remove'
@@ -46,13 +47,13 @@ export class MemoryStore {
 
   private ensureDir(): void {
     if (!existsSync(this.baseDir)) mkdirSync(this.baseDir, { recursive: true, mode: 0o700 })
-    chmodSync(this.baseDir, 0o700)
+    chmodSafe(this.baseDir, 0o700)
     if (!this.scoped) return
     const projectsDir = join(this.baseDir, 'projects')
     if (!existsSync(projectsDir)) mkdirSync(projectsDir, { recursive: true, mode: 0o700 })
     if (!existsSync(this.projectDir)) mkdirSync(this.projectDir, { recursive: true, mode: 0o700 })
-    chmodSync(projectsDir, 0o700)
-    chmodSync(this.projectDir, 0o700)
+    chmodSafe(projectsDir, 0o700)
+    chmodSafe(this.projectDir, 0o700)
   }
 
   private getFilePath(target: 'memory' | 'user'): string {
@@ -102,7 +103,7 @@ export class MemoryStore {
       this.ensureDir()
       const temp = `${file}.${process.pid}.${Date.now()}.tmp`
       writeFileSync(temp, joined, { encoding: 'utf-8', mode: 0o600, flag: 'wx' })
-      chmodSync(temp, 0o600)
+      chmodSafe(temp, 0o600)
       renameSync(temp, file)
       return { success: true, chars: joined.length, limit }
     } catch (err: any) {

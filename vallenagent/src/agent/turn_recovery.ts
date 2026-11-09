@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
+import { getVallenHome } from '../core/config'
 
 /**
  * Turn recovery — bikin turn panjang bisa lanjut setelah error provider di tengah jalan.
@@ -139,6 +140,6 @@ export function progressFromHistory(messages: Array<{ role?: string; content?: s
 
 export function defaultCheckpointDir(sessionDir?: string, home?: string): string {
   if (sessionDir) return dirname(join(sessionDir, 'x'))
-  const base = home || process.env.VALLENEMPEROR_HOME || join(process.env.HOME || '.', '.vallenemperor')
+  const base = home || getVallenHome()
   return join(base, 'sessions')
 }

@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
-import { existsSync } from 'fs'
 import { spawn, ChildProcess } from 'child_process'
+import { SUPPORTS_PROCESS_GROUPS, killTree, pipelineStatusReliable, resolveShell } from './platform'
 
 const MAX_OUTPUT = 1024 * 1024
 const MAX_PROCESSES = 100
@@ -31,13 +31,17 @@ export function startBackgroundProcess(command: string, cwd: string, owner: stri
   }
   if (processes.size >= MAX_PROCESSES) return { error: 'Process limit reached; stop or wait for a process first.' }
 
+  const shellSpec = resolveShell()
+  if (!shellSpec) return { error: 'No usable shell found on this host; install bash or sh.' }
   const hasPipeline = /(?:^|[^|])\|(?!\|)/.test(command)
-  const shell = existsSync('/bin/bash') ? '/bin/bash' : '/bin/sh'
-  if (hasPipeline && shell !== '/bin/bash') return { error: 'Pipeline status cannot be verified without Bash; command was not run.' }
-  const shellArgs = shell === '/bin/bash' ? ['--noprofile', '--norc', '-o', 'pipefail', '-c', command] : ['-c', command]
+  if (hasPipeline && !pipelineStatusReliable(shellSpec)) {
+    return { error: `Pipeline status cannot be verified with ${shellSpec.label}; command was not run.` }
+  }
   let child: ChildProcess
   try {
-    child = spawn(shell, shellArgs, { cwd, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+    child = spawn(shellSpec.file, shellSpec.argv(command), {
+      cwd, detached: SUPPORTS_PROCESS_GROUPS, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe']
+    })
   } catch (err: any) {
     return { error: err.message || 'Failed to start process' }
   }
@@ -101,9 +105,7 @@ export async function manageProcess(args: Record<string, any>, owner: string): P
       }
     }
     if (found.running && found.pid) {
-      try { process.kill(-found.pid, 'SIGTERM') } catch (err: any) {
-        if (err.code !== 'ESRCH') return { error: err.message || 'Failed to stop process' }
-      }
+      if (!killTree(found.pid, 'SIGTERM')) return { error: 'Failed to stop process' }
     }
     return { success: true, ...snapshot(found, owner) }
   }

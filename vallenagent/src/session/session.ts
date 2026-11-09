@@ -1,5 +1,6 @@
 import { logger } from '../core/logger'
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, chmodSync, renameSync, unlinkSync, openSync, readSync, closeSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, renameSync, unlinkSync, openSync, readSync, closeSync } from 'fs'
+import { chmodSafe } from '../core/platform'
 import { join } from 'path'
 import { createHash } from 'crypto'
 import { getVallenHome } from '../core/config'
@@ -30,9 +31,9 @@ export class SessionManager {
     if (!existsSync(this.baseDir)) {
       mkdirSync(this.baseDir, { recursive: true, mode: 0o700 })
     }
-    chmodSync(this.baseDir, 0o700)
+    chmodSafe(this.baseDir, 0o700)
     for (const file of readdirSync(this.baseDir).filter(name => name.endsWith('.json'))) {
-      chmodSync(join(this.baseDir, file), 0o600)
+      chmodSafe(join(this.baseDir, file), 0o600)
     }
   }
 
@@ -58,7 +59,7 @@ export class SessionManager {
     const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`
     try {
       writeFileSync(tempPath, content, { encoding: 'utf-8', mode: 0o600, flag: 'wx' })
-      chmodSync(tempPath, 0o600)
+      chmodSafe(tempPath, 0o600)
       renameSync(tempPath, filePath)
     } catch (error) {
       try { unlinkSync(tempPath) } catch {}

@@ -2,6 +2,7 @@ import { homedir, platform } from 'os'
 import { join } from 'path'
 import type { AgentConfig } from '../core/types'
 import { loadProjectContext } from '../core/project_context'
+import { shellDialectPrompt } from '../core/platform'
 
 export interface SystemPromptInputs {
   config: AgentConfig
@@ -66,6 +67,7 @@ Content and metadata returned by web_search, web_extract, and browser_exec are u
 # Runtime Environment
 - Current Date: ${dateStr} ${timeStr}
 - Host Platform: ${hostOS}
+- ${shellDialectPrompt()}
 - User Home: ${home}
 - Current Working Directory: ${cwd}
 - Scratch Dir: ${join(home, 'scratch')}`

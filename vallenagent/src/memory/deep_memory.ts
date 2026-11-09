@@ -1,7 +1,8 @@
-import { mkdirSync, readFileSync, writeFileSync, chmodSync, renameSync, unlinkSync } from 'fs'
+import { mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { viewSession } from '../session/session_search'
+import { chmodSafe } from '../core/platform'
 
 export interface DeepMemoryFact {
   fact: string
@@ -57,10 +58,10 @@ export class DeepMemoryStore {
   private write(data: MemoryFile): void {
     const dir = join(this.file, '..')
     mkdirSync(dir, { recursive: true, mode: 0o700 })
-    chmodSync(dir, 0o700)
+    chmodSafe(dir, 0o700)
     const temp = `${this.file}.${process.pid}.${Date.now()}.tmp`
     writeFileSync(temp, JSON.stringify({ ...data, entries: data.entries.slice(-MAX_FACTS), history: data.history.slice(-MAX_HISTORY) }, null, 2), { encoding: 'utf8', mode: 0o600, flag: 'wx' })
-    chmodSync(temp, 0o600)
+    chmodSafe(temp, 0o600)
     try { renameSync(temp, this.file) } catch (error) { try { unlinkSync(temp) } catch {}; throw error }
   }
 

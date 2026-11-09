@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { createInterface } from 'node:readline'
-import { spawn, spawnSync } from 'node:child_process'
+import { createInterface, emitKeypressEvents } from 'node:readline'
+import { spawn } from 'node:child_process'
 import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync } from 'node:fs'
 import { homedir, platform } from 'node:os'
 import { PassThrough } from 'node:stream'
@@ -17,9 +17,11 @@ export { HELP, collectHealthChecks, chatBoxRedrawSequence, formatChatBox, format
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const CORE_PATH = join(ROOT, 'vallenagent', 'dist', 'index.js')
+// VALLEN_ASCII=1 (or a legacy Windows console) swaps box glyphs for plain ASCII.
+let ASCII_MODE = process.env.VALLEN_ASCII === '1'
 function write(output, text = '') {
   const line = `${text}${text.endsWith('\n') ? '' : '\n'}`
-  output.write(process.env.VALLEN_ASCII === '1' ? toAscii(line) : line)
+  output.write(ASCII_MODE ? toAscii(line) : line)
 }
 
 function toolError(result) {
@@ -80,8 +82,14 @@ export async function runCli(options = {}) {
   const healthCheck = options.healthCheck || ((target, servers) => collectHealthChecks(target, servers, core))
   const bannerText = options.bannerText ?? (() => { try { return readFileSync(join(ROOT, 'banner.txt'), 'utf8') } catch { return '' } })()
   const sharedCommand = options.handleSharedCommand || core.handleCommand
-  const noColorMode = process.env.NO_COLOR || output.isTTY === false
-  const fixAscii = value => (process.env.VALLEN_ASCII === '1' ? toAscii(value) : value)
+  // A legacy Windows console (conhost without VT processing) prints ANSI escapes as
+  // garbage and ignores bracketed paste, so it gets plain ASCII and no colour.
+  const legacyWindowsConsole = platform() === 'win32'
+    && !process.env.WT_SESSION && !process.env.TERM_PROGRAM && !process.env.CONEMU_VERSION && !process.env.ANSICON
+  ASCII_MODE = ASCII_MODE || legacyWindowsConsole
+  const supportsAnsi = !legacyWindowsConsole
+  const noColorMode = process.env.NO_COLOR || output.isTTY === false || !supportsAnsi
+  const fixAscii = value => (ASCII_MODE ? toAscii(value) : value)
   const out = value => output.write(fixAscii(noColorMode ? stripAnsi(value) : value))
   const verboseTools = process.env.VALLEN_VERBOSE === '1'
   const interactive = Boolean(input.isTTY && output.isTTY)
@@ -91,7 +99,7 @@ export async function runCli(options = {}) {
   const home = process.env.VALLENEMPEROR_HOME || join(homedir(), '.vallenemperor')
   const historyFile = join(home, 'cli_history')
   if (interactive) { loadSavedTheme(home); refreshThemeColors() }
-  const setTitle = text => { if (interactive) output.write(`\x1b]0;${text}\x07`) }
+  const setTitle = text => { if (interactive && supportsAnsi) output.write(`\x1b]0;${text}\x07`) }
   let readerInput = input
   const loadHistory = () => {
     if (!interactive) return []
@@ -101,7 +109,7 @@ export async function runCli(options = {}) {
     if (!interactive || !line.trim() || /^\/token\b/i.test(line) || /\[Pasted text #\d+/.test(line)) return
     try { mkdirSync(home, { recursive: true }); appendFileSync(historyFile, `${line}\n`, { mode: 0o600 }) } catch {}
   }
-  const pasteMode = on => { if (interactive) output.write(on ? '\x1b[?2004h' : '\x1b[?2004l') }
+  const pasteMode = on => { if (interactive && supportsAnsi) output.write(on ? '\x1b[?2004h' : '\x1b[?2004l') }
   const resetPasteMode = () => { try { output.write('\x1b[?2004l') } catch {} }
   function lockInputEcho() {
     const rl = state.rl
@@ -425,15 +433,46 @@ export async function runCli(options = {}) {
     resumeInput()
     prompt()
   }
-  function readHiddenToken() {
+  /**
+   * Hidden token entry without `stty`: raw-mode keypresses work on Windows, macOS,
+   * Linux and Termux alike. Returns a Promise so callers await it.
+   */
+  async function readHiddenToken() {
     if (!input.isTTY || !output.isTTY) return { error: 'Hidden token entry requires an interactive terminal.' }
-    if (platform() === 'win32') return { error: 'Secure token input is not yet supported on Windows.' }
     detachReader()
-    const script = "trap 'stty echo' EXIT HUP INT TERM; stty -echo || exit 1; printf '9router API token: ' >&2; IFS= read -r token || exit 1; printf '\\n' >&2; printf '%s' \"$token\""
-    const result = spawnSync('/bin/sh', ['-c', script], { stdio: ['inherit', 'pipe', 'inherit'], encoding: 'utf8', maxBuffer: 1024 * 1024 })
-    attachReader()
-    if (result.error || result.status !== 0) return { error: `Hidden token input failed${result.error ? `: ${result.error.message}` : ''}.` }
-    return { value: result.stdout }
+    input.off('data', onInputData)
+    try {
+      return await new Promise(resolveToken => {
+        let token = ''
+        let settled = false
+        const finish = result => {
+          if (settled) return
+          settled = true
+          input.off('keypress', onKey)
+          try { input.setRawMode(false) } catch {}
+          input.pause()
+          output.write('\n')
+          resolveToken(result)
+        }
+        const onKey = (text, key = {}) => {
+          if (key.ctrl && key.name === 'c') return finish({ error: 'Token entry cancelled.' })
+          if (key.name === 'return' || key.name === 'enter' || text === '\r' || text === '\n') {
+            return finish(token ? { value: token } : { error: 'Empty token not saved.' })
+          }
+          if (key.name === 'backspace') { token = Array.from(token).slice(0, -1).join(''); return }
+          if (key.ctrl && key.name === 'u') { token = ''; return }
+          if (text && !key.ctrl && token.length + text.length <= 512) token += text
+        }
+        emitKeypressEvents(input)
+        input.setRawMode(true)
+        input.on('keypress', onKey)
+        input.resume()
+        output.write('9router API token (input hidden): ')
+      })
+    } finally {
+      input.on('data', onInputData)
+      attachReader()
+    }
   }
   function nextLine() {
     if (state.queue.length) return Promise.resolve(state.queue.shift())
@@ -529,8 +568,8 @@ export async function runCli(options = {}) {
     try { state.lastTokens = Number(agent.getContextStats?.()?.promptTokens) || state.lastTokens } catch {}
   }
 
-  out(`${startupBox(agent, bannerText, await healthCheck(agent, state.mcpServers), output.columns || 80, { fancy: interactive, compact: compactUi })}\n`)
-  if (interactive) { if (!compactUi) out(`${formatTip()}\n`); output.write('\x1b[22;0t'); setTitle('VallenEmperor') }
+  out(`${startupBox(agent, bannerText, await healthCheck(agent, state.mcpServers), output.columns || 80, { fancy: interactive && supportsAnsi, compact: compactUi })}\n`)
+  if (interactive) { if (!compactUi) out(`${formatTip()}\n`); if (supportsAnsi) output.write('\x1b[22;0t'); setTitle('VallenEmperor') }
   state.started = true
   if (interactive) {
     // readline reads from a proxy so the dropdown keys (Tab/arrows/Esc/Enter) and bracketed paste can be handled first.
@@ -627,12 +666,14 @@ export async function runCli(options = {}) {
   }
 
   async function enterShell() {
-    if (platform() === 'win32') { write(output, 'Direct shell unavailable: CLI currently supports POSIX hosts only.'); return }
+    const spec = core.interactiveShell?.() || {
+      command: process.env.SHELL || (platform() === 'win32' ? 'cmd.exe' : '/bin/sh'),
+      args: platform() === 'win32' ? [] : ['-i']
+    }
     detachReader()
-    const shell = process.env.SHELL || '/bin/sh'
-    write(output, `Entering ${shell}; type exit to return to VallenCLI.`)
+    write(output, `Entering ${spec.command}; type exit to return to VallenCLI.`)
     await new Promise(resolveShell => {
-      const child = spawn(shell, ['-i'], { cwd: agent.config?.terminal?.cwd || process.cwd(), stdio: 'inherit' })
+      const child = spawn(spec.command, spec.args, { cwd: agent.config?.terminal?.cwd || process.cwd(), stdio: 'inherit' })
       child.once('error', error => { write(output, `Shell error: ${error.message}`); resolveShell() })
       child.once('exit', (code, signal) => { write(output, `Shell closed (${signal || (code ?? 0)}).`); resolveShell() })
     })
@@ -701,7 +742,7 @@ export async function runCli(options = {}) {
       try { sessionId = agent.getSessionId?.() || '' } catch {}
       out(`\n${formatSessionSummary({ model: agent.provider?.model || '', sessionId, startedAt: state.sessionStartedAt, turns: state.turns, toolCalls: state.toolCalls, toolErrors: state.toolErrors, percent: Number(stats.percent) || 0, width: boxWidth() })}\n`)
     }
-    if (interactive) output.write('\x1b[23;0t')
+    if (interactive && supportsAnsi) output.write('\x1b[23;0t')
     // Real cleanup: closes MCP transports and child processes. The old shutdownMcp?.() call
     // never existed on AIAgent, so MCP servers were left running after the CLI exited.
     try { await agent.shutdown?.() } catch {}
@@ -866,7 +907,18 @@ export async function main(argv = process.argv.slice(2)) {
   const parsed = parseArgs(argv)
   if (parsed.mode === 'help') { console.log(HELP); return 0 }
   if (parsed.mode === 'error') { console.error(parsed.error); return 2 }
-  const { version } = JSON.parse(readFileSync(join(ROOT, 'vallencli/package.json'), 'utf8'))
+  // Version comes from the published package root; vallencli is a private workspace
+  // and its own version lags behind the release tag.
+  const version = (() => {
+    for (const candidate of [join(ROOT, 'package.json'), join(ROOT, 'vallencli', 'package.json')]) {
+      try {
+        const parsed = JSON.parse(readFileSync(candidate, 'utf8'))
+        if (parsed?.version) return String(parsed.version)
+      } catch { /* try the next candidate */ }
+    }
+    return '0.0.0'
+  })()
+
   if (parsed.mode === 'version') { console.log(`vallenemperor v${version}`); return 0 }
   if (!existsSync(CORE_PATH)) {
     console.error('VallenAgent core build missing. Run: npm -w vallenagent run build')

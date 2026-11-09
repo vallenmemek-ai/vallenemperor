@@ -1,5 +1,6 @@
 import { createHash } from 'crypto'
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, lstatSync, realpathSync, openSync, readSync, closeSync, chmodSync, unlinkSync, renameSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, lstatSync, realpathSync, openSync, readSync, closeSync, unlinkSync, renameSync } from 'fs'
+import { chmodSafe } from '../../core/platform'
 import { resolve, join, dirname, relative, isAbsolute, basename } from 'path'
 import { homedir } from 'os'
 import { parse as parseYaml } from 'yaml'
@@ -314,7 +315,7 @@ export function registerFileTools(): void {
         snapshotBeforeWrite(context, destination)
         const mode = existsSync(destination) ? statSync(destination).mode : undefined
         writeFileSync(tempPath, content, { encoding: 'utf-8', mode })
-        if (mode !== undefined) chmodSync(tempPath, mode)
+        if (mode !== undefined) chmodSafe(tempPath, mode)
         renameSync(tempPath, destination)
         const verified = readFileSync(destination, 'utf-8') === content
         if (!verified) return JSON.stringify({ error: 'Write verification failed' })
@@ -406,7 +407,7 @@ export function registerFileTools(): void {
         try {
           snapshotBeforeWrite(context, fullPath)
           writeFileSync(tempPath, result.content, { encoding: 'utf-8', mode: originalMode })
-          chmodSync(tempPath, originalMode)
+          chmodSafe(tempPath, originalMode)
           renameSync(fullPath, backupPath)
           try {
             renameSync(tempPath, fullPath)
@@ -759,7 +760,7 @@ function applyPatchBatch(files: any, baseDir: string, context: ToolContext): Rec
     for (const item of staged) {
       if (item.after === null) continue
       writeFileSync(item.temp, item.after, { encoding: 'utf8', mode: item.mode })
-      chmodSync(item.temp, item.mode)
+      chmodSafe(item.temp, item.mode)
     }
     for (const item of staged) snapshotBeforeWrite(context, item.path)
     try {

@@ -1,9 +1,10 @@
 import { logger } from './logger'
-import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync, renameSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import type { AgentConfig, ProviderConfig } from './types'
 import type { McpServerConfig } from '../mcp/types'
+import { chmodSafe } from './platform'
 
 export function validateMcpServers(value: unknown): Record<string, McpServerConfig> {
   if (value === undefined) return {}
@@ -263,7 +264,7 @@ export function saveConfig(updates: Partial<AgentConfig>): AgentConfig {
   }
 
   mkdirSync(home, { recursive: true })
-  chmodSync(home, 0o700)
+  chmodSafe(home, 0o700)
   
   // BUG-10: Write config with 0600 permissions (API keys inside)
   const existingConfig = existsSync(configPath)
@@ -284,7 +285,7 @@ export function saveConfig(updates: Partial<AgentConfig>): AgentConfig {
       throw new Error(`Refusing to overwrite corrupt config; inspect ${corruptPath} and restore or remove it first.`)
     }
     // Secure legacy config before copying secrets into backup.
-    chmodSync(configPath, 0o600)
+    chmodSafe(configPath, 0o600)
     // Backup only valid config, never overwrite known-good backup with corrupt bytes.
     const backupPath = configPath + '.bak'
     writeFileSync(backupPath, oldContent, { mode: 0o600 })
@@ -293,7 +294,7 @@ export function saveConfig(updates: Partial<AgentConfig>): AgentConfig {
   const { terminal: _runtimeTerminal, ...persisted } = updated
   const tmpPath = `${configPath}.${process.pid}.${Date.now()}.tmp`
   writeFileSync(tmpPath, JSON.stringify(persisted, null, 2), { mode: 0o600 })
-  chmodSync(tmpPath, 0o600)
+  chmodSafe(tmpPath, 0o600)
   renameSync(tmpPath, configPath)
   return updated
 }

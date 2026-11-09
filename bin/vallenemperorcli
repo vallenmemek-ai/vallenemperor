@@ -1,21 +1,4 @@
-#!/usr/bin/env bash
-set -euo pipefail
-SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$SOURCE" ]; do
-  DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
-  SOURCE="$(readlink "$SOURCE")"
-  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
-done
-BIN_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
-REPO_ROOT="$(cd -P "$BIN_DIR/.." >/dev/null 2>&1 && pwd)"
-CLI_ENTRY="$REPO_ROOT/vallencli/src/cli.mjs"
-CORE_BUILD="$REPO_ROOT/vallenagent/dist/index.js"
-if ! command -v node >/dev/null 2>&1; then
-  echo "Error: Node.js is required to run VallenCLI."
-  exit 1
-fi
-if [ ! -f "$CORE_BUILD" ]; then
-  echo "Error: VallenAgent core build missing. Run: npm -w vallenagent run build"
-  exit 1
-fi
-exec node "$CLI_ENTRY" "$@"
+#!/usr/bin/env node
+'use strict'
+// Alias entry point; both names share one launcher.
+require('./vallenemperor')

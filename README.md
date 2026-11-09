@@ -67,6 +67,26 @@ npm install && npm run build && ./install.sh --install-vallencli
 Requires **Node.js ≥ 20**. The published tarball already contains the compiled core, CLI sources,
 bundled skill catalog and banner — no build step after `npm install -g`.
 
+### Platforms
+
+Linux, macOS, Windows and Termux run the same code path; the only per-OS pieces live in
+`vallenagent/src/core/platform.ts` (shell discovery, process-tree kill, Python lookup, chmod).
+
+| Host | Shell used by the `terminal` tool | Install |
+| --- | --- | --- |
+| Linux / macOS | `bash` (falls back to `sh`) | `./install.sh` |
+| Termux (Android) | `bash` from `$PREFIX` | `pkg install nodejs-lts && ./install.sh` |
+| Windows | PowerShell 7 (`pwsh`) → Windows PowerShell 5.1 → `cmd.exe` | `.\install.ps1` |
+
+Notes:
+
+- `better-sqlite3` is optional: when it cannot build (Termux arm64, Windows without build tools)
+  session search falls back to a plain-text scan instead of failing.
+- Windows launchers are `bin/vallenemperor.cmd` / `bin/vallenemperorcli.cmd`; `npm install -g`
+  generates the same shims automatically.
+- A legacy Windows console (no Windows Terminal, no `WT_SESSION`) automatically switches to
+  ASCII output and no colour. Force it anywhere with `VALLEN_ASCII=1`.
+
 ## Quick start
 
 ```bash

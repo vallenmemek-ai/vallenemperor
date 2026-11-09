@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosError } from 'axios'
-import { chmodSync, mkdirSync, writeFileSync, unlinkSync } from 'fs'
+import { mkdirSync, writeFileSync, unlinkSync } from 'fs'
+import { chmodSafe } from '../core/platform'
 import { join, extname } from 'path'
 import { createHash, randomUUID, timingSafeEqual } from 'crypto'
 import { logger } from '../core/logger'
@@ -257,10 +258,10 @@ export class TelegramAdapter implements GatewayAdapter, RemoteTransport {
       const ext = extname(file.file_path).replace(/[^.a-zA-Z0-9]/g, '').slice(0, 10) || '.img'
       const dir = join(gatewayDir(), 'telegram', 'media')
       mkdirSync(dir, { recursive: true, mode: 0o700 })
-      chmodSync(dir, 0o700)
+      chmodSafe(dir, 0o700)
       const path = join(dir, `${randomUUID()}${ext}`)
       writeFileSync(path, buffer, { mode: 0o600, flag: 'wx' })
-      chmodSync(path, 0o600)
+      chmodSafe(path, 0o600)
       return path
     } catch (error) {
       throw new Error(this.safeError(error))

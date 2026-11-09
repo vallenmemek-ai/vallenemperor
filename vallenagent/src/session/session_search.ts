@@ -1,7 +1,27 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, chmodSync } from 'fs'
-import { join } from 'path'
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'fs'
+import { basename, join } from 'path'
 import { homedir } from 'os'
-const Database: any = require('better-sqlite3')
+import { chmodSafe } from '../core/platform'
+
+/**
+ * better-sqlite3 is a native module: it has no prebuilt binary for Termux/Android
+ * arm64 and needs build tools on Windows. Loading it at import time crashed the
+ * whole agent core, so it is resolved lazily and every failure falls back to the
+ * plain-text legacy search below.
+ */
+let DatabaseCtor: any = null
+let databaseUnavailable = false
+
+function loadDatabase(): any {
+  if (DatabaseCtor || databaseUnavailable) return DatabaseCtor
+  try {
+    DatabaseCtor = require('better-sqlite3')
+  } catch {
+    databaseUnavailable = true
+    DatabaseCtor = null
+  }
+  return DatabaseCtor
+}
 
 export interface SessionHit {
   sessionId: string
@@ -41,7 +61,7 @@ function searchable(file: string): { sessionId: string; title: string; body: str
     if (!Array.isArray(messages)) return null
     const body = messages.filter((message: any) => message?.role !== 'system' && typeof message?.content === 'string')
       .map((message: any) => message.content).join('\n').slice(0, 2_000_000)
-    return { sessionId: String(data.id || file.split('/').pop()!.replace(/\.json$/, '')), title: String(data.title || ''), body }
+    return { sessionId: String(data.id || basename(file).replace(/\.json$/, '')), title: String(data.title || ''), body }
   } catch { return null }
 }
 
@@ -53,7 +73,7 @@ function legacySearch(query: string, options: { limit?: number; dirs?: string[] 
   }).slice(0, MAX_FILES)
   for (const file of files) {
     const messages = readMessages(file)
-    const sessionId = searchable(file)?.sessionId || file.split('/').pop()!.replace(/\.json$/, '')
+    const sessionId = searchable(file)?.sessionId || basename(file).replace(/\.json$/, '')
     let score = 0
     let snippet = ''
     const matched = new Set<string>()
@@ -74,9 +94,13 @@ function legacySearch(query: string, options: { limit?: number; dirs?: string[] 
 }
 
 function openIndex(path: string) {
+  const Database = loadDatabase()
+  // No native binding (Termux arm64, Windows without build tools): the caller's
+  // try/catch turns this into the plain-text fallback search.
+  if (!Database) throw new Error('session index unavailable: better-sqlite3 could not be loaded')
   mkdirSync(join(path, '..'), { recursive: true, mode: 0o700 })
   const db = new Database(path)
-  chmodSync(path, 0o600)
+  chmodSafe(path, 0o600)
   db.pragma('journal_mode = WAL')
   db.exec(`CREATE TABLE IF NOT EXISTS session_files (file TEXT PRIMARY KEY, mtime INTEGER NOT NULL, size INTEGER NOT NULL);
     CREATE VIRTUAL TABLE IF NOT EXISTS session_fts USING fts5(session_id UNINDEXED, file UNINDEXED, title, body, tokenize='unicode61');`)
@@ -174,5 +198,6 @@ export function viewSession(sessionId: string, options: { offset?: number; limit
 
 export function ensureSessionDir(dir: string): string {
   mkdirSync(dir, { recursive: true, mode: 0o700 })
+  chmodSafe(dir, 0o700)
   return dir
 }

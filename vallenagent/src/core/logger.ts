@@ -1,4 +1,5 @@
-import { appendFileSync, chmodSync, mkdirSync } from 'fs'
+import { appendFileSync, mkdirSync } from 'fs'
+import { chmodSafe } from './platform'
 import { homedir } from 'os'
 import { join } from 'path'
 
@@ -26,10 +27,10 @@ function emit(level: LogLevel, args: unknown[], consoleWriter: (...values: unkno
     const home = process.env.VALLENEMPEROR_HOME || join(homedir(), '.vallenemperor')
     const logDir = join(home, 'logs')
     mkdirSync(logDir, { recursive: true, mode: 0o700 })
-    chmodSync(logDir, 0o700)
+    chmodSafe(logDir, 0o700)
     const logPath = join(logDir, 'agent.log')
     appendFileSync(logPath, `${new Date().toISOString()} [${level.toUpperCase()}] ${format(args)}\n`, { encoding: 'utf8', mode: 0o600 })
-    chmodSync(logPath, 0o600)
+    chmodSafe(logPath, 0o600)
   } catch {}
 }
 

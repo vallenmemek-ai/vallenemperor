@@ -1,10 +1,12 @@
 import axios from 'axios'
-import { chmodSync, closeSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
+import { closeSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
+import { chmodSafe } from '../core/platform'
 import { join } from 'path'
 import { spawn } from 'child_process'
 import { createHash, randomInt } from 'crypto'
 import { logger } from '../core/logger'
 import { loadConfig, saveConfig } from '../core/config'
+import { killTree, spawnableCommand } from '../core/platform'
 import { gatewayDir, loadTelegramConfig, saveTelegramConfig, updateTelegramConfig } from './store'
 import { redact } from './format'
 import type { TelegramApprovalMode } from './types'
@@ -22,13 +24,16 @@ function readPid(): number | null {
 function isRunning(pid = readPid()): pid is number {
   if (!pid) return false
   try {
+    // Signal 0 is the portable liveness probe (works on Windows too).
     process.kill(pid, 0)
-    if (process.platform === 'linux') {
+  } catch { return false }
+  if (process.platform === 'linux') {
+    try {
       const command = readFileSync(`/proc/${pid}/cmdline`, 'utf8')
       return command.includes('gateway/daemon.js')
-    }
-    return true
-  } catch { return false }
+    } catch { return true }
+  }
+  return true
 }
 
 export function createTelegramPairingCode(now = Date.now()): string {
@@ -103,15 +108,16 @@ export function startTelegramGateway(): { started: boolean; pid?: number; messag
   const logFd = openSync(LOG_FILE(), 'a', 0o600)
   let child
   try {
-    child = spawn(process.execPath, [join(__dirname, 'daemon.js')], {
-      cwd: gatewayDir(), detached: true, stdio: ['ignore', logFd, logFd],
+    const spec = spawnableCommand(process.execPath, [join(__dirname, 'daemon.js')])
+    child = spawn(spec.command, spec.args, {
+      cwd: gatewayDir(), detached: true, windowsHide: true, stdio: ['ignore', logFd, logFd],
       env: { ...process.env, VALLENEMPEROR_GATEWAY: 'telegram' }
     })
   } finally { closeSync(logFd) }
   child.unref()
   if (!child.pid) return { started: false, message: 'Gagal menjalankan Telegram gateway.' }
   writeFileSync(PID_FILE(), String(child.pid), { encoding: 'utf8', mode: 0o600 })
-  chmodSync(PID_FILE(), 0o600)
+  chmodSafe(PID_FILE(), 0o600)
   logger.info(`[Gateway] Telegram daemon started (PID ${child.pid})`)
   return { started: true, pid: child.pid, message: `Telegram gateway dijalankan (PID ${child.pid}). Cek dengan /geteway tel status.` }
 }
@@ -123,7 +129,7 @@ export function stopTelegramGateway(): { stopped: boolean; message: string } {
     return { stopped: false, message: 'Telegram gateway sedang mati.' }
   }
   try {
-    process.kill(pid!, 'SIGTERM')
+    if (!killTree(pid!, 'SIGTERM')) return { stopped: false, message: `Gagal menghentikan gateway (PID ${pid}).` }
     return { stopped: true, message: `Telegram gateway dihentikan (PID ${pid}).` }
   } catch (error) {
     return { stopped: false, message: `Gagal menghentikan gateway: ${redact(error instanceof Error ? error.message : String(error))}` }

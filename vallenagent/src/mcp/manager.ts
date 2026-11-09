@@ -7,6 +7,7 @@ import { writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { logger } from '../core/logger'
+import { spawnableCommand } from '../core/platform'
 import type { McpServerConfig, McpServerSnapshot, McpServerStatus } from './types'
 
 type ServerEntry = {
@@ -275,11 +276,12 @@ export class McpManager {
         void this.notifyToolsChanged()
       } } }
     })
+    const stdioSpec = entry.config.url ? null : spawnableCommand(entry.config.command!, entry.config.args || [])
     const transport = entry.config.url
       ? new StreamableHTTPClientTransport(new URL(entry.config.url), { requestInit: { headers: entry.config.headers } })
       : new StdioClientTransport({
-      command: entry.config.command!,
-      args: entry.config.args || [],
+      command: stdioSpec!.command,
+      args: stdioSpec!.args,
       env: safeEnvironment(entry.config.env),
       cwd: entry.config.cwd,
       stderr: 'ignore'

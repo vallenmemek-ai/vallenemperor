@@ -1,4 +1,5 @@
-import { chmodSync, unlinkSync, writeFileSync } from 'fs'
+import { unlinkSync, writeFileSync } from 'fs'
+import { chmodSafe } from '../core/platform'
 import { join } from 'path'
 import { logger } from '../core/logger'
 import { AIAgent } from '../agent/agent'
@@ -66,7 +67,7 @@ async function main(): Promise<void> {
     stopScheduledJobs = scheduler.start()
     void scheduler.runDue().catch(error => logger.error(`[Cron] Startup run failed: ${redact(String(error))}`))
     writeFileSync(pidFile, String(process.pid), { encoding: 'utf8', mode: 0o600 })
-    chmodSync(pidFile, 0o600)
+    chmodSafe(pidFile, 0o600)
     process.once('SIGTERM', () => { void shutdown() })
     process.once('SIGINT', () => { void shutdown() })
     await adapter.start()

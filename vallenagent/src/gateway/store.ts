@@ -1,4 +1,5 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
+import { chmodSafe } from '../core/platform'
 import { join } from 'path'
 import { getVallenHome } from '../core/config'
 import type { TelegramGatewayConfig } from './types'
@@ -8,7 +9,7 @@ const DEFAULTS: TelegramGatewayConfig = { allowlist: [], last_update_id: 0, appr
 export function gatewayDir(): string {
   const dir = join(getVallenHome(), 'gateway')
   mkdirSync(dir, { recursive: true, mode: 0o700 })
-  chmodSync(dir, 0o700)
+  chmodSafe(dir, 0o700)
   return dir
 }
 
@@ -37,9 +38,9 @@ export function saveTelegramConfig(config: TelegramGatewayConfig): void {
   const path = telegramConfigPath()
   const temp = `${path}.${process.pid}.${Date.now()}.tmp`
   writeFileSync(temp, JSON.stringify(config, null, 2), { encoding: 'utf8', mode: 0o600 })
-  chmodSync(temp, 0o600)
+  chmodSafe(temp, 0o600)
   renameSync(temp, path)
-  chmodSync(path, 0o600)
+  chmodSafe(path, 0o600)
 }
 
 export function updateTelegramConfig(update: Partial<TelegramGatewayConfig>): TelegramGatewayConfig {

@@ -5,6 +5,7 @@ import { spawn } from 'child_process'
 import { registry, ToolSchema } from '../tools'
 import { manageProcess, startBackgroundProcess } from '../../core/process_manager'
 import { truncateOutput } from './tool_output'
+import { CWD_MARKER, SUPPORTS_PROCESS_GROUPS, killTree, pipelineStatusReliable, resolvePython, resolveShell, wrapCommand } from '../../core/platform'
 
 export function registerTerminalTools(): void {
   // 5. terminal
@@ -28,12 +29,17 @@ export function registerTerminalTools(): void {
     name: 'terminal',
     schema: terminalSchema,
     toolset: 'terminal',
-    checkFn: () => process.platform !== 'win32',
+    checkFn: () => resolveShell() !== null,
     handler: async (args, context, signal) => {
       const rawCommand = String(args.command || '').trim()
       const requestedDir = String(args.workdir || context.workingDir || process.cwd())
       const workdir = isAbsolute(requestedDir) ? requestedDir : resolve(context.workingDir || process.cwd(), requestedDir)
       const timeout = (Number(args.timeout) || 120) * 1000
+
+      const shellSpec = resolveShell()
+      if (!shellSpec) {
+        return JSON.stringify({ exit_code: 127, error: 'No usable shell found on this host; install bash or sh.' })
+      }
 
       if (!existsSync(workdir) || !statSync(workdir).isDirectory()) {
         return JSON.stringify({ exit_code: 1, error: `Working directory does not exist or is not a directory: ${workdir}` })
@@ -66,18 +72,17 @@ export function registerTerminalTools(): void {
 
       // Probe command to detect chained cd transitions
       const isBackground = /(?:^|[;&|])\s*[^;&|]+\s*&\s*$/.test(rawCommand)
-      const probeCommand = isBackground ? rawCommand : `${rawCommand}\n__RET=$?; printf '\n__VALLEN_CWD__=%s\n' "$(pwd)"; exit $__RET`
+      const probeCommand = isBackground ? rawCommand : wrapCommand(shellSpec, rawCommand)
       const hasPipeline = /(?:^|[^|])\|(?!\|)/.test(rawCommand)
-      const shell = existsSync('/bin/bash') ? '/bin/bash' : '/bin/sh'
-      if (hasPipeline && shell !== '/bin/bash') {
-        return JSON.stringify({ exit_code: 127, error: 'Pipeline status cannot be verified without Bash; command was not run.' })
+      if (hasPipeline && !pipelineStatusReliable(shellSpec)) {
+        return JSON.stringify({ exit_code: 127, error: `Pipeline status cannot be verified with ${shellSpec.label}; command was not run.` })
       }
-      const shellArgs = shell === '/bin/bash' ? ['--noprofile', '--norc', '-o', 'pipefail', '-c', probeCommand] : ['-c', probeCommand]
 
       return new Promise<string>((resolveResult) => {
-        const proc = spawn(shell, shellArgs, {
+        const proc = spawn(shellSpec.file, shellSpec.argv(probeCommand), {
           cwd: workdir,
-          detached: true,
+          detached: SUPPORTS_PROCESS_GROUPS,
+          windowsHide: true,
           stdio: isBackground ? ['ignore', 'ignore', 'ignore'] : ['ignore', 'pipe', 'pipe']
         })
 
@@ -94,9 +99,7 @@ export function registerTerminalTools(): void {
           } else if (!exceededBufferCap) {
             exceededBufferCap = true
             stdout += '\n[Output stream exceeded 10MB buffer limit, killing process...]'
-            try {
-              if (proc.pid) process.kill(-proc.pid, 'SIGKILL')
-            } catch {}
+            killTree(proc.pid, 'SIGKILL')
           }
         })
         proc.stderr?.on('data', (chunk: Buffer) => {
@@ -108,9 +111,7 @@ export function registerTerminalTools(): void {
 
         const timeoutHandle = setTimeout(() => {
           killed = true
-          try {
-            if (proc.pid) process.kill(-proc.pid, 'SIGKILL')
-          } catch {}
+          killTree(proc.pid, 'SIGKILL')
         }, timeout)
 
         let interrupted = false
@@ -118,16 +119,12 @@ export function registerTerminalTools(): void {
           if (signal.aborted) {
             interrupted = true
             killed = true
-            try {
-              if (proc.pid) process.kill(-proc.pid, 'SIGKILL')
-            } catch {}
+            killTree(proc.pid, 'SIGKILL')
           } else {
             signal.addEventListener('abort', () => {
               interrupted = true
               killed = true
-              try {
-                if (proc.pid) process.kill(-proc.pid, 'SIGKILL')
-              } catch {}
+              killTree(proc.pid, 'SIGKILL')
             }, { once: true })
           }
         }
@@ -153,10 +150,9 @@ export function registerTerminalTools(): void {
           }
         
           let output = stdout || ''
-          const cwdMarker = '\n__VALLEN_CWD__='
-          const markerIdx = output.lastIndexOf(cwdMarker)
+          const markerIdx = output.lastIndexOf(CWD_MARKER)
           if (markerIdx !== -1) {
-            const detectedCwd = output.slice(markerIdx + cwdMarker.length).trim()
+            const detectedCwd = output.slice(markerIdx + CWD_MARKER.length).split(/\r?\n/)[0].trim()
             output = output.slice(0, markerIdx)
             if (detectedCwd && resolve(detectedCwd) !== resolve(workdir) && existsSync(detectedCwd) && statSync(detectedCwd).isDirectory()) {
               context.workingDir = detectedCwd
@@ -203,7 +199,6 @@ export function registerTerminalTools(): void {
     name: 'process_manage',
     schema: processManageSchema,
     toolset: 'terminal',
-    checkFn: () => process.platform !== 'win32',
     handler: async (args, context) => JSON.stringify(await manageProcess(args, context.sessionId || 'default'))
   })
 
@@ -225,11 +220,15 @@ export function registerTerminalTools(): void {
     name: 'execute_code',
     schema: executeCodeSchema,
     toolset: 'code_execution',
-    checkFn: () => process.platform !== 'win32',
+    checkFn: () => resolvePython() !== null,
     handler: async (args, context, signal) => {
       const code = String(args.code || '')
       const workdir = context.workingDir || process.cwd()
       const timeout = (Number(args.timeout_s) || 300) * 1000
+      const python = resolvePython()
+      if (!python) {
+        return JSON.stringify({ exit_code: 127, output: '', error: 'Python interpreter not found (tried py -3, python3, python).' })
+      }
 
       return new Promise<string>((resolveResult) => {
         let child: any = null
@@ -237,13 +236,13 @@ export function registerTerminalTools(): void {
         let settled = false
         let timedOut = false
         let timeoutTimer: NodeJS.Timeout | undefined
-        const abortChild = () => { try { if (child?.pid) process.kill(-child.pid, 'SIGKILL') } catch { try { child?.kill?.('SIGKILL') } catch {} } }
-        const args = ['-c', code]
+        const abortChild = () => { killTree(child?.pid, 'SIGKILL') }
+        const scriptArgs = [...python.args, '-c', code]
         if (Buffer.byteLength(code) > 100_000) {
           try {
             tempDir = mkdtempSync(join(tmpdir(), 'vallenemperor-code-'))
             writeFileSync(join(tempDir, 'script.py'), code, { mode: 0o600 })
-            args.splice(0, args.length, join(tempDir, 'script.py'))
+            scriptArgs.splice(python.args.length, scriptArgs.length, join(tempDir, 'script.py'))
           } catch (err: any) {
             return resolveResult(JSON.stringify({ exit_code: 1, output: '', error: `Could not stage code: ${err.message}` }))
           }
@@ -269,7 +268,7 @@ export function registerTerminalTools(): void {
           }
           if (chunk.length > available && !bufferExceeded) { bufferExceeded = true; abortChild() }
         }
-        child = spawn('python3', args, { cwd: workdir, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+        child = spawn(python.command, scriptArgs, { cwd: workdir, detached: SUPPORTS_PROCESS_GROUPS, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
         child.stdout.on('data', collect(stdoutParts))
         child.stderr.on('data', collect(stderrParts))
         child.on('close', (code: number | null, closeSignal: string | null) => {

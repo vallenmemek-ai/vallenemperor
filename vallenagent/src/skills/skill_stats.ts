@@ -1,6 +1,7 @@
-import { mkdirSync, readFileSync, writeFileSync, chmodSync, renameSync, unlinkSync } from 'fs'
+import { mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { getVallenHome } from '../core/config'
+import { chmodSafe } from '../core/platform'
 
 export type SkillOutcome = 'unknown' | 'verified' | 'failed'
 type SkillStats = { view_count: number; manage_count: number; completed_count: number; verified_count: number; failed_verification_count: number; correction_count: number }
@@ -38,10 +39,10 @@ export class SkillStatsStore {
   private write(data: StatsFile): void {
     const dir = join(this.file, '..')
     mkdirSync(dir, { recursive: true, mode: 0o700 })
-    chmodSync(dir, 0o700)
+    chmodSafe(dir, 0o700)
     const temp = `${this.file}.${process.pid}.${Date.now()}.tmp`
     writeFileSync(temp, JSON.stringify(data, null, 2), { encoding: 'utf8', mode: 0o600, flag: 'wx' })
-    chmodSync(temp, 0o600)
+    chmodSafe(temp, 0o600)
     try { renameSync(temp, this.file) } catch (error) { try { unlinkSync(temp) } catch {}; throw error }
   }
 

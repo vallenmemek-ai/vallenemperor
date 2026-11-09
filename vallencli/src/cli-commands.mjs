@@ -23,7 +23,7 @@ export function createLocalCommandHandler(context) {
       const provider = agent.config.providers['9router']
       if (value === 'status') { printResponse(`9router token: ${provider?.api_key ? 'configured (value hidden)' : 'not set'}`); return true }
       if (value) { printResponse('Token rejected. Use /token with no argument to enter it without echo.'); return true }
-      const result = readHiddenToken()
+      const result = await readHiddenToken()
       if (result.error) { printResponse(result.error); return true }
       if (!result.value) { printResponse('Empty token not saved.'); return true }
       agent.setToken(result.value, '9router')

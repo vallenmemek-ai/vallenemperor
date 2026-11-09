@@ -36,7 +36,7 @@ export const COMMANDS = [
   { name: '/perf', desc: 'Process CPU / memory sample' },
   { name: '/clear', desc: 'Clear the screen' },
   { name: '/theme', aliases: ['/themes'], args: '[name]', desc: 'Show or switch color theme' },
-  { name: '/sh', aliases: ['/pty'], desc: 'Enter a direct POSIX shell' }
+  { name: '/sh', aliases: ['/pty'], desc: 'Enter a direct shell' }
 ]
 
 // Category per command (colours the marker dot in the dropdown).

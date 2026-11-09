@@ -1,7 +1,7 @@
 import { createHash } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, renameSync } from 'fs'
-import { homedir } from 'os'
-import { dirname, join, resolve } from 'path'
+import { dirname, join, resolve, sep } from 'path'
+import { getVallenHome } from '../core/config'
 
 export interface CheckpointContext {
   sessionId?: string
@@ -26,9 +26,9 @@ const MAX_TURNS = 20
 
 export function snapshotBeforeWrite(ctx: CheckpointContext, absPath: string): string | null {
   if (!ctx.sessionId || !ctx.turnNumber) return null
-  const root = resolve(ctx.checkpointRoot || join(homedir(), '.vallenemperor', 'checkpoints'))
+  const root = resolve(ctx.checkpointRoot || join(getVallenHome(), 'checkpoints'))
   const session = resolve(root, ctx.sessionId)
-  if (!session.startsWith(`${root}/`) && session !== root) throw new Error('Invalid checkpoint session ID')
+  if (!session.startsWith(`${root}${sep}`) && session !== root) throw new Error('Invalid checkpoint session ID')
   const turn = join(session, `turn-${ctx.turnNumber}`)
   mkdirSync(turn, { recursive: true, mode: 0o700 })
   const manifestPath = join(turn, 'manifest.json')
@@ -87,9 +87,9 @@ function directorySize(dir: string): number {
 
 function paths(ctx: CheckpointContext): { root: string; session: string } | null {
   if (!ctx.sessionId) return null
-  const root = resolve(ctx.checkpointRoot || join(homedir(), '.vallenemperor', 'checkpoints'))
+  const root = resolve(ctx.checkpointRoot || join(getVallenHome(), 'checkpoints'))
   const session = resolve(root, ctx.sessionId)
-  if (!session.startsWith(`${root}/`) && session !== root) throw new Error('Invalid checkpoint session ID')
+  if (!session.startsWith(`${root}${sep}`) && session !== root) throw new Error('Invalid checkpoint session ID')
   return { root, session }
 }
 

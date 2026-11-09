@@ -1,21 +1,34 @@
-#!/usr/bin/env bash
-set -euo pipefail
-SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$SOURCE" ]; do
-  DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
-  SOURCE="$(readlink "$SOURCE")"
-  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
-done
-BIN_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
-REPO_ROOT="$(cd -P "$BIN_DIR/.." >/dev/null 2>&1 && pwd)"
-CLI_ENTRY="$REPO_ROOT/vallencli/src/cli.mjs"
-CORE_BUILD="$REPO_ROOT/vallenagent/dist/index.js"
-if ! command -v node >/dev/null 2>&1; then
-  echo "Error: Node.js is required to run VallenCLI."
-  exit 1
-fi
-if [ ! -f "$CORE_BUILD" ]; then
-  echo "Error: VallenAgent core build missing. Run: npm -w vallenagent run build"
-  exit 1
-fi
-exec node "$CLI_ENTRY" "$@"
+#!/usr/bin/env node
+'use strict'
+/**
+ * Portable launcher: replaces the old bash wrapper so the CLI starts the same way
+ * on Linux, macOS, Termux and Windows. npm's bin shim reads this shebang and
+ * generates the matching .cmd on Windows.
+ */
+const { spawn } = require('node:child_process')
+const { existsSync } = require('node:fs')
+const { dirname, join, resolve } = require('node:path')
+
+const repoRoot = resolve(dirname(__filename), '..')
+const cliEntry = join(repoRoot, 'vallencli', 'src', 'cli.mjs')
+const coreBuild = join(repoRoot, 'vallenagent', 'dist', 'index.js')
+
+if (!existsSync(coreBuild)) {
+  console.error('VallenAgent core build missing. Run: npm -w vallenagent run build')
+  process.exit(1)
+}
+if (!existsSync(cliEntry)) {
+  console.error(`VallenCLI entry not found: ${cliEntry}`)
+  process.exit(1)
+}
+
+const child = spawn(process.execPath, [cliEntry, ...process.argv.slice(2)], { stdio: 'inherit' })
+// The terminal delivers Ctrl+C to the whole process group; the launcher only waits.
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(signal, () => {})
+child.on('error', error => {
+  console.error(`VallenCLI failed to start: ${error.message}`)
+  process.exit(1)
+})
+child.on('exit', (code, signal) => {
+  process.exit(code ?? (signal ? 1 : 0))
+})

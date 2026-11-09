@@ -1,4 +1,5 @@
-import { chmodSync, lstatSync, mkdirSync, writeFileSync } from 'fs'
+import { lstatSync, mkdirSync, writeFileSync } from 'fs'
+import { chmodSafe } from './platform'
 import { join } from 'path'
 import { getVallenHome, loadConfig } from './config'
 import { createProvider } from '../providers/providers'
@@ -105,7 +106,7 @@ export async function runConfiguredModelEval(args: string[]): Promise<void> {
   mkdirSync(directory, { recursive: true, mode: 0o700 })
   const directoryStat = lstatSync(directory)
   if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink()) throw new Error('Eval report path must be a real directory')
-  chmodSync(directory, 0o700)
+  chmodSafe(directory, 0o700)
   const reportPath = join(directory, `model-eval-${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
   writeFileSync(reportPath, JSON.stringify({ createdAt: new Date().toISOString(), reports }, null, 2), { mode: 0o600, flag: 'wx' })
   console.log(`Report saved: ${reportPath}`)

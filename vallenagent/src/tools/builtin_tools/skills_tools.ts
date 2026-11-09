@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, lstatSync, realpathSync, chmodSync, unlinkSync, mkdtempSync, rmdirSync, renameSync, rmSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, lstatSync, realpathSync, unlinkSync, mkdtempSync, rmdirSync, renameSync, rmSync } from 'fs'
+import { chmodSafe } from '../../core/platform'
 import { resolve, join, dirname, relative, isAbsolute, sep, basename } from 'path'
 import { registry, ToolSchema } from '../tools'
 import { SkillLoader } from '../../skills/skills'
@@ -231,7 +232,7 @@ export function registerSkillsTools(skillLoader?: SkillLoader): void {
             const before = readFileSync(skill.path)
             const mode = statSync(skill.path).mode & 0o7777
             const patched = fuzzyReplace(before.toString('utf-8'), op.old_string || '', op.new_string || '', false)
-            undo.push(() => { writeFileSync(skill.path, before); chmodSync(skill.path, mode) })
+            undo.push(() => { writeFileSync(skill.path, before); chmodSafe(skill.path, mode) })
             writeFileSync(skill.path, patched.content, 'utf-8')
             results.push({ action: 'patch', name, strategy: patched.strategy, status: 'patched' })
           } else if (opAction === 'delete') {
@@ -265,7 +266,7 @@ export function registerSkillsTools(skillLoader?: SkillLoader): void {
             const dirsToRemove: string[] = []
             for (let dir = dirname(filePath); dir !== skillDir && !existsSync(dir); dir = dirname(dir)) dirsToRemove.push(dir)
             undo.push(() => {
-              if (existed) { writeFileSync(filePath, before!); chmodSync(filePath, mode) }
+              if (existed) { writeFileSync(filePath, before!); chmodSafe(filePath, mode) }
               else if (existsSync(filePath)) unlinkSync(filePath)
               for (const dir of dirsToRemove) { try { rmdirSync(dir) } catch {} }
             })
@@ -286,7 +287,7 @@ export function registerSkillsTools(skillLoader?: SkillLoader): void {
               if (!lstatSync(filePath).isFile()) throw new Error('Skill file target must be a regular file')
               const before = readFileSync(filePath)
               const mode = statSync(filePath).mode & 0o7777
-              undo.push(() => { writeFileSync(filePath, before); chmodSync(filePath, mode) })
+              undo.push(() => { writeFileSync(filePath, before); chmodSafe(filePath, mode) })
               unlinkSync(filePath)
             }
             results.push({ action: 'remove_file', name, file_path: op.file_path, status: 'removed' })

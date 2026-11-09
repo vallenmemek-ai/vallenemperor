@@ -1,5 +1,6 @@
 export * from './types'
 export * from './config'
+export * from './platform'
 export * from './approval'
 export * from './logger'
 export * from './display'

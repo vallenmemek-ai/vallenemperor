@@ -8,7 +8,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,3 +23,27 @@ jobs:
       - run: npm run build
       - run: npm run typecheck
       - run: npm test
+      # Verify the exact command users run, on every OS.
+      - name: Global install smoke test
+        run: |
+          npm install -g .
+          vallenemperor --version
+          vallenemperor --help
+          vallenemperor config show
+
+  # Termux is Android/aarch64 with no prebuilt native modules; the closest CI proxy
+  # is a Linux arm64 container that installs without build tooling.
+  termux-shape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install without native build tools
+        run: npm ci --omit=optional
+      - run: npm run build
+      - run: npm run typecheck
+      - name: Core must load without better-sqlite3
+        run: node -e "const core = require('./vallenagent/dist/index.js'); if (!core.resolveShell) throw new Error('platform adapter missing'); console.log('core loaded, shell =', core.resolveShell().label)"

@@ -1,6 +1,7 @@
-import { relative, sep, isAbsolute, resolve, basename, join } from 'path'
+import { relative, sep, isAbsolute, resolve, basename, dirname, join } from 'path'
 import { homedir } from 'os'
 import { realpathSync } from 'fs'
+import { IS_WINDOWS } from './platform'
 
 /**
  * Local approval heuristic shared by every surface (Electron chat, Telegram
@@ -9,8 +10,20 @@ import { realpathSync } from 'fs'
  */
 
 const TERMINAL_DANGERS = /(?:\brm\s+(?:(?:-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*)|(?:-[a-z]*r[a-z]*\s+-[a-z]*f[a-z]*|-[a-z]*f[a-z]*\s+-[a-z]*r[a-z]*)|(?:--recursive\b[^\n]*\b--force\b|--force\b[^\n]*\b--recursive\b))|\bdd\s+if=|\bmkfs(?:\.|\s)|\b(?:shutdown|reboot)\b|\b(?:curl|wget)\b[^\n]*(?:\s-d\s*@|--data(?:-binary)?\s+@|\s-T\s|--upload-file\b)|\b(?:scp|rsync|nc|netcat)\b|\bchmod\s+-R\b|\bgit\s+push\b[^\n]*--force|\bgit\s+clean\b|\bgit\s+reset\b[^\n]*--hard|\bfind\b[^\n]*\s-delete\b|>\s*\/dev\/sd)/i
-const SHELL_WRAPPER = /^\s*(?:(?:sudo|env|nohup|command|exec|time)\s+)*(?:sh|bash|dash|zsh|fish|node|python(?:\d+(?:\.\d+)?)?|perl|ruby)\s+-(?:c|e)\b/i
-const SAFE_TERMINAL_COMMANDS = new Set(['ls', 'pwd', 'cat', 'head', 'tail', 'git', 'npm', 'node', 'python', 'python3', 'wc', 'file', 'stat', 'du', 'df', 'uname', 'whoami', 'which', 'type', 'grep', 'rg', 'find', 'sed', 'sort', 'uniq', 'cut', 'tr', 'printf', 'echo', 'date'])
+
+/**
+ * Windows shells have their own destructive vocabulary. Without this list a
+ * `del /s /q`, `rd /s` or `Remove-Item -Recurse -Force` would run with no approval.
+ */
+const WINDOWS_TERMINAL_DANGERS = /(?:\b(?:del|erase)\b[^\n]*\s\/(?:[a-z]*[sfq][a-z]*)(?:\s|$)|\b(?:rd|rmdir)\b[^\n]*\s\/s\b|\bformat\b[^\n]*\s[a-z]:|\bdiskpart\b|\bbcdedit\b|\breg\s+delete\b|\breg\s+add\b|\btakeown\b|\bicacls\b[^\n]*\s\/(?:grant|deny|reset)|\b(?:net\s+user|net\s+localgroup)\b|\bset-executionpolicy\b|\bwmic\b[^\n]*\bdelete\b|\bremove-item\b[^\n]*(?:-recurse|-force)|\b(?:stop-process|kill)\b[^\n]*-force|\bclear-disk\b|\bformat-volume\b|\bremove-partition\b|\binvoke-expression\b|\biex\b|\b(?:shutdown|restart-computer|stop-computer)\b|\bcipher\b[^\n]*\/w|\b(?:curl|wget|invoke-webrequest|iwr)\b[^\n]*\|\s*(?:iex|invoke-expression)|>\s*[a-z]:\\windows)/i
+
+const SHELL_WRAPPER = /^\s*(?:(?:sudo|env|nohup|command|exec|time)\s+)*(?:sh|bash|dash|zsh|fish|node|python(?:\d+(?:\.\d+)?)?|py|perl|ruby)\s+-(?:c|e)\b|^\s*(?:(?:cmd(?:\.exe)?\s+\/[a-z:]*\s*\/?[ck]|powershell(?:\.exe)?|pwsh(?:\.exe)?)\b[^\n]*-(?:c|command|encodedcommand|enc)\b)/i
+
+const SAFE_TERMINAL_COMMANDS = new Set(['ls', 'pwd', 'cat', 'head', 'tail', 'git', 'npm', 'node', 'python', 'python3', 'py', 'wc', 'file', 'stat', 'du', 'df', 'uname', 'whoami', 'which', 'type', 'grep', 'rg', 'find', 'sed', 'sort', 'uniq', 'cut', 'tr', 'printf', 'echo', 'date'])
+
+/** Read-only Windows commands that never need approval on their own. */
+const SAFE_WINDOWS_COMMANDS = new Set(['dir', 'type', 'where', 'findstr', 'more', 'echo', 'cd', 'chdir', 'whoami', 'hostname', 'ver', 'vol', 'tree', 'tasklist', 'systeminfo', 'get-childitem', 'gci', 'get-content', 'gc', 'select-string', 'sls', 'test-path', 'get-location', 'gl', 'get-item', 'gi', 'measure-object', 'sort-object', 'get-process', 'git', 'npm', 'node', 'python', 'py'])
+
 function isSafeTestLogPipeline(command: string): boolean {
   const match = command.trim().match(/^cd\s+("[^"]+"|'[^']+'|[^&|;\n]+?)\s*&&\s*npm\s+test\s+2>&1\s*\|\s*tail\s+-30\s*&&\s*git\s+log\s+--oneline\s+-5\s+2>\/dev\/null\s*\|\s*head(?:\s+-n\s+\d+)?$/)
   if (!match) return false
@@ -18,8 +31,10 @@ function isSafeTestLogPipeline(command: string): boolean {
   return directory.length > 0 && !isSensitivePath(directory)
 }
 const SENSITIVE_DIRS = ['.ssh', '.aws', '.gnupg', '.config', '.kube', '.docker', '.vallenemperor']
-const SENSITIVE_ROOTS = ['/etc', '/usr', '/boot', '/root']
-const SENSITIVE_RC = new Set(['.bashrc', '.zshrc', '.profile', '.bash_profile', '.zprofile', '.zshenv'])
+const SENSITIVE_ROOTS = IS_WINDOWS
+  ? ['C:\\Windows', 'C:\\Program Files', 'C:\\Program Files (x86)', 'C:\\ProgramData', 'C:\\System Volume Information']
+  : ['/etc', '/usr', '/boot', '/root']
+const SENSITIVE_RC = new Set(['.bashrc', '.zshrc', '.profile', '.bash_profile', '.zprofile', '.zshenv', 'Microsoft.PowerShell_profile.ps1', 'profile.ps1'])
 
 const ENV_KEYS = ['VALLENEMPEROR_APPROVAL', 'VALLENEMPEROR_APPROVAL_MODE']
 
@@ -54,10 +69,14 @@ function isSensitivePath(raw: string, workingDir = process.cwd()): boolean {
     if (rel === '' || (!rel.startsWith(`..${sep}`) && rel !== '..' && !isAbsolute(rel))) return true
   }
   const base = basename(target)
-  const targetParts = target.split('/').filter(Boolean)
-  if (SENSITIVE_RC.has(base) && ['home', 'Users'].includes(targetParts[0]) && targetParts.length >= 3) return true
-  if (['home', 'Users'].includes(targetParts[0]) && SENSITIVE_DIRS.includes(targetParts[2])) return true
-  if (target.startsWith('/var/spool/cron/') || target === '/var/spool/cron' || target.startsWith('/etc/cron.') || target.startsWith('/etc/cron/')) return true
+  // Path-aware home check: works with backslash separators and drive letters,
+  // unlike the old target.split('/') heuristic.
+  const homeRoot = normalizeToolPath(homedir())
+  const homeRel = relative(homeRoot, target)
+  const insideHome = homeRel === '' || (!homeRel.startsWith(`..${sep}`) && homeRel !== '..' && !isAbsolute(homeRel))
+  if (insideHome && SENSITIVE_RC.has(base)) return true
+  if (insideHome && SENSITIVE_DIRS.includes(basename(dirname(target)))) return true
+  if (!IS_WINDOWS && (target.startsWith('/var/spool/cron/') || target === '/var/spool/cron' || target.startsWith('/etc/cron.') || target.startsWith('/etc/cron/'))) return true
   return false
 }
 
@@ -155,9 +174,9 @@ function shellSegmentRequiresApproval(tokens: string[], workingDir: string): boo
   if (['env', 'printenv'].includes(binary)) return true
   if (tokens.some(token => (token.includes('$') || /[*?[]/.test(token)) && mayResolveToSensitivePath(token, workingDir))) return true
   if (tokens.slice(1).some(token => mayResolveToSensitivePath(token, workingDir))) return true
-  if (!SAFE_TERMINAL_COMMANDS.has(binary)) return true
+  if (!SAFE_TERMINAL_COMMANDS.has(binary) && !SAFE_WINDOWS_COMMANDS.has(binary)) return true
   if (hasRiskySafeCommandFlags(tokens, workingDir)) return true
-  if (['node', 'python', 'python3'].includes(binary) && tokens.slice(1).some(arg => !['-v', '--version', '-V', '-h', '--help'].includes(arg))) return true
+  if (['node', 'python', 'python3', 'py'].includes(binary) && tokens.slice(1).some(arg => !['-v', '--version', '-V', '-h', '--help'].includes(arg))) return true
   if (binary === 'git' && !['status', 'diff', 'log', 'show', 'branch', 'rev-parse', 'describe'].includes(tokens[1])) return true
   if (binary === 'npm' && !['test', 'run', 'ls', 'view', 'audit', '-v', '--version', '-h', '--help'].includes(tokens[1])) return true
   if (binary === 'npm' && ['-v', '--version', '-h', '--help'].includes(tokens[1]) && tokens.length > 2) return true
@@ -180,7 +199,7 @@ function shellSegments(command: string): string[][] {
   for (let i = 0; i < input.length; i++) {
     const char = input[i]
     if (escaped) { token += char; escaped = false; continue }
-    if (char === '\\' && quote !== "'") { escaped = true; continue }
+    if (char === '\\' && quote !== "'" && !IS_WINDOWS) { escaped = true; continue }
     if (quote) { if (char === quote) quote = ''; else token += char; continue }
     if (char === '"' || char === "'") { quote = char; continue }
     if (char === '$' && input[i + 1] === '(' || char === '`' || char === '<') return []
@@ -229,7 +248,7 @@ export function requiresDangerousApproval(info: { name: string; args: Record<str
   if (info.name !== 'terminal') return false
   const command = String(info.args.command || '')
   if (isSafeTestLogPipeline(command)) return false
-  if (SHELL_WRAPPER.test(command) || TERMINAL_DANGERS.test(command)) return true
+  if (SHELL_WRAPPER.test(command) || TERMINAL_DANGERS.test(command) || WINDOWS_TERMINAL_DANGERS.test(command)) return true
   const segments = shellSegments(command)
   if (!segments.length) return true
   return segments.some(tokens => shellSegmentRequiresApproval(tokens, workingDir))
