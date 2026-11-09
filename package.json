@@ -1,8 +1,20 @@
 {
   "name": "vallenemperor",
   "version": "0.1.0",
-  "private": true,
-  "description": "Autonomous AI Agent Core & CLI",
+  "description": "Autonomous AI agent core and terminal CLI (VallenEmperor)",
+  "bin": {
+    "vallenemperor": "vallencli/src/cli.mjs",
+    "vallenemperorcli": "vallencli/src/cli.mjs"
+  },
+  "files": [
+    "vallencli/src/",
+    "vallencli/package.json",
+    "vallenagent/dist/",
+    "banner.txt",
+    "README.md",
+    "LICENSE",
+    ".vallenemperor/skills/"
+  ],
   "workspaces": [
     "vallenagent",
     "vallencli"
@@ -11,13 +23,37 @@
     "build": "npm -w vallenagent run build && npm -w vallencli run build",
     "typecheck": "npm -w vallenagent run typecheck",
     "cli": "npm -w vallenagent run build && npm -w vallencli run start",
-    "test": "NO_COLOR=1 npm -w vallenagent run test && NO_COLOR=1 npm -w vallencli run test"
+    "test": "NO_COLOR=1 npm -w vallenagent run test && NO_COLOR=1 npm -w vallencli run test",
+    "prepack": "npm run build",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "axios": "^1.20.0",
+    "better-sqlite3": "11.10.0",
+    "glob": "^10.3.0",
+    "openai": "^4.0.0",
+    "yaml": "^2.9.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "keywords": [
     "ai-agent",
     "cli",
-    "autonomous-agent"
+    "autonomous-agent",
+    "llm",
+    "terminal"
   ],
   "author": "vallenganteng",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vallenmemek-ai/vallenemperor.git"
+  },
+  "homepage": "https://github.com/vallenmemek-ai/vallenemperor#readme",
+  "bugs": {
+    "url": "https://github.com/vallenmemek-ai/vallenemperor/issues"
+  }
 }

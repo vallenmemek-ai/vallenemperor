@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { createInterface } from 'node:readline'
 import { spawn, spawnSync } from 'node:child_process'
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync } from 'node:fs'
 import { homedir, platform } from 'node:os'
 import { PassThrough } from 'node:stream'
 import { StringDecoder } from 'node:string_decoder'
@@ -907,6 +907,17 @@ export async function main(argv = process.argv.slice(2)) {
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// npm installs the bin as a symlink (node_modules/.bin/vallenemperor), so compare real paths:
+// a plain resolve() comparison leaves the CLI silently doing nothing when run from a global install.
+function invokedAsCli() {
+  if (!process.argv[1]) return false
+  try {
+    return realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))
+  } catch {
+    return resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+  }
+}
+
+if (invokedAsCli()) {
   process.exitCode = await main()
 }

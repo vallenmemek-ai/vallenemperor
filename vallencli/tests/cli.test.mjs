@@ -1,9 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { PassThrough, Writable } from 'node:stream'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
+import { execFileSync } from 'node:child_process'
 import { BIG_EDIT_PREVIEW_LINES, bigEditPreview, chatBoxRedrawSequence, collectHealthChecks, createCliAgent, formatChatBox, formatStatus, formatThinkingActivity, parseArgs, runCli, runConfigCommand } from '../src/cli.mjs'
 import { HELP } from '../src/cli-ui.mjs'
 import { colorizeDiffPro, formatFileEditResult, formatToolResult, stringWidth } from '../src/cli-ui.mjs'
@@ -603,4 +604,16 @@ test('a non-interactive run auto-approves a big edit instead of waiting for inpu
   await run
   assert.deepEqual(agent.calls.find(Array.isArray), ['approved', true])
   assert.match(output.text, /edit done/)
+})
+
+// ---------- global install (npm bin symlink) ----------
+
+test('the CLI still runs when invoked through a symlink, as npm global installs do', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'vallenemperor-binlink-'))
+  t.after(() => rmSync(dir, { recursive: true, force: true }))
+  const link = join(dir, 'vallenemperor')
+  symlinkSync(resolve('src/cli.mjs'), link)
+
+  const output = execFileSync(process.execPath, [link, '--version'], { encoding: 'utf8' })
+  assert.match(output, /vallenemperor v\d+\.\d+\.\d+/)
 })

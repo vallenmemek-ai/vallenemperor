@@ -735,3 +735,19 @@ File: vallenagent/src/agent/clarify_policy.ts (baru), vallenagent/src/tools/buil
 Test: vallenagent/tests/clarify_policy.test.mjs (7 test: keputusan blocking diterima, izin-lanjut ditolak, preferensi ditolak, batas payload, payload kosong, tool benar-benar menerapkan policy lewat agent, prompt memuat aturan) — gagal sebelum fix: ya (API belum ada; handler lama selalu `clarification_needed: true`), lulus sesudah: ya
 npm test: vallenagent 218/218, vallencli 56/56
 Catatan: runtime tetap tidak bisa mengumpulkan jawaban terstruktur; `clarify` yang lolos policy menyuruh model bertanya di jawaban akhir lalu berhenti. Kalau nanti mau form interaktif di CLI, itu item terpisah.
+
+## [x] 17. Paket npm global (`npm install -g vallenemperor`)
+
+**Bukti**: `package.json` root masih `private: true`, tanpa `bin`, tanpa `files`, dan tanpa dependency runtime — jadi tidak bisa dipublikasikan. Selain itu `vallencli/src/cli.mjs` membandingkan `process.argv[1]` dengan `fileURLToPath(import.meta.url)` tanpa me-resolve symlink, sehingga bin hasil `npm install -g` (symlink di `node_modules/.bin`) **tidak menjalankan `main()` sama sekali** (exit 0, tanpa output).
+
+**Perbaikan**:
+1. Root `package.json` jadi paket yang bisa dipublikasikan: `bin` (`vallenemperor`, `vallenemperorcli`), `files` (vallencli/src, vallenagent/dist, banner, README, LICENSE, `.vallenemperor/skills`), dependency runtime yang dipakai core, `engines >= 20`, `repository`/`homepage`/`bugs`, `prepack` + `prepare` untuk build.
+2. `vallencli/src/cli.mjs:909-923` — deteksi pemanggilan CLI lewat `realpathSync` di kedua sisi, jadi bin symlink hasil install global benar-benar menjalankan `main()`.
+3. `README.md` — bagian "Global install (npm)" (npm registry, tarball, atau `github:`), plus catatan bahwa paket sudah membawa `dist` terkompilasi.
+
+Selesai: 2026-11-09
+File: package.json (root, publish config), vallencli/src/cli.mjs:909-923, README.md:72-97
+Test: vallencli/tests/cli.test.mjs — "the CLI still runs when invoked through a symlink, as npm global installs do" (spawn `node <symlink> --version`) — gagal sebelum fix: ya (output kosong), lulus sesudah: ya
+npm test: vallenagent 236/236, vallencli 57/57
+Bukti end-to-end: `npm pack` → 1.6 MB, 785 file (dist + CLI + 385 file skill) → `npm install -g --prefix /tmp/... ./vallenemperor-0.1.0.tgz` (197 paket) → `vallenemperor --version` = `vallenemperor v0.1.0`, `--help`, `config show`, dan `config set provider ollama` semuanya jalan dari paket terpasang.
+Catatan: `npm publish` belum dijalankan karena butuh login npm pemilik repo (`npm login` lalu `npm publish --access public`). Nama `vallenemperor` masih tersedia di registry saat dicek. `"type": "module"` sengaja TIDAK dipasang di root karena `vallenagent/dist/*.js` masih CommonJS — memasangnya membuat `config show` gagal dengan "exports is not defined in ES module scope".

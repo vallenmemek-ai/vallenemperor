@@ -71,6 +71,30 @@ Data lives in `~/.vallenemperor` (override with `VALLENEMPEROR_HOME`): `config.j
 
 ### Installation
 
+#### Global install (npm)
+
+Once published, the CLI installs like any other agent CLI:
+
+```bash
+npm install -g vallenemperor
+vallenemperor --version
+```
+
+Until the package is on the npm registry you can install the same tarball or the GitHub repo:
+
+```bash
+# from a packed tarball
+npm pack && npm install -g ./vallenemperor-0.1.0.tgz
+
+# or straight from GitHub (runs the build on install)
+npm install -g github:vallenmemek-ai/vallenemperor
+```
+
+The published package ships the compiled core (`vallenagent/dist`), the CLI sources, the bundled
+skill catalog and the banner, so no build step is needed after `npm install -g`.
+
+#### From a clone
+
 Clone repository and install dependencies:
 
 ```bash
