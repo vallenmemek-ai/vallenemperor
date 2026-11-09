@@ -105,6 +105,12 @@ Akun npm yang mewajibkan 2FA akan menolak `npm publish` dengan **E403** kecuali 
 `--otp=<kode>` atau granular access token yang opsi *bypass 2FA*-nya aktif. Token tidak pernah
 ditulis ke config npm: skrip hanya membacanya dari environment atau `.env`.
 
+Kalau token hanya punya izin *staging*, npm menyimpan rilis di area staging dan membuat versi
+placeholder `0.0.0-stage`. Rilis baru tayang setelah di-approve dengan 2FA di
+**npmjs.com → package → tab Staged Packages → Approve** (atau `npm stage approve <stage-id>` pada
+npm CLI 11.15+ dengan Node 22.14+). Untuk rilis manual yang langsung tayang, pakai
+`npm publish --otp=<kode>`.
+
 #### From a clone
 
 Clone repository and install dependencies:

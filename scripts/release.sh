@@ -76,6 +76,13 @@ else
 fi
 
 echo '[4/4] Selesai.'
-echo "✔ vallenemperor@$VERSION terbit di npm."
+if npm view "vallenemperor@$VERSION" version >/dev/null 2>&1; then
+  echo "✔ vallenemperor@$VERSION terbit di npm."
+else
+  echo "… vallenemperor@$VERSION masuk AREA STAGING (belum publik)."
+  echo "  Token ini hanya boleh stage. Approve dengan 2FA di:"
+  echo "    https://www.npmjs.com/package/vallenemperor  → tab Staged Packages → Approve"
+  echo "  Atau langsung tanpa staging: npm publish --otp=<kode authenticator>"
+fi
 echo "  Commit kenaikan versi: ./update.sh"
 echo "  Cek hasil: npm view vallenemperor version && npm install -g vallenemperor"
