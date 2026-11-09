@@ -48,8 +48,18 @@ else
 fi
 
 echo '[3/4] Publish ke npm...'
+# `--otp=` berarti rilis manual dengan login interaktif: token staging di .env harus diabaikan,
+# kalau tidak npm akan menaruh rilis di staging lagi dan OTP-nya tidak dipakai.
+USE_TOKEN=1
+for arg in "$@"; do
+  case "$arg" in
+    --otp=*|--otp|--no-token) USE_TOKEN=0 ;;
+  esac
+done
+
 NPM_TOKEN="${NPM_TOKEN:-}"
-if [[ -z "$NPM_TOKEN" && -f .env ]]; then
+[[ "$USE_TOKEN" -eq 0 ]] && NPM_TOKEN=""   # manual --otp: pakai login interaktif
+if [[ "$USE_TOKEN" -eq 1 && -z "$NPM_TOKEN" && -f .env ]]; then
   while IFS= read -r line || [[ -n "$line" ]]; do
     case "$line" in
       NPM_TOKEN=*|export\ NPM_TOKEN=*) NPM_TOKEN="${line#*=}" ;;
@@ -61,7 +71,10 @@ if [[ -z "$NPM_TOKEN" && -f .env ]]; then
   [[ -n "$NPM_TOKEN" ]] && echo '      token npm dimuat dari .env (nilai disembunyikan).'
 fi
 
-if [[ -n "$NPM_TOKEN" ]]; then
+if [[ "$USE_TOKEN" -eq 0 ]]; then
+  echo '      Rilis manual dengan login interaktif (NPM_TOKEN diabaikan).'
+  npm publish "$@"
+elif [[ -n "$NPM_TOKEN" ]]; then
   # Token goes into a throwaway 0600 npmrc, never into argv (which `ps` exposes).
   NPMRC="$(mktemp)"
   trap 'rm -f "$NPMRC"' EXIT

@@ -98,6 +98,7 @@ skill catalog and the banner, so no build step is needed after `npm install -g`.
 ```bash
 ./scripts/release.sh patch              # test → bump versi → npm publish
 ./scripts/release.sh minor --otp=123456 # akun dengan 2FA: tempel kode authenticator
+                                       # (--otp mengabaikan NPM_TOKEN di .env, jadi rilis langsung tayang)
 NPM_TOKEN=... ./scripts/release.sh patch # atau granular token dengan "bypass 2FA"
 ```
 
