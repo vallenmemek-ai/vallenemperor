@@ -93,6 +93,18 @@ npm install -g github:vallenmemek-ai/vallenemperor
 The published package ships the compiled core (`vallenagent/dist`), the CLI sources, the bundled
 skill catalog and the banner, so no build step is needed after `npm install -g`.
 
+#### Publishing a release
+
+```bash
+./scripts/release.sh patch              # test → bump versi → npm publish
+./scripts/release.sh minor --otp=123456 # akun dengan 2FA: tempel kode authenticator
+NPM_TOKEN=... ./scripts/release.sh patch # atau granular token dengan "bypass 2FA"
+```
+
+Akun npm yang mewajibkan 2FA akan menolak `npm publish` dengan **E403** kecuali memakai
+`--otp=<kode>` atau granular access token yang opsi *bypass 2FA*-nya aktif. Token tidak pernah
+ditulis ke config npm: skrip hanya membacanya dari environment atau `.env`.
+
 #### From a clone
 
 Clone repository and install dependencies:
