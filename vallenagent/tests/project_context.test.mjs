@@ -47,8 +47,8 @@ test('discovery walks up to parent folders and stops at the git boundary', t => 
   const ctx = loadProjectContext(join(root, 'sub'))
   const files = ctx.instructions.map(item => item.file)
 
-  assert.ok(files.some(f => f.endsWith('/sub/VALLEN.md')), 'instruction file in the working dir is loaded')
-  assert.ok(files.some(f => f.endsWith('/AGENTS.md')), 'parent instruction file is loaded')
+  assert.ok(files.some(f => f.endsWith(join('sub', 'VALLEN.md'))), 'instruction file in the working dir is loaded')
+  assert.ok(files.some(f => f.endsWith('AGENTS.md')), 'parent instruction file is loaded')
   assert.ok(files.every(f => f.startsWith(root)), 'walk stops at the .git boundary')
   assert.ok(!files.some(f => f.includes('packages/app')), 'subdirectories are not scanned for instructions')
 })

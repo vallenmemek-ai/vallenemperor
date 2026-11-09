@@ -19,7 +19,7 @@ test('formatResponseBox frames content with the requested label', () => {
 })
 
 test('cutePath shortens paths under cwd', () => {
-  assert.equal(cutePath(join('/work', 'proj', 'src', 'a.ts'), '/work/proj'), 'src/a.ts')
+  assert.equal(cutePath(join('/work', 'proj', 'src', 'a.ts'), join('/work', 'proj')), join('src', 'a.ts'))
 })
 
 test('sanitizeControlChars replaces raw control bytes with spaces', () => {

@@ -20,12 +20,12 @@
     "vallencli"
   ],
   "scripts": {
-    "build": "npm -w vallenagent run build && npm -w vallencli run build",
+    "build": "npm --prefix vallenagent run build && npm --prefix vallencli run build",
     "typecheck": "npm -w vallenagent run typecheck",
     "cli": "npm -w vallenagent run build && npm -w vallencli run start",
     "test": "npm -w vallenagent run test && npm -w vallencli run test",
     "prepack": "npm run build",
-    "prepare": "npm run build"
+    "prepare": "node scripts/prepare.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 
 import { buildCheckpoint, saveCheckpoint, loadCheckpoint, clearCheckpoint, buildResumePrompt, isCheckpointRelevant, checkpointPath, progressFromHistory } from '../dist/agent/turn_recovery.js'
@@ -37,8 +37,8 @@ test('checkpoint round-trips through disk and clears', t => {
 
 test('checkpointPath sanitizes session ids so traversal cannot escape', () => {
   const p = checkpointPath('/base', '../../etc/passwd')
-  assert.equal(dirname(p), '/base')
-  assert.equal(p.includes('/etc/passwd'), false)
+  assert.equal(dirname(p), resolve('/base'), 'the file stays directly under the base dir')
+  assert.equal(p.startsWith(resolve('/base')), true, 'the path cannot escape the base dir')
 })
 
 test('isCheckpointRelevant respects age and null', () => {

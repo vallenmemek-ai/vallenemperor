@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { homedir } from 'node:os'
 
 import { approvalMode, normalizeToolPath, requiresDangerousApproval, requiresApproval, mcpServerFromTool } from '../dist/core/approval.js'
@@ -24,8 +24,9 @@ test('approvalMode defaults to dangerous and honors explicit values', () => {
 test('normalizeToolPath expands ~ and resolves relative paths against workingDir', () => {
   assert.equal(normalizeToolPath('~'), normalizeToolPath(homedir()))
   assert.equal(normalizeToolPath('~/x'), join(homedir(), 'x'))
-  assert.equal(normalizeToolPath('a/b', '/tmp'), '/tmp/a/b')
-  assert.equal(normalizeToolPath('', '/tmp'), '/tmp')
+  // Expected values are built with the host separator so Windows passes too.
+  assert.equal(normalizeToolPath('a/b', '/tmp'), join('/tmp', 'a/b'))
+  assert.equal(normalizeToolPath('', '/tmp'), resolve('/tmp'))
 })
 
 test('recursive rm and git hard reset require dangerous approval', () => {

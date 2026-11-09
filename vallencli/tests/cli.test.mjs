@@ -610,7 +610,9 @@ test('a non-interactive run auto-approves a big edit instead of waiting for inpu
 
 // ---------- global install (npm bin symlink) ----------
 
-test('the CLI still runs when invoked through a symlink, as npm global installs do', async t => {
+// Windows needs Developer Mode/admin for symlinks, and npm uses .cmd shims there,
+// so this POSIX-specific scenario is skipped rather than failing the whole suite.
+test('the CLI still runs when invoked through a symlink, as npm global installs do', { skip: process.platform === 'win32' ? 'symlinks need privileges on Windows; npm uses .cmd shims' : false }, async t => {
   const dir = mkdtempSync(join(tmpdir(), 'vallenemperor-binlink-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   const link = join(dir, 'vallenemperor')
