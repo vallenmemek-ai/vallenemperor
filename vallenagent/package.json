@@ -7,7 +7,7 @@
     "dev": "tsc --watch",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --test tests/",
+    "test": "npm run build && node ../scripts/run-tests.mjs tests",
     "eval:models": "npm run build && node dist/core/model_eval_cli.js",
     "gateway": "node dist/gateway/cli.js"
   },
