@@ -12,6 +12,7 @@ export type { AgentCallbacks, AgentContextStats, AgentOptions, AgentResponse, Ag
 export { safeCallback } from './agent_helpers'
 import { createProvider } from '../providers/providers'
 import { registry } from '../tools/tools'
+import { deferredToolGate } from '../tools/tool_health'
 import { SkillLoader } from '../skills/skills'
 import { syncBundledSkills, readManifest } from '../skills/skills_sync'
 import { MemoryStore } from '../memory/memory'
@@ -931,6 +932,15 @@ export class AIAgent {
       const available = registry.getDeferredTools(this.toolWhitelist, this.mcpToolNames).some(tool => tool.name === target)
       if (!available || !toolArgs.arguments || typeof toolArgs.arguments !== 'object' || Array.isArray(toolArgs.arguments)) {
         return emitRejected(JSON.stringify({ error: `Deferred tool unavailable or invalid arguments: ${target}` }), toolArgs)
+      }
+      // Pre-flight: a deferred tool whose backend is known to be missing is refused
+      // here instead of running a call that is guaranteed to fail.
+      const gate = deferredToolGate(target)
+      if (gate.blocked) {
+        return emitRejected(JSON.stringify({
+          error: `Deferred tool "${target}" is unavailable: ${gate.health.detail}`,
+          health: gate.health
+        }), toolArgs)
       }
       return this.executeToolCall({
         ...toolCall,

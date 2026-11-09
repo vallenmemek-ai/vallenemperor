@@ -1,6 +1,6 @@
 # now.md — status pekerjaan
 
-Terakhir diperbarui: `2026-11-09T16:30Z` · HEAD setelah commit "checkpoint, schedule, batch hash, tool health"
+Terakhir diperbarui: `2026-11-09T16:50Z` · HEAD setelah commit "tool_call health gate"
 · rilis publik `vallenemperor@999.999.999` (versi publik itu **belum** memuat bagian 3 & 4)
 
 Cara baca: `[x]` = selesai **dan sudah diuji**, `[ ]` = belum. Jangan centang tanpa bukti
@@ -154,9 +154,16 @@ Koreksi: klaim sebelumnya bahwa `999.999.999` adalah versi tertinggi semver itu 
       (butuh HTTPS keluar), `image_generate` cek `api_key`, `vision_analyze` cek provider.
       Jadi tool yang backend-nya bolong kelihatan sebelum dipanggil, bukan setelah gagal.
 
+### P2 penutup — selesai
+- [x] **`tool_call` menolak lebih awal kalau backend `unavailable`.** Health dipindah ke modul
+      netral `vallenagent/src/tools/tool_health.ts` supaya agent bisa memakainya tanpa import
+      melingkar. `deferredToolGate()` memblokir hanya status `unavailable`; `degraded` tetap
+      dijalankan karena tool itu mungkin masih berhasil.
+- [x] Test: gate memblokir `unavailable`, meloloskan `degraded` dan `ready`; probe
+      `browser_exec` diverifikasi sebagai probe nyata (bukan label statis).
+
 ### Sisa backlog
-- [ ] `tool_call` menolak lebih awal untuk tool yang `health.status = unavailable`
-      (sekarang baru dilaporkan di `tool_search`)
+- (kosong)
 
 
 
@@ -170,9 +177,11 @@ Dijalankan `2026-11-09T15:35Z`, semua dari perintah nyata:
 | Uji | Perintah | Hasil |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ bersih |
-| Test suite (Node 20.19.2) | `npm test` | ✅ **263 + 72 pass, 0 fail** |
-| Test suite (Node 24.22.1) | `npx node@24.22.1 ../scripts/run-tests.mjs tests` | ✅ **263 + 72 pass, 0 fail** |
+| Test suite (Node 20.19.2) | `npm test` | ✅ **266 + 72 pass, 0 fail** |
+| Test suite (Node 24.22.1) | `npx node@24.22.1 ../scripts/run-tests.mjs tests` | ✅ **266 + 72 pass, 0 fail** |
 | Tool terdaftar | `registry.list().length` | ✅ **32** (`list_dir`, `typecheck`, `checkpoint`, `schedule` baru) |
+| Tool E2E via agent | `-p "Use the list_dir tool on /tmp/vpkg..."` | ✅ 5 entri, cocok dengan `ls \| wc -l` |
+| Health E2E via agent | `-p "Call tool_search query 'browser'..."` | ✅ `ready · playwright importable via python3` (diverifikasi manual) |
 | `--json` telemetry | `vallenemperor --json -p "/stats"` | ✅ satu objek JSON, exit 0 |
 | `--quiet` | `printf '/exit\n' \| vallenemperor --quiet` | ✅ output kosong |
 | `-p` slash: `/help` | `vallenemperor -p "/help"` | ✅ help CLI asli, exit 0 |

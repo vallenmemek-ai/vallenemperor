@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 
 import { registerBuiltinTools } from '../dist/tools/builtin_tools.js'
 import { registry } from '../dist/tools/tools.js'
+import { deferredToolGate, deferredToolHealth, resetDeferredHealthCache } from '../dist/tools/tool_health.js'
 
 registerBuiltinTools()
 
@@ -240,4 +241,31 @@ test('tool_search reports backend health for deferred tools', async () => {
   const webHit = web.results.find(item => item.name === 'web_search')
   assert.ok(webHit)
   assert.equal(webHit.health.status, 'degraded')
+})
+
+test('deferredToolHealth labels network tools degraded and internal tools ready', () => {
+  assert.equal(deferredToolHealth('web_search').status, 'degraded')
+  assert.equal(deferredToolHealth('web_extract').status, 'degraded')
+  assert.equal(deferredToolHealth('manage_connections').status, 'ready')
+  assert.equal(deferredToolHealth('image_generate', {}).status, 'degraded')
+  assert.equal(deferredToolHealth('image_generate', { providerConfig: { base_url: 'http://x', api_key: 'k', model: 'm' } }).status, 'ready')
+})
+
+test('browser_exec health is a real probe with a reason', () => {
+  resetDeferredHealthCache()
+  const health = deferredToolHealth('browser_exec')
+  assert.ok(['ready', 'unavailable'].includes(health.status), JSON.stringify(health))
+  assert.ok(health.detail.length > 0)
+})
+
+test('tool_call gate blocks only unavailable backends', () => {
+  const blocked = deferredToolGate('browser_exec', undefined, { status: 'unavailable', detail: 'playwright missing' })
+  assert.equal(blocked.blocked, true)
+  assert.match(blocked.health.detail, /playwright missing/)
+
+  const degraded = deferredToolGate('web_search', undefined, { status: 'degraded', detail: 'needs network' })
+  assert.equal(degraded.blocked, false, 'degraded tools still run; only unavailable is refused')
+
+  const ready = deferredToolGate('manage_connections', undefined, { status: 'ready', detail: 'ok' })
+  assert.equal(ready.blocked, false)
 })
