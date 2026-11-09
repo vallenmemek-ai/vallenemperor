@@ -282,38 +282,74 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     return { handled: true, response: `Memori ${scope} ${verb}.` }
   }
 
-  if (ctx.channel !== 'remote') return NOT_HANDLED
-  const { agent, userId = 0, sessionPrefix = `tg-${userId}-` } = ctx
+  // --- Channel-agnostic session commands -------------------------------------
+  // These used to live behind `channel !== 'remote'`, which forced the CLI to
+  // reimplement them (and drift). One implementation serves every surface; the
+  // surface only decides how to render the text.
+  const sessionPrefix = ctx.sessionPrefix ?? (ctx.channel === 'remote' ? `tg-${ctx.userId ?? 0}-` : '')
 
-  if (cmd === '/stop') {
-    return { handled: true, response: agent.interrupt() ? '⏹ Perintah berhenti dikirim ke agent.' : 'Tidak ada proses agent yang sedang berjalan.' }
-  }
-  if (cmd === '/status') {
-    const stats = agent.getContextStats()
-    return { handled: true, response: ctx.busy ? `Agent sedang mengerjakan pesan. Konteks ${stats.percent}% (${stats.promptTokens.toLocaleString()}/${stats.contextWindow.toLocaleString()}).` : `Agent siap. Model: ${agent.provider.model}. Konteks ${stats.percent}% (${stats.promptTokens.toLocaleString()}/${stats.contextWindow.toLocaleString()}).` }
-  }
-  if (cmd === '/new' || cmd === '/reset') {
-    agent.resetSession(`${sessionPrefix}${Date.now()}`)
-    return { handled: true, response: 'Sesi baru dimulai.' }
+  if (cmd === '/status' || cmd === '/stats') {
+    const stats = ctx.agent.getContextStats()
+    const mark = stats.estimated ? '~' : ''
+    const servers = ctx.agent.mcpManager?.getStatus?.() || []
+    const ready = servers.filter(server => server.status === 'ready').length
+    const total = servers.filter(server => server.status !== 'disabled').length
+    const lines = [
+      `Session: ${ctx.agent.getSessionId()}`,
+      `Model: ${ctx.agent.provider.model}`,
+      `Provider: ${ctx.agent.config.providers.active} · ${ctx.agent.provider.baseURL}`,
+      `Working directory: ${ctx.agent.config.terminal?.cwd || process.cwd()}`,
+      `Context: ${mark}${stats.promptTokens}/${stats.contextWindow} tokens (${stats.percent}%)`,
+      `Turns: ${stats.turns} · Skills: ${ctx.agent.skillLoader?.list?.().length || 0} · MCP: ${ready}/${total}`
+    ]
+    if (ctx.busy) lines.unshift('Agent sedang mengerjakan pesan.')
+    return { handled: true, response: lines.join(String.fromCharCode(10)) }
   }
   if (cmd === '/model') {
-    if (!args.length) return { handled: true, response: `Model saat ini: ${agent.provider.model}\nPakai /model <nama-model> untuk mengganti model di sesi ini.` }
+    const first = String(args[0] || '').toLowerCase()
+    if (first === 'save') {
+      const model = args.slice(1).join(' ').slice(0, 200).trim()
+      if (!model) return { handled: true, response: 'Penggunaan: /model save <nama-model> — menyimpan permanen ke config.json.' }
+      ctx.agent.setModel(model, true)
+      return { handled: true, response: `Model ${model} disimpan ke config.json.` }
+    }
+    if (!args.length) {
+      return { handled: true, response: `Model saat ini: ${ctx.agent.provider.model}\nPakai /model <nama-model> untuk sesi ini saja, atau /model save <nama-model> untuk permanen.` }
+    }
     const model = args.join(' ').slice(0, 200)
-    agent.setModel(model, false)
-    return { handled: true, response: `Model sesi diubah ke ${model}.` }
+    ctx.agent.setModel(model, false)
+    return { handled: true, response: `Model sesi diubah ke ${model} (tidak disimpan; pakai /model save untuk permanen).` }
   }
   if (cmd === '/sessions') {
-    const sessions = agent.sessionManager.listSessions().filter(session => session.id.startsWith(sessionPrefix)).slice(0, 10)
+    const sessions = ctx.agent.sessionManager.listSessions()
+      .filter(session => session.id.startsWith(sessionPrefix))
+      .slice(0, 20)
     return { handled: true, response: sessions.length
-      ? sessions.map(session => `${session.id} — ${session.title} (${session.updated_at})`).join('\n')
+      ? sessions.map((session, index) => `${index + 1}. ${session.id} · ${session.title} · ${session.updated_at} · ${session.model}`).join(String.fromCharCode(10))
       : 'Belum ada sesi tersimpan.' }
   }
   if (cmd === '/resume') {
-    const target = args[0]
-    if (!target || !target.startsWith(sessionPrefix)) {
-      return { handled: true, response: `Gunakan /resume <id> dari daftar /sessions milikmu (prefix ${sessionPrefix}).` }
+    const target = String(args[0] || '').trim()
+    if (!target) return { handled: true, response: 'Penggunaan: /resume <nomor|session-id>. Lihat /sessions.' }
+    let id = target
+    if (/^\d+$/.test(target)) {
+      const sessions = ctx.agent.sessionManager.listSessions().filter(session => session.id.startsWith(sessionPrefix))
+      const picked = sessions[Number(target) - 1]
+      if (!picked) return { handled: true, response: `Nomor sesi di luar rentang: ${target}. Lihat /sessions.` }
+      id = picked.id
     }
-    return { handled: true, response: agent.resumeSession(target) ? `Sesi ${target} dilanjutkan.` : 'Sesi tidak ditemukan.' }
+    return { handled: true, response: ctx.agent.resumeSession(id) ? `Sesi ${id} dilanjutkan.` : `Sesi tidak ditemukan: ${id}` }
+  }
+  if (cmd === '/new' || cmd === '/reset') {
+    await ctx.agent.resetSession(`${sessionPrefix}${Date.now()}`)
+    return { handled: true, response: 'Sesi baru dimulai.' }
+  }
+
+  if (ctx.channel !== 'remote') return NOT_HANDLED
+  const { agent } = ctx
+
+  if (cmd === '/stop') {
+    return { handled: true, response: agent.interrupt() ? '⏹ Perintah berhenti dikirim ke agent.' : 'Tidak ada proses agent yang sedang berjalan.' }
   }
   if (cmd === '/help') {
     return { handled: true, response: 'Perintah Telegram: /new, /resume <id>, /stop, /status, /model [nama], /plan [tugas], /sessions, /schedule [list|history|add|remove], /help.' }

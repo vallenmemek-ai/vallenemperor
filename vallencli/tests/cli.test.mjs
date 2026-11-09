@@ -253,35 +253,38 @@ test('active turn keeps boxed status while showing compact robot states', async 
   assert.match(output.text, /VALLENEMPEROR/)
 })
 
-test('sessions use displayed numeric indexes and resume selects indexed session', async () => {
-  const sessions = [
-    { id: 'session-new', title: 'latest chat', updated_at: '2026-10-22T12:00:00.000Z', model: 'mock-model' },
-    { id: 'session-old', title: 'older chat', updated_at: '2026-10-21T12:00:00.000Z', model: 'mock-model' }
-  ]
+test('CLI forwards /sessions and /resume to the shared core handler', async () => {
+  const shared = []
   const input = new PassThrough()
   input.isTTY = false
   const output = captureOutput()
-  const agent = fakeAgent({ sessions })
-  const run = runCli({ input, output: output.output, agent, healthCheck: noHealth, bannerText: '' })
+  const agent = fakeAgent()
+  const run = runCli({
+    input, output: output.output, agent, healthCheck: noHealth, bannerText: '',
+    handleSharedCommand: async (_ctx, text) => { shared.push(text); return { handled: true, response: `core:${text}` } }
+  })
   input.end(['/sessions', '/resume 1', '/exit', ''].join(String.fromCharCode(10)))
   await run
-  assert.ok(output.text.includes('1. session-new · latest chat'))
-  assert.ok(output.text.includes('2. session-old · older chat'))
-  assert.ok(agent.calls.some(call => Array.isArray(call) && call[0] === 'resume' && call[1] === 'session-new'))
-  assert.match(output.text, /Resumed session-new/)
+  // Numbering and index→id resolution live in core now; the CLI only forwards.
+  assert.deepEqual(shared, ['/sessions', '/resume 1'])
+  assert.match(output.text, /core:\/sessions/)
+  assert.match(output.text, /core:\/resume 1/)
 })
 
-test('resume accepts only numeric session indexes and rejects zero/out-of-range', async () => {
+test('CLI forwards every /resume form instead of rejecting ids locally', async () => {
+  const shared = []
   const input = new PassThrough()
   input.isTTY = false
   const output = captureOutput()
   const agent = fakeAgent({ sessions: [{ id: 'session-one', title: 'one', updated_at: '', model: 'mock-model' }] })
-  const run = runCli({ input, output: output.output, agent, healthCheck: noHealth, bannerText: '' })
+  const run = runCli({
+    input, output: output.output, agent, healthCheck: noHealth, bannerText: '',
+    handleSharedCommand: async (_ctx, text) => { shared.push(text); return { handled: true, response: 'ok' } }
+  })
   input.end(['/resume 0', '/resume 2', '/resume latest', '/resume session-one', '/resume', '/exit', ''].join(String.fromCharCode(10)))
   await run
-  assert.equal(agent.calls.filter(call => Array.isArray(call) && call[0] === 'resume').length, 0)
-  assert.equal((output.text.match(/Session number out of range/g) || []).length, 2)
-  assert.equal((output.text.match(/Usage: \/resume <number>/g) || []).length, 3)
+  assert.deepEqual(shared, ['/resume 0', '/resume 2', '/resume latest', '/resume session-one', '/resume'])
+  assert.equal(agent.calls.filter(call => Array.isArray(call) && call[0] === 'resume').length, 0, 'the CLI must not resume on its own')
 })
 
 test('CLI renders typed tool progress and terminal output from the core', async () => {
@@ -387,7 +390,7 @@ test('CLI keeps denied tool approval denied', async () => {
   assert.match(output.text, /denied result/)
 })
 
-test('CLI forwards shared slash commands and supports model switching', async () => {
+test('CLI forwards shared slash commands and no longer switches models itself', async () => {
   const input = new PassThrough()
   input.isTTY = false
   const output = captureOutput()
@@ -396,10 +399,9 @@ test('CLI forwards shared slash commands and supports model switching', async ()
   const run = runCli({ input, output: output.output, agent, healthCheck: noHealth, bannerText: '', handleSharedCommand: async (_ctx, text) => { shared.push(text); return { handled: true, response: 'MCP command result' } } })
   input.end('/mcp\n/model next-model\n/exit\n')
   await run
-  assert.deepEqual(shared, ['/mcp'])
-  assert.equal(agent.provider.model, 'next-model')
+  assert.deepEqual(shared, ['/mcp', '/model next-model'])
+  assert.equal(agent.provider.model, 'mock-model', 'model switching belongs to core, not the CLI')
   assert.match(output.text, /MCP command result/)
-  assert.match(output.text, /next-model/)
 })
 
 test('CLI forwards /stop to the active turn and exits without input races', async () => {

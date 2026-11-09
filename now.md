@@ -118,6 +118,8 @@ Koreksi: klaim sebelumnya bahwa `999.999.999` adalah versi tertinggi semver itu 
 
 ## 4. Telemetry & permukaan tool — selesai
 
+> Penyatuan command CLI ↔ core dilacak terpisah di [`wiring.md`](wiring.md).
+
 ### P1
 - [x] **`--json`** untuk telemetry. `core.contextTelemetry(agent)` jadi satu sumber data;
       `--json -p "/stats"` mencetak satu objek JSON stabil (session, model, token, persen,

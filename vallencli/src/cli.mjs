@@ -730,7 +730,13 @@ export async function runCli(options = {}) {
         try {
           if (await localCommand(text)) continue
           const shared = await sharedCommand?.({ channel: 'terminal', agent }, text)
-          if (shared?.handled) { printResponse(shared.response); continue }
+          if (shared?.handled) {
+            printResponse(shared.response)
+            // Commands that change session/model/cwd now live in core, so the status
+            // bar has to be refreshed here instead of inside a local handler.
+            if (interactive) refreshStatus()
+            continue
+          }
           printResponse(`Unknown command: ${text.split(/\s+/, 1)[0]}. Use /help.`)
         } catch (error) { displayLine(color(`Command error: ${error instanceof Error ? error.message : String(error)}`, ANSI.red)) }
         continue

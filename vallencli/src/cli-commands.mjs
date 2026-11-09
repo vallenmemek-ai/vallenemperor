@@ -2,7 +2,7 @@ import { rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { HELP, color, startupBox, summarizeMcp, refreshThemeColors } from './cli-ui.mjs'
+import { HELP, color, startupBox, refreshThemeColors } from './cli-ui.mjs'
 import { THEMES, getThemeName, gradientText, saveTheme, setTheme, themeNames } from './cli-theme.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -13,12 +13,9 @@ export function createLocalCommandHandler(context) {
     const [cmd, ...args] = text.trim().split(/\s+/)
     const value = args.join(' ').trim()
     if (cmd === '/help') { printResponse(HELP); return true }
-    if (cmd === '/model') {
-      if (!value) { printResponse(`Active model: ${agent.provider.model}\nProvider: ${agent.config.providers.active}\nUse /model <model-name> to switch.`); return true }
-      agent.setModel(value)
-      printResponse(`Active model updated: ${agent.provider.model}`)
-      return true
-    }
+    // /model, /status, /stats, /sessions, /resume, /new, /reset and /memory live in
+    // core.handleCommand so every surface behaves the same. Returning false lets
+    // runCli fall through to the shared handler.
     if (cmd === '/token') {
       const provider = agent.config.providers['9router']
       if (value === 'status') { printResponse(`9router token: ${provider?.api_key ? 'configured (value hidden)' : 'not set'}`); return true }
@@ -42,37 +39,11 @@ export function createLocalCommandHandler(context) {
     }
     if (cmd === '/clear') { out('\x1b[2J\x1b[H'); printResponse('VallenEmperor CLI screen cleared.'); refreshStatus(); return true }
     if (cmd === '/health') { printResponse(startupBox(agent, '', await healthCheck(agent, state.mcpServers), output.isTTY ? Math.min(output.columns || 80, 76) : output.columns || 80)); return true }
-    if (cmd === '/status' || cmd === '/stats') {
-      const s = agent.getContextStats()
-      const mcp = summarizeMcp(agent, state.mcpServers)
-      printResponse(`Session: ${agent.getSessionId()}\nModel: ${agent.provider.model}\nProvider: ${agent.config.providers.active} · ${agent.provider.baseURL}\nWorking directory: ${agent.config.terminal?.cwd || process.cwd()}\nContext: ${s.estimated ? '~' : ''}${s.promptTokens}/${s.contextWindow} tokens (${s.percent}%)\nTurns: ${s.turns} · Skills: ${agent.skillLoader.list().length} · MCP: ${mcp.ready}/${mcp.total}`)
-      return true
-    }
     if (cmd === '/tools') {
       const tools = core.registry.list().filter(tool => !tool.checkFn || tool.checkFn())
       const groups = new Map()
       for (const tool of tools) { const group = tool.toolset || 'other'; groups.set(group, [...(groups.get(group) || []), tool.name]) }
       printResponse([...groups].sort(([a], [b]) => a.localeCompare(b)).map(([group, names]) => `${group}: ${names.join(', ')}`).join('\n'))
-      return true
-    }
-    if (cmd === '/sessions') {
-      const sessions = agent.sessionManager.listSessions()
-      printResponse(sessions.length ? sessions.slice(0, 20).map((item, index) => `${index + 1}. ${item.id} · ${item.title} · ${item.updated_at} · ${item.model}`).join('\n') : 'No saved sessions.')
-      return true
-    }
-    if (cmd === '/resume') {
-      const sessions = agent.sessionManager.listSessions()
-      if (!/^\d+$/.test(value)) { printResponse('Usage: /resume <number>. Use /sessions.'); return true }
-      const number = Number(value)
-      if (!Number.isSafeInteger(number) || number < 1 || number > sessions.length) {
-        printResponse(`Session number out of range: ${value}. Use /sessions.`)
-        return true
-      }
-      const target = sessions[number - 1]?.id
-      if (!target || !agent.resumeSession(target)) { printResponse(`Session not found: ${value}`); return true }
-      agent.memoryStore.setWorkingDir(agent.config.terminal?.cwd || process.cwd())
-      printResponse(`Resumed ${target}\nModel: ${agent.provider.model}\nWorking directory: ${agent.config.terminal?.cwd || process.cwd()}`)
-      refreshStatus()
       return true
     }
     if (cmd === '/session') {
@@ -81,8 +52,6 @@ export function createLocalCommandHandler(context) {
       printResponse(`Deleted ${agent.sessionManager.clearAllSessions()} saved sessions; active session reset.`)
       return true
     }
-    if (cmd === '/new' || cmd === '/reset') { await agent.resetSession(); printResponse('Session reset.'); refreshStatus(); return true }
-    if (cmd === '/memory' && !value) { printResponse(agent.memoryStore.formatForSystemPrompt() || 'No persistent memories stored.'); return true }
     if (cmd === '/todos') { printResponse(agent.todoStore.formatForInjection() || 'No active todos.'); return true }
     if (cmd === '/output') { printResponse(state.lastTerminalOutput ? `Last terminal output:\n\n${state.lastTerminalOutput}` : 'No terminal output captured yet.'); return true }
     if (cmd === '/auto') {
@@ -147,8 +116,9 @@ export function createLocalCommandHandler(context) {
         printResponse(rows.length ? rows.map(row => `${row.at} ${row.kind} ${row.name}: ${row.change}`).join('\n') : 'No review history.')
         return true
       }
-      const started = agent.requestBackgroundReview({ onReviewComplete: message => displayLine(message), onReviewError: error => displayLine(`Review error: ${error}`) })
-      printResponse(started ? 'Background review started.' : 'Background review already running.')
+      const focus = value.trim()
+      const started = agent.requestBackgroundReview({ onReviewComplete: message => displayLine(message), onReviewError: error => displayLine(`Review error: ${error}`) }, focus)
+      printResponse(started ? `Background review started${focus ? ` (focus: ${focus.slice(0, 120)})` : ''}.` : 'Background review already running.')
       return true
     }
     if (cmd === '/skills') {
