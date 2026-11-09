@@ -52,6 +52,13 @@ export function bigEditPreview(request, { interactive = true } = {}) {
   const changedLines = preview.added + preview.removed
   return changedLines > BIG_EDIT_PREVIEW_LINES ? { ...preview, changedLines } : null
 }
+// "/auto on" promises "no approval gates". A big edit used to bypass the mode check and
+// still prompt, so /auto looked broken. The mode wins; the preview only decides when the
+// mode is not 'off'.
+export function shouldAskApproval({ mode, required, bigPreview }) {
+  if (mode === 'off') return false
+  return Boolean(required || bigPreview)
+}
 // "[a] always this session" scope: all file-edit tools share one key; terminal has its own; everything else is per tool.
 const approvalKey = request => (isEditTool(request?.name) ? 'file-edit' : String(request?.name))
 // Destructive shell commands (rm -r, sudo, git push -f, ...) never ride on an "always" grant.
@@ -500,9 +507,11 @@ export async function runCli(options = {}) {
     const mode = core.approvalMode(agent.config?.agentApproval)
     const server = core.mcpServerFromTool(request.name)
     const trusted = server ? agent.config?.mcpServers?.[server]?.trusted === true : false
-    // A big edit shows its diff before it lands, even when the mode would not ask.
+    // A big edit shows its diff before it lands, even when the mode would not ask —
+    // unless the mode is 'off' (/auto on), where the user asked for no gates at all.
     const bigPreview = bigEditPreview(request, { interactive })
-    if (!bigPreview && !core.requiresApproval({ name: request.name, args: request.args }, mode, trusted)) return Promise.resolve(true)
+    const required = core.requiresApproval({ name: request.name, args: request.args }, mode, trusted)
+    if (!shouldAskApproval({ mode, required, bigPreview })) return Promise.resolve(true)
     if (server && core.isMcpApproved(agent.getSessionId(), server)) return Promise.resolve(true)
     const key = approvalKey(request)
     const canAlways = interactive && !isRiskyTerminal(request)

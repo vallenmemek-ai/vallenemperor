@@ -1,2 +1,0 @@
-line1=FROM_AGENT_B
-line2=beta
