@@ -1169,7 +1169,9 @@ export class AIAgent {
             }
           } }, systemPrompt)
           if (signal?.aborted) return 'No updates needed'
-          if (budgetExceeded) throw new Error('Background review stopped at 20,000 aggregate input tokens.')
+          // Hitting the budget is a skip, not a failure: report it as such instead of
+          // throwing, which used to surface as "Review error: ..." on every long turn.
+          if (budgetExceeded) return `Review budget reached (${inputBudget.total}/${inputBudget.ceiling} tokens)`
           return result.response
         } finally {
           signal?.removeEventListener('abort', abortReview)

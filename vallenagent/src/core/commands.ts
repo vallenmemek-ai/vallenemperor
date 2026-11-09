@@ -166,7 +166,7 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
       if (!match) return { handled: true, response: 'Usage: /schedule add <minute hour day month weekday> <timezone> | <name> | <prompt>.' }
       try {
         const job = await store.add({ cron: match[1], timezone: match[2], name: match[3].trim(), prompt: match[4].trim(), delivery: remote ? 'telegram' : 'local', ownerId })
-        return { handled: true, response: `Scheduled job created. ID: ${job.id} · next: ${job.nextRunAt} · ${job.timezone}${remote ? ' · each run asks Telegram approval.' : ''}` }
+        return { handled: true, response: `Scheduled job created. ID: ${job.id} · next: ${job.nextRunAt} · ${job.timezone}${remote ? ' · each run asks Telegram approval.' : ' · results go to ~/.vallenemperor/gateway/cron-local.log (run by the gateway daemon).'}` }
       } catch (error) { return { handled: true, response: `Schedule rejected: ${error instanceof Error ? error.message : 'invalid schedule'}` } }
     }
     return { handled: true, response: 'Usage: /schedule [list|history [limit]|add ...|remove <id>].' }

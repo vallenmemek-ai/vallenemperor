@@ -52,15 +52,27 @@ export class ReviewRunGate {
   finish(): void { this.running = false }
 }
 
+/**
+ * Caps how much *new* context a background review may add.
+ *
+ * `onTelemetry` reports the prompt size of each provider call, and every iteration
+ * re-sends the whole conversation — so summing `promptTokens` counted the same text
+ * once per iteration and blew the budget after two calls, failing every review.
+ * Only the growth between calls is charged here.
+ */
 export class ReviewInputBudget {
   private used = 0
+  private last = 0
   constructor(private readonly limit = 20_000) {}
-  consume(tokens: number): boolean {
-    if (!Number.isFinite(tokens) || tokens < 0) return false
-    this.used += tokens
+  consume(promptTokens: number): boolean {
+    if (!Number.isFinite(promptTokens) || promptTokens < 0) return false
+    const growth = Math.max(0, promptTokens - this.last)
+    this.last = promptTokens
+    this.used += growth
     return this.used <= this.limit
   }
   get total(): number { return this.used }
+  get ceiling(): number { return this.limit }
 }
 
 export class RepeatableToolErrorTracker {
@@ -114,6 +126,9 @@ export async function spawnBackgroundReview(
       }
       if (!trimmed || /^no updates needed[.!]?$/i.test(trimmed)) {
         log('no-op', 'No durable update was justified.')
+      } else if (/^review budget reached/i.test(trimmed)) {
+        // Budget exhaustion is a deliberate skip, not a failed review.
+        log('skipped', trimmed)
       } else {
         let notice = ''
         let invalidOutput = false

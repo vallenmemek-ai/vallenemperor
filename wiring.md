@@ -70,7 +70,50 @@ logika itu. Duplikasi itulah sumber 6 divergensi:
 - [x] Test penjaga tambahan: `cli-commands.mjs` tidak boleh menyentuh `vallenagent/dist/`,
       dan dropdown harus memuat `/output`, `/schedule`, `/status`, `/context`.
 
-## Bukti uji
+## Fase 5 — jalur remote + jadwal + review
+
+- [x] **Budget review salah hitung.** `onTelemetry` melaporkan ukuran prompt **per panggilan**,
+      dan tiap iterasi mengirim ulang seluruh percakapan — jadi konteks yang sama ditagih
+      berkali-kali dan 20k terlampaui setelah dua panggilan. Sekarang yang ditagih hanya
+      **pertumbuhan** (`promptTokens - promptTokensSebelumnya`). Bukti: review sungguhan
+      tercatat `no-op`, bukan `error`.
+- [x] **Budget habis bukan error.** Dulu `throw` → `Review error: ...`. Sekarang
+      mengembalikan penanda `Review budget reached (n/limit tokens)` dan dicatat sebagai
+      `skipped`.
+- [x] **Approval Telegram ditulis dua kali** (daemon untuk cron, router untuk chat) dengan
+      teks dan batas preview berbeda → satu `createRemoteApprovalGate()` untuk keduanya.
+- [x] **Job `/schedule` dari terminal tidak pernah jalan.** `authorize` mensyaratkan
+      `job.ownerId` + allowlist Telegram, sedangkan job terminal tidak punya owner. Sekarang
+      job `local` dijalankan daemon, hasil ditulis ke `gateway/cron-local.log`; tool berisiko
+      ditolak karena tidak ada manusia yang bisa meng-approve.
+- [x] **`whatsapp` ditawarkan sebagai tujuan jadwal padahal tidak ada adapter**
+      (`manager.ts` → `available: false`). Job dibuat lalu gagal tiap run. Sekarang ditolak
+      saat dibuat dengan pesan yang jelas.
+- [x] **Tool `schedule` bisa membuat job Telegram tanpa owner** → tidak akan pernah terkirim.
+      Sekarang tool itu hanya bisa membuat job `local` dan menyebutkan alasannya.
+- [x] **`/geteway` (typo) dipakai di teks bantuan** → diganti `/gateway` (nama lama tetap
+      diterima sebagai alias).
+- [x] **Pipeline cron dipindah ke `gateway/cron_actions.ts`** supaya bisa diuji tanpa token
+      Telegram — sekaligus menghapus `void main()` yang membuat daemon mustahil diimpor.
+
+### Bukti uji Fase 5
+
+`2026-11-09T18:20Z`
+
+| Uji | Perintah | Hasil |
+|---|---|---|
+| Typecheck | `npm run typecheck` | ✅ bersih |
+| Test core | `node ../scripts/run-tests.mjs tests` | ✅ **296 pass, 0 fail** |
+| Test CLI | `node ../scripts/run-tests.mjs tests` | ✅ **78 pass, 0 fail** |
+| Review sungguhan | `requestBackgroundReview(...)` | ✅ log `no-op`, **bukan** `error` |
+| Job lokal jalan | test `cron_actions` (pakai `createCronActions` produksi) | ✅ `succeeded`, hasil masuk `cron-local.log` |
+| Slash di job | prompt `/help` | ✅ perintah dijalankan, model **tidak** dipanggil |
+| Job lokal + tool berisiko | `rm -rf /tmp/x` | ✅ ditolak (`false`), tak ada approver |
+| Job Telegram non-allowlist | owner 999 | ✅ `denied`, tanpa prompt/ kirim |
+| `/schedule add` lokal | `-p "/schedule add 0 9 * * * Asia/Jakarta \| nightly \| /status"` | ✅ dibuat + menyebut lokasi log |
+| `delivery: whatsapp` | `store.add(...)` | ✅ ditolak: "WhatsApp has no adapter yet" |
+
+### Bukti uji Fase 1–4
 
 `2026-11-09T17:45Z`, semua perintah nyata.
 

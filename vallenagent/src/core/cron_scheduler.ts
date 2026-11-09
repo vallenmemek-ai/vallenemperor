@@ -102,7 +102,9 @@ export class CronStore {
       const prompt = String(input.prompt || '').trim()
       if (!name || name.length > 100) throw new Error('Job name must be 1-100 characters')
       if (!prompt || prompt.length > 4000) throw new Error('Job prompt must be 1-4000 characters')
-      if (!['local', 'telegram', 'whatsapp'].includes(input.delivery)) throw new Error('Invalid delivery; choose local, telegram, or whatsapp')
+      // 'whatsapp' is in the type but no adapter exists, so accepting it only created
+      // jobs that failed on every run with a misleading "recipient not authorized".
+      if (!['local', 'telegram'].includes(input.delivery)) throw new Error('Invalid delivery; choose local or telegram (WhatsApp has no adapter yet)')
       if (input.ownerId !== undefined && (!Number.isSafeInteger(input.ownerId) || input.ownerId <= 0)) throw new Error('Invalid scheduled job owner')
       const nextRunAt = nextCronRun(input.cron, input.timezone, now).toISOString()
       const job: CronJob = { id: randomUUID(), name, prompt, cron: input.cron.trim(), timezone: input.timezone, delivery: input.delivery, ...(input.ownerId === undefined ? {} : { ownerId: input.ownerId }), enabled: true, createdAt: now.toISOString(), nextRunAt }

@@ -18,7 +18,7 @@ export function registerScheduleTools(): void {
         prompt: { type: 'string', description: 'Prompt the job runs (action=add)' },
         cron: { type: 'string', description: 'Five-field cron expression, e.g. "0 9 * * *" (action=add)' },
         timezone: { type: 'string', description: 'IANA timezone (default: host timezone)' },
-        delivery: { type: 'string', enum: ['local', 'telegram', 'whatsapp'], description: 'Where the result goes (default: local)' },
+        delivery: { type: 'string', enum: ['local', 'telegram'], description: 'Where the result goes (default: local)' },
         id: { type: 'string', description: 'Job id (action=remove)' },
         limit: { type: 'integer', description: 'History entries to return (default: 20)' }
       },
@@ -54,9 +54,12 @@ export function registerScheduleTools(): void {
           const cron = String(args.cron || '').trim()
           if (!name || !prompt || !cron) return JSON.stringify({ error: 'name, prompt and cron are required for action=add' })
           const timezone = String(args.timezone || '').trim() || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-          const delivery = (String(args.delivery || 'local').toLowerCase()) as 'local' | 'telegram' | 'whatsapp'
-          const job = await store.add({ name, prompt, cron, timezone, delivery })
-          return JSON.stringify({ action, job })
+          // This tool has no chat/owner context, so a telegram job created here could
+          // never be delivered. Local is the only delivery it can honour.
+          const requested = String(args.delivery || 'local').toLowerCase()
+          if (requested !== 'local') return JSON.stringify({ error: `delivery "${requested}" needs a chat owner; create it with /schedule from the terminal or Telegram instead` })
+          const job = await store.add({ name, prompt, cron, timezone, delivery: 'local' })
+          return JSON.stringify({ action, job, note: 'Local jobs are run by the gateway daemon; results are appended to gateway/cron-local.log' })
         }
         return JSON.stringify({ error: 'action must be one of: list, add, remove, history' })
       } catch (error) {

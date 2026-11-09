@@ -1,10 +1,10 @@
 import { join } from 'path'
 import { AIAgent } from '../agent/agent'
-import { requiresApproval, mcpServerFromTool, isMcpApproved, rememberMcpApproval } from '../core/approval'
 import { handleCommand } from '../core/commands'
 import { loadConfig } from '../core/config'
 import { SessionManager } from '../session/session'
-import { gatewayDir, loadTelegramConfig } from './store'
+import { gatewayDir } from './store'
+import { createRemoteApprovalGate } from './approval_gate'
 import { stripAnsi } from './format'
 import { unlinkSync } from 'fs'
 
@@ -136,20 +136,12 @@ export class SessionRouter {
             void transport.progress(userId, `⏳ ${stripAnsi(info.preview).slice(0, 300)}`).catch(() => {})
           }
         },
-        onBeforeTool: async info => {
-          const config = loadTelegramConfig()
-          const mode = loadConfig().gateway?.telegram?.approval || config.approval
-          const server = mcpServerFromTool(info.name)
-          const trusted = server ? chat.agent.config.mcpServers?.[server]?.trusted === true : false
-          if (!requiresApproval({ name: info.name, args: info.args }, mode, trusted)) return true
-          if (server && isMcpApproved(chat.agent.getSessionId(), server)) return true
-          const summary = info.name === 'terminal'
-            ? `Tool: ${info.name}\nCommand: ${String(info.args.command || '').slice(0, 1500)}`
-            : server ? `Izinkan MCP ${server}, tool ${info.name}? Argumen tidak ditampilkan.` : `Izinkan tool ${info.name} dijalankan?`
-          const allowed = await transport.approve(userId, userId, summary)
-          if (allowed && server) rememberMcpApproval(chat.agent.getSessionId(), server)
-          return allowed
-        }
+        onBeforeTool: createRemoteApprovalGate({
+          agent: chat.agent,
+          ownerId: userId,
+          commandPreview: 1500,
+          approve: summary => transport.approve(userId, userId, summary)
+        })
       }, chat.agent.getSystemPrompt(REMOTE_SYSTEM_PROMPT))
       const reply = stripAnsi(result.response)
       await transport.finish(userId, reply || 'Agent selesai tanpa balasan teks.')

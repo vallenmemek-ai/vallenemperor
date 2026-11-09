@@ -8,7 +8,7 @@ export async function handleGatewayCommand(args: string[]): Promise<string> {
   if (!platform) {
     const wa = existsWhatsAppClient() ? 'WA connector ditemukan' : 'WA connector lokal belum tersedia'
     const tg = telegramStatus()
-    return `[Gateway]\nWhatsApp: ${wa}\nTelegram: ${tg.running ? `aktif (PID ${tg.pid})` : tg.configured ? 'siap, belum aktif' : 'token belum diatur'}\n\nPerintah: /geteway wa | /geteway tel <token|pair|start|stop|restart|status|allow|revoke|send|approval>`
+    return `[Gateway]\nWhatsApp: ${wa}\nTelegram: ${tg.running ? `aktif (PID ${tg.pid})` : tg.configured ? 'siap, belum aktif' : 'token belum diatur'}\n\nPerintah: /gateway wa | /gateway tel <token|pair|start|stop|restart|status|allow|revoke|send|approval>`
   }
   if (platform === 'wa' || platform === 'whatsapp') {
     const actionArg = action.toLowerCase()
