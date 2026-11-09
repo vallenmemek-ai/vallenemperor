@@ -20,6 +20,8 @@ export const COMMANDS = [
   { name: '/skills', args: '[help|search|install]', desc: 'Search, install and manage skills' },
   { name: '/review', args: '[log]', desc: 'Run review or show review history' },
   { name: '/session', args: 'clearall', desc: 'Delete saved sessions', fillOnly: true },
+  { name: '/output', desc: 'Expand the latest terminal output' },
+  { name: '/schedule', args: '[list|history|add|remove]', desc: 'Manage scheduled agent jobs' },
   { name: '/plan', args: '[task]', desc: 'Create a read-only implementation plan', fillOnly: true },
   { name: '/plans', desc: 'List saved plans' },
   { name: '/gamedev', args: '[off]', desc: 'Toggle game-development mode' },
@@ -42,8 +44,8 @@ export const COMMANDS = [
 // Category per command (colours the marker dot in the dropdown).
 const CATEGORY = {
   chat: ['/help', '/stop', '/exit', '/clear', '/theme'],
-  agent: ['/model', '/token', '/new', '/sessions', '/resume', '/stats', '/search', '/memory', '/todos', '/tools', '/skills', '/review', '/session', '/plan', '/plans', '/gamedev', '/compact', '/auto'],
-  workspace: ['/cd', '/mcp', '/project', '/init', '/checkpoints', '/diff', '/undo', '/sh'],
+  agent: ['/model', '/token', '/new', '/sessions', '/resume', '/stats', '/search', '/memory', '/todos', '/tools', '/skills', '/review', '/session', '/plan', '/plans', '/gamedev', '/compact', '/auto', '/schedule'],
+  workspace: ['/cd', '/mcp', '/project', '/init', '/checkpoints', '/diff', '/undo', '/sh', '/output'],
   system: ['/health', '/perf']
 }
 const categoryOf = name => Object.keys(CATEGORY).find(key => CATEGORY[key].includes(name)) || 'system'

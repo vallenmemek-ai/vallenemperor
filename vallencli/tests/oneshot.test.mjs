@@ -96,13 +96,18 @@ test('handled shared command prints its response', async () => {
   assert.equal(out.text().trim(), 'model: gpt-4o')
 })
 
-test('unknown slash command exits non-zero instead of asking the model', async () => {
-  const out = sink()
+test('a REPL-only command explains where it lives instead of saying "unknown"', async () => {
   const err = sink()
-  const code = await runOneShotCommand(fakeCore(), fakeAgent, '/zzz-not-a-command', { out, err })
+  const code = await runOneShotCommand(fakeCore(), fakeAgent, '/skills', { out: sink(), err })
   assert.equal(code, 2)
-  assert.equal(out.text(), '')
-  assert.match(err.text(), /Unknown command: \/zzz-not-a-command/)
+  assert.match(err.text(), /hanya tersedia di REPL interaktif/)
+})
+
+test('a genuinely unknown command still says unknown', async () => {
+  const err = sink()
+  const code = await runOneShotCommand(fakeCore(), fakeAgent, '/zzz-nope', { out: sink(), err })
+  assert.equal(code, 2)
+  assert.match(err.text(), /Unknown command: \/zzz-nope/)
 })
 
 test('a throwing command handler is reported as an error, not a success', async () => {

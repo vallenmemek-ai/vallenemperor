@@ -1,11 +1,8 @@
 import { rmSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { join, resolve } from 'node:path'
 import { HELP, color, startupBox, refreshThemeColors } from './cli-ui.mjs'
 import { THEMES, getThemeName, gradientText, saveTheme, setTheme, themeNames } from './cli-theme.mjs'
-
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
 export function createLocalCommandHandler(context) {
   const { agent, core, state, output, printResponse, readHiddenToken, settleApproval, enqueue, out, refreshStatus, healthCheck, enterShell, runTurn, displayLine } = context
@@ -90,8 +87,7 @@ export function createLocalCommandHandler(context) {
     }
     if (cmd === '/search') {
       if (!value) { printResponse('Usage: /search <query>'); return true }
-      const { searchSessions, formatHits } = await import(pathToFileURL(join(ROOT, 'vallenagent/dist/session_search.js')).href)
-      printResponse(formatHits(searchSessions(value, { limit: 10 })))
+      printResponse(core.formatHits(core.searchSessions(value, { limit: 10 })))
       return true
     }
     if (cmd === '/gamedev') {
@@ -111,8 +107,7 @@ export function createLocalCommandHandler(context) {
     }
     if (cmd === '/review') {
       if (args[0]?.toLowerCase() === 'log') {
-        const { ReviewLogStore } = await import(pathToFileURL(join(ROOT, 'vallenagent/dist/skill_history.js')).href)
-        const rows = new ReviewLogStore().list(20)
+        const rows = new core.ReviewLogStore().list(20)
         printResponse(rows.length ? rows.map(row => `${row.at} ${row.kind} ${row.name}: ${row.change}`).join('\n') : 'No review history.')
         return true
       }
@@ -125,8 +120,8 @@ export function createLocalCommandHandler(context) {
       const sub = (args[0] || '').toLowerCase()
       const name = args[1]
       const skills = agent.skillLoader.list()
-      const historyModule = () => import(pathToFileURL(join(ROOT, 'vallenagent/dist/skill_history.js')).href)
-      const hubInstall = () => import(pathToFileURL(join(ROOT, 'vallenagent/dist/skills_hub_install.js')).href)
+      // Every skill helper comes from the core barrel (dist/index.js), not from
+      // internal dist paths — the CLI must only depend on the public surface.
       if (!sub) {
         const byCategory = new Map()
         for (const skill of skills) { const category = skill.metadata?.category || 'general'; byCategory.set(category, [...(byCategory.get(category) || []), skill.name]) }
@@ -135,20 +130,18 @@ export function createLocalCommandHandler(context) {
       }
       if (sub === 'help') { printResponse('/skills search <query> · install <github-url|official/category/name> · uninstall|update <name> · installed · stats · history · undo <id> · enable|disable <name> · disabled · sync · reset <name>'); return true }
       if (sub === 'stats') {
-        const { SkillStatsStore } = await import(pathToFileURL(join(ROOT, 'vallenagent/dist/skill_stats.js')).href)
-        const rows = new SkillStatsStore().list()
+        const rows = new core.SkillStatsStore().list()
         printResponse(rows.length ? rows.map(row => `${row.name}: views=${row.view_count}, successes=${row.success_count}, changes=${row.manage_count}, corrections=${row.correction_count}`).join('\n') : 'No skill usage stats yet.')
         return true
       }
       if (sub === 'history') {
-        const { SkillHistoryStore } = await historyModule(); const rows = new SkillHistoryStore().list(20)
+        const rows = new core.SkillHistoryStore().list(20)
         printResponse(rows.length ? rows.map(row => `${row.id} · ${row.at} · ${row.skill} ${row.action}${row.undone ? ' [undone]' : ''}\n  ${row.reason}`).join('\n') : 'No skill changes recorded yet.')
         return true
       }
       if (sub === 'undo') {
         if (!name) { printResponse('Usage: /skills undo <change-id>'); return true }
-        const [{ SkillHistoryStore }, { getSkillsDir }] = await Promise.all([historyModule(), import(pathToFileURL(join(ROOT, 'vallenagent/dist/skills_hub_models.js')).href)])
-        const result = new SkillHistoryStore().undo(name, [...(agent.skillLoader.skillPaths || []), getSkillsDir()])
+        const result = new core.SkillHistoryStore().undo(name, [...(agent.skillLoader.skillPaths || []), core.getSkillsDir()])
         if (result.success) agent.skillLoader.scanAll()
         printResponse(result.message)
         return true
@@ -156,9 +149,8 @@ export function createLocalCommandHandler(context) {
       if (sub === 'search') {
         const query = args.slice(1).join(' ').trim()
         if (!query) { printResponse('Usage: /skills search <query>'); return true }
-        const { searchSkills, getCatalogError } = await import(pathToFileURL(join(ROOT, 'vallenagent/dist/skills_hub_search.js')).href)
-        const results = await searchSkills({ query, limit: 10 })
-        const catalogError = getCatalogError?.()
+        const results = await core.searchSkills({ query, limit: 10 })
+        const catalogError = core.getCatalogError?.()
         const body = results.length ? results.map(item => `${item.name} · ${item.trust_level}\n  ${item.description}\n  ${item.install_command}`).join('\n\n') : `No skills found for: ${query}`
         printResponse(catalogError ? `${body}\n\n[catalog] ${catalogError}` : body)
         return true
@@ -166,13 +158,12 @@ export function createLocalCommandHandler(context) {
       if (sub === 'install') {
         const identifier = args.slice(1).join(' ').trim()
         if (!identifier) { printResponse('Usage: /skills install <github-url|official/category/name>'); return true }
-        const [{ parseSkillIdentifier }, search, install] = await Promise.all([import(pathToFileURL(join(ROOT, 'vallenagent/dist/skills_hub_models.js')).href), import(pathToFileURL(join(ROOT, 'vallenagent/dist/skills_hub_search.js')).href), hubInstall()])
-        const parsed = parseSkillIdentifier(identifier)
-        const bundle = parsed.source === 'github' && parsed.url ? await search.fetchGitHubSkill(parsed.url) : parsed.source === 'official' && parsed.category ? await search.fetchOfficialSkill(parsed.category, parsed.name) : null
+        const parsed = core.parseSkillIdentifier(identifier)
+        const bundle = parsed.source === 'github' && parsed.url ? await core.fetchGitHubSkill(parsed.url) : parsed.source === 'official' && parsed.category ? await core.fetchOfficialSkill(parsed.category, parsed.name) : null
         if (!bundle) { printResponse('Use a GitHub URL or official/category/name.'); return true }
-        const quarantine = install.quarantineBundle(bundle)
+        const quarantine = core.quarantineBundle(bundle)
         try {
-          const result = install.installFromQuarantine(quarantine, bundle, { overwrite: false })
+          const result = core.installFromQuarantine(quarantine, bundle, { overwrite: false })
           if (result.success) agent.skillLoader.scanAll()
           printResponse(result.message)
         } finally { rmSync(quarantine, { recursive: true, force: true }) }
@@ -181,14 +172,14 @@ export function createLocalCommandHandler(context) {
       if (sub === 'uninstall' || sub === 'update' || sub === 'reset') {
         if (!name) { printResponse(`Usage: /skills ${sub} <name>`); return true }
         const result = sub === 'reset'
-          ? await (async () => (await import(pathToFileURL(join(ROOT, 'vallenagent/dist/skills_sync.js')).href)).resetSkill(name))()
-          : sub === 'update' ? await (await hubInstall()).updateSkill(name) : (await hubInstall()).uninstallSkill(name)
+          ? await core.resetSkill(name)
+          : sub === 'update' ? await core.updateSkill(name) : core.uninstallSkill(name)
         if (result.success) agent.skillLoader.scanAll()
         printResponse(result.message)
         return true
       }
       if (sub === 'installed') {
-        const rows = (await hubInstall()).listInstalledSkills()
+        const rows = core.listInstalledSkills()
         printResponse(rows.length ? rows.map(row => `${row.source} · ${row.name} · ${row.install_path} · ${row.installed_at}`).join('\n') : 'No skills installed via hub yet.')
         return true
       }
@@ -206,7 +197,7 @@ export function createLocalCommandHandler(context) {
       }
       if (sub === 'disabled') { printResponse(agent.skillLoader.getDisabled().join('\n') || 'No disabled skills.'); return true }
       if (sub === 'sync') {
-        const result = (await import(pathToFileURL(join(ROOT, 'vallenagent/dist/skills_sync.js')).href)).syncBundledSkills({ force: false })
+        const result = core.syncBundledSkills({ force: false })
         agent.skillLoader.scanAll()
         printResponse(`Added ${result.added.length} · updated ${result.updated.length} · skipped ${result.skipped.length} · errors ${result.errors.length}`)
         return true

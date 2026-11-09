@@ -53,22 +53,44 @@ logika itu. Duplikasi itulah sumber 6 divergensi:
       yang sudah pindah ke core; dan masih punya yang CLI-only
 - [x] `now.md` ditautkan ke file ini
 
+### Fase 4 — audit kedua (temuan lanjutan)
+- [x] **`/schedule` di terminal** dulu menjawab "dikelola lewat Telegram" padahal `CronStore`
+      itu lokal. Sekarang `list`/`history`/`add`/`remove` jalan di terminal; `delivery` =
+      `local` untuk terminal, `telegram` untuk remote.
+- [x] **10 import langsung ke `vallenagent/dist/*.js`** (`session_search`, `skill_history`,
+      `skill_stats`, `skills_hub_*`, `skills_sync`) dihapus. Semua sudah diekspor barrel
+      `dist/index.js`, jadi CLI sekarang lewat objek `core` — tidak lagi bergantung pada
+      layout file internal.
+- [x] **`/output` dan `/schedule` tidak ada di dropdown** (padahal handler-nya ada) →
+      ditambahkan beserta kategorinya. Alias `/status`, `/context`, `/reset`, `/pty`,
+      `/themes`, `/quit` sudah terwakili lewat `aliases`.
+- [x] **`-p "/skills"` menjawab "Unknown command"** padahal command itu ada di REPL.
+      Sekarang: "`/skills` hanya tersedia di REPL interaktif" (exit 2), dan command yang
+      benar-benar tidak dikenal tetap "Unknown command".
+- [x] Test penjaga tambahan: `cli-commands.mjs` tidak boleh menyentuh `vallenagent/dist/`,
+      dan dropdown harus memuat `/output`, `/schedule`, `/status`, `/context`.
+
 ## Bukti uji
 
-`2026-11-09T17:20Z`, semua perintah nyata.
+`2026-11-09T17:45Z`, semua perintah nyata.
 
 | Uji | Perintah | Hasil |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ bersih |
-| Test core | `node ../scripts/run-tests.mjs tests` (vallenagent) | ✅ **278 pass, 0 fail** (+12 test wiring) |
-| Test CLI | `node ../scripts/run-tests.mjs tests` (vallencli) | ✅ **75 pass, 0 fail** (+3 test penjaga) |
+| Test core | `node ../scripts/run-tests.mjs tests` (vallenagent) | ✅ **280 pass, 0 fail** |
+| Test CLI | `node ../scripts/run-tests.mjs tests` (vallencli) | ✅ **78 pass, 0 fail** |
+| Import dist di CLI | `grep -c "vallenagent/dist/" cli-commands.mjs` | ✅ **0** (dulu 10) |
 | `/status` | `vallenemperor -p "/status"` | ✅ 6 baris laporan (Session/Model/Provider/cwd/Context/Turns·Skills·MCP) |
 | `/sessions` | `vallenemperor -p "/sessions"` | ✅ bernomor `1. … 2. …` |
 | `/model` | `vallenemperor -p "/model"` | ✅ tampil model + dua bentuk (`/model`, `/model save`) |
 | `/resume <id>` | `vallenemperor -p "/resume session-…"` | ✅ `Sesi … dilanjutkan` — dulu **ditolak** CLI |
 | `/resume <nomor>` | `vallenemperor -p "/resume 1"` | ✅ resolve ke id yang sama |
 | `/resume 999` | `vallenemperor -p "/resume 999"` | ✅ `Nomor sesi di luar rentang` |
+| `/schedule list` | `vallenemperor -p "/schedule list"` | ✅ `Belum ada jadwal.` — dulu "pakai Telegram" |
+| `/skills` di `-p` | `vallenemperor -p "/skills"` | ✅ `hanya tersedia di REPL interaktif`, exit 2 |
+| `/zzz-nope` | `vallenemperor -p "/zzz-nope"` | ✅ `Unknown command`, exit 2 |
 | `--json` tetap jalan | `vallenemperor --json -p "/status"` | ✅ objek telemetry |
+
 
 ## Perilaku yang berubah (disengaja)
 

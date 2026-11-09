@@ -142,9 +142,11 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
   }
 
   if (cmd === '/schedule') {
-    if (ctx.channel !== 'remote') return { handled: true, response: 'Jadwal saat ini dikelola lewat Telegram gateway.' }
-    const ownerId = ctx.userId
-    if (!Number.isSafeInteger(ownerId) || Number(ownerId) <= 0) return { handled: true, response: 'User Telegram tidak valid.' }
+    // CronStore is local to this host, so the terminal can manage the same jobs the
+    // gateway runs. It used to answer "use Telegram" here, which was wrong.
+    const remote = ctx.channel === 'remote'
+    const ownerId = remote ? ctx.userId : undefined
+    if (remote && (!Number.isSafeInteger(ownerId) || Number(ownerId) <= 0)) return { handled: true, response: 'User Telegram tidak valid.' }
     const store = ctx.cronStore || new CronStore()
     const action = (args[0] || 'list').toLowerCase()
     if (action === 'list') {
@@ -161,10 +163,10 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     }
     if (action === 'add') {
       const match = text.trim().match(/^\/schedule\s+add\s+(.+?)\s+([A-Za-z0-9_+./-]+)\s*\|\s*(.{1,100}?)\s*\|\s*([\s\S]{1,4000})$/i)
-      if (!match) return { handled: true, response: 'Usage: /schedule add <minute hour day month weekday> <timezone> | <name> | <prompt> (Telegram approval required at every run).' }
+      if (!match) return { handled: true, response: 'Usage: /schedule add <minute hour day month weekday> <timezone> | <name> | <prompt>.' }
       try {
-        const job = await store.add({ cron: match[1], timezone: match[2], name: match[3].trim(), prompt: match[4].trim(), delivery: 'telegram', ownerId })
-        return { handled: true, response: `Scheduled job created. ID: ${job.id} · next: ${job.nextRunAt} · ${job.timezone}. Each run asks Telegram approval.` }
+        const job = await store.add({ cron: match[1], timezone: match[2], name: match[3].trim(), prompt: match[4].trim(), delivery: remote ? 'telegram' : 'local', ownerId })
+        return { handled: true, response: `Scheduled job created. ID: ${job.id} · next: ${job.nextRunAt} · ${job.timezone}${remote ? ' · each run asks Telegram approval.' : ''}` }
       } catch (error) { return { handled: true, response: `Schedule rejected: ${error instanceof Error ? error.message : 'invalid schedule'}` } }
     }
     return { handled: true, response: 'Usage: /schedule [list|history [limit]|add ...|remove <id>].' }

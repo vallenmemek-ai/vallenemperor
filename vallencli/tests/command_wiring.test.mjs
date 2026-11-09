@@ -33,3 +33,15 @@ test('the CLI keeps the commands that need CLI-only state', () => {
 test('/review stays local but forwards its focus text to the agent', () => {
   assert.match(source, /requestBackgroundReview\([\s\S]*?,\s*focus\)/, 'the focus argument must be forwarded')
 })
+
+test('the CLI reaches core through the public barrel, never internal dist paths', () => {
+  assert.doesNotMatch(source, /vallenagent\/dist\//, 'import from the `core` object instead of dist internals')
+})
+
+test('commands that exist are also discoverable in the dropdown', async () => {
+  const { COMMANDS } = await import('../src/cli-suggest.mjs')
+  const names = new Set(COMMANDS.flatMap(command => [command.name, ...(command.aliases || [])]))
+  for (const command of ['/output', '/schedule', '/status', '/context']) {
+    assert.equal(names.has(command), true, `${command} must be suggested`)
+  }
+})

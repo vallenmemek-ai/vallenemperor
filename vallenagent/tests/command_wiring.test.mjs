@@ -1,5 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { handleCommand } from '../dist/core/commands.js'
 
@@ -135,4 +138,48 @@ test('/stop stays remote-only because the CLI needs its own approval cleanup', a
   assert.equal(local.handled, false)
   const telegram = await handleCommand(remote(agent), '/stop')
   assert.equal(telegram.handled, true)
+})
+
+test('/schedule manages real jobs from the terminal, not just Telegram', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'vallen-cron-'))
+  const previous = process.env.VALLENEMPEROR_HOME
+  process.env.VALLENEMPEROR_HOME = home
+  try {
+    const agent = fakeAgent()
+
+    const empty = await handleCommand(terminal(agent), '/schedule list')
+    assert.match(empty.response, /Belum ada jadwal/, 'must not answer "use Telegram" any more')
+
+    const added = await handleCommand(terminal(agent), '/schedule add 0 9 * * * Asia/Jakarta | nightly | say hi')
+    assert.match(added.response, /Scheduled job created/)
+    assert.match(added.response, /next:/)
+    assert.doesNotMatch(added.response, /Telegram approval/)
+
+    const listed = await handleCommand(terminal(agent), '/schedule list')
+    assert.match(listed.response, /nightly/)
+    const id = listed.response.split(' · ')[0]
+
+    const removed = await handleCommand(terminal(agent), `/schedule remove ${id}`)
+    assert.match(removed.response, /removed/)
+    const after = await handleCommand(terminal(agent), '/schedule list')
+    assert.match(after.response, /Belum ada jadwal/)
+  } finally {
+    if (previous === undefined) delete process.env.VALLENEMPEROR_HOME
+    else process.env.VALLENEMPEROR_HOME = previous
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('/schedule rejects an invalid cron expression with a reason', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'vallen-cron-bad-'))
+  const previous = process.env.VALLENEMPEROR_HOME
+  process.env.VALLENEMPEROR_HOME = home
+  try {
+    const result = await handleCommand(terminal(fakeAgent()), '/schedule add not-a-cron UTC | bad | x')
+    assert.match(result.response, /Schedule rejected/)
+  } finally {
+    if (previous === undefined) delete process.env.VALLENEMPEROR_HOME
+    else process.env.VALLENEMPEROR_HOME = previous
+    rmSync(home, { recursive: true, force: true })
+  }
 })

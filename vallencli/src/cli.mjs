@@ -983,6 +983,12 @@ export async function runOneShotCommand(core, agent, text, io = {}) {
     out.write(io.json ? `${JSON.stringify({ command: cmd, handled: true, response })}\n` : `${response}\n`)
     return 0
   }
+  // Some commands only exist in the interactive REPL because they need its state
+  // (readline, approval, output buffer). Say that instead of "unknown command".
+  if (findCommand(cmd)) {
+    err.write(`${cmd} hanya tersedia di REPL interaktif: jalankan \`vallenemperor\` tanpa -p.\n`)
+    return 2
+  }
   err.write(`Unknown command: ${cmd}. Use --help.\n`)
   return 2
 }
