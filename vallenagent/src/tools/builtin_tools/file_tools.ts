@@ -625,7 +625,8 @@ export function registerPatchTools(): void {
   const patchBatchSchema: ToolSchema = {
     name: 'patch_batch', description: 'Atomically apply targeted fuzzy replacements across multiple files. Preflights every file before writing.',
     parameters: { type: 'object', properties: { files: { type: 'array', items: { type: 'object', properties: {
-      path: { type: 'string' }, old_string: { type: 'string' }, new_string: { type: 'string' }, replace_all: { type: 'boolean' }
+      path: { type: 'string' }, old_string: { type: 'string' }, new_string: { type: 'string' }, replace_all: { type: 'boolean' },
+      expected_hash: { type: 'string', description: 'Optional sha256 from read_file; the whole batch is aborted if that file changed.' }
     }, required: ['path', 'old_string', 'new_string'] } } }, required: ['files'] }
   }
   registry.register({ name: 'patch_batch', schema: patchBatchSchema, toolset: 'file', handler: async (args, context) =>
@@ -762,6 +763,10 @@ function applyPatchBatch(files: any, baseDir: string, context: ToolContext): Rec
       const before = readFileSync(path)
       if (before.includes(0)) throw new Error(`Cannot patch binary file: ${rawPath}`)
       const oldText = before.toString('utf8')
+      const expectedHash = typeof edit.expected_hash === 'string' ? edit.expected_hash.trim().toLowerCase() : ''
+      if (expectedHash && createHash('sha256').update(oldText).digest('hex') !== expectedHash) {
+        throw new Error(`File changed since read: expected_hash does not match for ${rawPath}. Read it again and retry.`)
+      }
       if (operation === 'delete') {
         staged.push({ path, temp, backup, operation, before, after: null, mode: info.mode & 0o7777, diff: `--- ${rawPath}\n(deleted)`, originalMoved: false, newInstalled: false })
       } else {

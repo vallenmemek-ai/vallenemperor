@@ -8,6 +8,8 @@ import { registerStateTools } from './builtin_tools/state_tools'
 import { registerSessionTools } from './builtin_tools/session_tools'
 import { registerFileTools, registerPatchTools, registerListTools } from './builtin_tools/file_tools'
 import { registerDiagnosticsTools } from './builtin_tools/diagnostics_tools'
+import { registerCheckpointTools } from './builtin_tools/checkpoint_tools'
+import { registerScheduleTools } from './builtin_tools/schedule_tools'
 import { registerTerminalTools } from './builtin_tools/terminal_tools'
 import { registerSkillsTools } from './builtin_tools/skills_tools'
 import { registerMediaTools } from './builtin_tools/media_tools'
@@ -38,6 +40,10 @@ export function registerBuiltinTools(
   registerListTools()
 
   registerDiagnosticsTools()
+
+  registerCheckpointTools()
+
+  registerScheduleTools()
 
   registerSessionTools()
 

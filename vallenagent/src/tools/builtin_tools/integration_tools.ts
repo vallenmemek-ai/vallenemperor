@@ -1,7 +1,56 @@
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
+import { spawnSync } from 'child_process'
 import { registry, ToolSchema, ToolContext } from '../tools'
+import { resolvePython } from '../../core/platform'
+
+type DeferredHealth = { status: 'ready' | 'degraded' | 'unavailable'; detail: string }
+
+const healthCache = new Map<string, { at: number; value: DeferredHealth }>()
+const HEALTH_TTL_MS = 5 * 60_000
+
+/**
+ * Deferred tools used to be advertised with no indication that their backend might be
+ * missing: `browser_exec` failed only after the agent called it. Probe the cheap,
+ * cacheable dependency here so tool_search can say "ready" vs "unavailable".
+ */
+function browserExecHealth(): DeferredHealth {
+  const cached = healthCache.get('browser_exec')
+  if (cached && Date.now() - cached.at < HEALTH_TTL_MS) return cached.value
+  const python = resolvePython()
+  let value: DeferredHealth
+  if (!python) {
+    value = { status: 'unavailable', detail: 'no Python interpreter found (tried py -3, python3, python)' }
+  } else {
+    const probe = spawnSync(python.command, [...python.args, '-c', 'import playwright'], { timeout: 4000, stdio: 'ignore', windowsHide: true })
+    value = probe.status === 0
+      ? { status: 'ready', detail: `playwright importable via ${python.command}` }
+      : { status: 'unavailable', detail: 'playwright is not installed for this Python; run: pip install playwright' }
+  }
+  healthCache.set('browser_exec', { at: Date.now(), value })
+  return value
+}
+
+function deferredToolHealth(name: string, context?: ToolContext): DeferredHealth {
+  switch (name) {
+    case 'browser_exec':
+      return browserExecHealth()
+    case 'web_search':
+    case 'web_extract':
+      return { status: 'degraded', detail: 'needs outbound HTTPS; network failures only surface when called' }
+    case 'vision_analyze':
+      return context?.providerConfig?.base_url
+        ? { status: 'ready', detail: 'provider configured; accuracy still depends on the model' }
+        : { status: 'degraded', detail: 'no provider config in this context' }
+    case 'image_generate':
+      return context?.providerConfig?.api_key
+        ? { status: 'ready', detail: 'provider key present' }
+        : { status: 'degraded', detail: 'provider api_key is not set; generation will fail' }
+    default:
+      return { status: 'ready', detail: 'no external dependency' }
+  }
+}
 
 export function registerIntegrationTools(isSubagent: boolean, delegateAgentFactory?: (task: { taskId: string; goal: string; context?: string; max_iterations?: number; max_output_tokens?: number; model?: string }, onProgress?: (event: { status: 'thinking' | 'tool_start' | 'tool_end'; message?: string }) => void) => Promise<string>): void {
   // 14. manage_connections
@@ -120,7 +169,7 @@ export function registerDeferredToolTools(): void {
         const text = `${name.replace(/[_-]/g, ' ')} ${description}`
         const score = words.reduce((total, word) => total + (name.includes(word) ? 4 : 0) + (text.includes(word) ? 1 : 0), 0)
           + (text.includes(query) ? 3 : 0)
-        return { name: tool.name, description: tool.schema.description, parameters: tool.schema.parameters, score }
+        return { name: tool.name, description: tool.schema.description, parameters: tool.schema.parameters, health: deferredToolHealth(tool.name, context), score }
       }).filter(item => item.score > 0).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, 10)
       return JSON.stringify({ results: results.map(({ score: _score, ...item }) => item) })
     }

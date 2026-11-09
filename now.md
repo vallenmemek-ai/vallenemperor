@@ -1,6 +1,6 @@
 # now.md — status pekerjaan
 
-Terakhir diperbarui: `2026-11-09T16:05Z` · HEAD setelah commit "P1/P2 telemetry & tool surface"
+Terakhir diperbarui: `2026-11-09T16:30Z` · HEAD setelah commit "checkpoint, schedule, batch hash, tool health"
 · rilis publik `vallenemperor@999.999.999` (versi publik itu **belum** memuat bagian 3 & 4)
 
 Cara baca: `[x]` = selesai **dan sudah diuji**, `[ ]` = belum. Jangan centang tanpa bukti
@@ -138,10 +138,26 @@ Koreksi: klaim sebelumnya bahwa `999.999.999` adalah versi tertinggi semver itu 
       maupun `content`. Jadi tidak ada filter dotfile yang perlu dibuka. Fitur
       `include_hidden` tetap ada di `list_dir` (untuk menyembunyikan, bukan membuka).
 
+### P2 lanjutan — selesai
+- [x] **`checkpoint`** (tool baru). `list` / `diff` / `undo` atas store yang sama dengan
+      `/checkpoints`, `/diff`, `/undo` di REPL. Sebelumnya agent yang merusak file tidak bisa
+      memulihkannya sendiri — harus user mengetik `/undo`.
+- [x] **`schedule`** (tool baru). `list` / `add` / `remove` / `history` lewat `CronStore` yang
+      sama dengan gateway Telegram. Cron divalidasi (`nextCronRun`), timezone default = host.
+- [x] **`expected_hash` di `patch_batch`** (bukan tool `multi_edit` baru). Ternyata
+      `patch_batch` **sudah** menangani banyak file secara atomik — jadi `multi_edit` akan
+      duplikat. Yang kurang hanya proteksi konflik, dan itu sekarang ada: satu hash basi
+      membatalkan seluruh batch tanpa menyentuh file lain (diuji).
+- [x] **Pre-flight health di `tool_search`.** Setiap hasil sekarang punya
+      `health: {status: ready|degraded|unavailable, detail}`. `browser_exec` diprobe nyata
+      (`import playwright`, cache 5 menit), `web_search`/`web_extract` ditandai `degraded`
+      (butuh HTTPS keluar), `image_generate` cek `api_key`, `vision_analyze` cek provider.
+      Jadi tool yang backend-nya bolong kelihatan sebelum dipanggil, bukan setelah gagal.
+
 ### Sisa backlog
-- [ ] `multi_edit` lintas-file (memotong N roundtrip + N full-read)
-- [ ] Wire `checkpoint`/`undo` dan `cron_scheduler` sebagai tool
-- [ ] Pre-flight health di `tool_search` untuk tool deferred (`playwright`, jaringan, dsb)
+- [ ] `tool_call` menolak lebih awal untuk tool yang `health.status = unavailable`
+      (sekarang baru dilaporkan di `tool_search`)
+
 
 
 
@@ -154,9 +170,9 @@ Dijalankan `2026-11-09T15:35Z`, semua dari perintah nyata:
 | Uji | Perintah | Hasil |
 |---|---|---|
 | Typecheck | `npm run typecheck` | ✅ bersih |
-| Test suite (Node 20.19.2) | `npm test` | ✅ **256 + 72 pass, 0 fail** |
-| Test suite (Node 24.22.1) | `npx node@24.22.1 ../scripts/run-tests.mjs tests` | ✅ **256 + 72 pass, 0 fail** |
-| Tool terdaftar | `registry.list().length` | ✅ **30** (`list_dir`, `typecheck` baru) |
+| Test suite (Node 20.19.2) | `npm test` | ✅ **263 + 72 pass, 0 fail** |
+| Test suite (Node 24.22.1) | `npx node@24.22.1 ../scripts/run-tests.mjs tests` | ✅ **263 + 72 pass, 0 fail** |
+| Tool terdaftar | `registry.list().length` | ✅ **32** (`list_dir`, `typecheck`, `checkpoint`, `schedule` baru) |
 | `--json` telemetry | `vallenemperor --json -p "/stats"` | ✅ satu objek JSON, exit 0 |
 | `--quiet` | `printf '/exit\n' \| vallenemperor --quiet` | ✅ output kosong |
 | `-p` slash: `/help` | `vallenemperor -p "/help"` | ✅ help CLI asli, exit 0 |
