@@ -11,6 +11,7 @@ import { discoverCustomAgents, formatAgentList } from '../agent/custom_agents'
 import { formatSandboxStatus, sandboxPolicyFor } from './sandbox'
 import { collectWorkingDiff, formatDiffSummary } from './working_diff'
 import { currentHunk, formatHunkView, moveReview, revertHunk, startDiffReview } from './diff_viewer'
+import { createHandoff, deliverHandoff, formatHandoff } from './handoff'
 import { formatCodeSearch, searchWorkspace } from './code_search'
 import { formatPendingList, listPendingWrites, readPendingWrite, removePendingWrite } from './pending_writes'
 import { browserToolsUnlocked } from './browser_gate'
@@ -89,7 +90,7 @@ export interface CommandResult {
 }
 
 const NOT_HANDLED: CommandResult = { handled: false, response: '' }
-const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer', '/queue', '/rewind', '/goal', '/grill-me', '/policy', '/worktree', '/approvals', '/extensions', '/curator', '/fast'])
+const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer', '/queue', '/rewind', '/goal', '/grill-me', '/policy', '/worktree', '/approvals', '/extensions', '/curator', '/fast', '/handoff'])
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -155,6 +156,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Berkas', name: '/extensions', desc: 'manifest skill, agent, command, hook, MCP' },
   { group: 'Berkas', name: '/curator', args: '[hari] [apply]', desc: 'arsipkan skill yang lama tidak dipakai' },
   { group: 'Sesi & model', name: '/fast', args: '[on|off|status]', desc: 'mode cepat: effort rendah, review mati' },
+  { group: 'Sesi & model', name: '/handoff', args: '[platform]', desc: 'ekspor sesi + perintah resume ke surface lain' },
   { group: 'Berkas', name: '/worktree', args: '[new [nama]|list]', desc: 'worktree git untuk sesi utama' },
   { group: 'Berkas', name: '/diff', args: '[turn | working | staged | all | review | next | prev | keep | skip | done]', desc: 'lihat diff atau review per-hunk' },
   { group: 'Berkas', name: '/undo', args: '[1-20] [--force]', desc: 'pulihkan checkpoint' },
@@ -356,11 +358,11 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
 
   if (cmd === '/agents') {
     const [sub, id] = args
+    if (sub === 'runs' || sub === 'dashboard') {
+      return { handled: true, response: formatAgentDashboard(subagentRegistry.list()) }
+    }
     if (sub === 'available' || sub === 'list') {
       const workspace = ctx.agent.config?.terminal?.cwd || process.cwd()
-      if (args[0] === 'runs' || args[0] === 'dashboard') {
-        return { handled: true, response: formatAgentDashboard(subagentRegistry.list()) }
-      }
       return { handled: true, response: formatAgentList(discoverCustomAgents({ workspace, home: getVallenHome() })) }
     }
     if (sub === 'show') {
@@ -413,6 +415,23 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     agentConfig.reasoning_effort = level
     saveConfig(agentConfig)
     return { handled: true, response: `Reasoning effort set to ${level} (saved). Applies to the next provider request.` }
+  }
+
+  if (cmd === '/handoff') {
+    const platform = args[0] || 'file'
+    const agentAny = ctx.agent as any
+    const transcript = typeof agentAny.exportTranscript === 'function' ? agentAny.exportTranscript() : []
+    const result = createHandoff({
+      messages: transcript,
+      sessionId: ctx.agent.getSessionId(),
+      title: agentAny.sessionTitle,
+      model: agentAny.provider?.model,
+      cwd: ctx.agent.config?.terminal?.cwd,
+      home: getVallenHome(),
+      platform
+    })
+    const delivery = deliverHandoff({ command: (ctx.agent.config as any).handoff?.command, result })
+    return { handled: true, response: formatHandoff(result, delivery) }
   }
 
   if (cmd === '/fast') {

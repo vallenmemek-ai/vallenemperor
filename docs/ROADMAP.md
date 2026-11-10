@@ -322,6 +322,12 @@ with a reverse `git apply` (proved on a real repo: reverting hunk 1 leaves hunk 
 `/diff done` reports kept/skipped. Tests: `vallenagent/tests/diff_viewer.test.mjs` (4). Suite at the
 time: **413/413 + 149/149**.
 
+**Evidence (R20 — done).** `/handoff [platform]` writes a redacted transcript plus the exact resume
+command (`vallenemperor --resume <id>`) into `<home>/handoffs/`; delivery only happens when
+`handoff.command` is configured, with `{file}` and `{platform}` substituted, and failures are reported
+rather than silently swallowed. Tests: `vallenagent/tests/handoff.test.mjs` (3, including secret
+redaction and command substitution). Suite at the time: **417/417 + 149/149**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -391,7 +397,7 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R17 | ACP server for editors | editor integration | L | `[ ]` |
 | R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[ ]` (partial: `/fast` done; `x_search` needs an X API key) |
 | R19 | Approval mining (propose allowlist from history) | fewer prompts over time | M | `[x]` |
-| R20 | `/handoff <platform>` | move a CLI session to Telegram | M | `[ ]` |
+| R20 | `/handoff <platform>` | move a CLI session to Telegram | M | `[x]` |
 | R21 | User-defined slash commands (`.vallenemperor/commands/*.md` → `/name`) | all three peers ship it; cheapest workflow win | S | `[x]` |
 | R22 | Rule-based tool policies (allow/ask/deny per tool or path) | replaces today's global modes with per-tool rules | M | `[x]` |
 | R23 | Formatter hook after edits (respect the project's formatter) | keeps diffs clean without manual runs | S | `[x]` |
