@@ -312,3 +312,18 @@ loop, the skill authoring path, and the verification gate for free.
 **Consequence.** The lock is in-process only: cross-process safety is the worktree/sandbox story.
 `/learn` must keep its standards text in sync with the bundled skill authoring rules; if those diverge,
 the skills it produces get rejected by review.
+
+---
+
+## D23 — First-run experience is three commands, all injectable
+
+**Decision.** `setup`, `doctor`, and `update` live in the CLI (`cli-setup.mjs`, `cli-doctor.mjs`,
+`cli-update-check.mjs`) and take every side effect as an injected dependency (prompting, model fetch,
+config write, probes, fetcher, installer). The daily update check is fire-and-forget with a 24-hour
+cache.
+
+**Why.** The biggest drop-off is a fresh install with no provider, and the biggest support cost is
+"it does not work" with no diagnosis. Injection keeps both testable without a terminal or network.
+
+**Consequence.** `setup` refuses non-TTY and prints the `config set` alternative — never attempt an
+interactive prompt in a pipe. `doctor` must never print a key value, only its presence.

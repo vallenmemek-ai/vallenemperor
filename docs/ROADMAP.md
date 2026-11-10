@@ -86,7 +86,7 @@ Format per item: **why**, **scope**, **acceptance**, **effort** (S ≤ 1 session
 
 ### P0 — First-run experience (do first)
 
-#### P0.1 `vallenemperor setup` wizard — ❌
+#### P0.1 `vallenemperor setup` wizard — ✅
 - **Why.** A new user installs the package and lands in a REPL with no provider configured. That is
   the single biggest drop-off point, and Hermes/opencode both solve it with a wizard.
 - **Scope.** `vallencli/src/cli-setup.mjs` (new), `vallencli/src/cli.mjs` (dispatch before REPL),
@@ -102,7 +102,7 @@ Format per item: **why**, **scope**, **acceptance**, **effort** (S ≤ 1 session
   - Unit tests: preset → config mapping, invalid input re-prompt, key never persisted.
 - **Effort.** M · **Risk.** medium (interactive input on Windows; test with injected streams).
 
-#### P0.2 `vallenemperor doctor` — ❌
+#### P0.2 `vallenemperor doctor` — ✅
 - **Why.** Support load. When something breaks, users cannot tell whether it is Node, config, network,
   provider, skills, or MCP.
 - **Scope.** `vallencli/src/cli-doctor.mjs` (new), reuse `collectHealthChecks` in `cli.mjs`.
@@ -114,7 +114,7 @@ Format per item: **why**, **scope**, **acceptance**, **effort** (S ≤ 1 session
   exit code 1 when any FAIL; tests cover each branch with injected probes.
 - **Effort.** S · **Risk.** low.
 
-#### P0.3 Update notifier — ❌
+#### P0.3 Update notifier — ✅
 - **Why.** Users stay on old versions (we shipped 7 versions in a day and the public one lagged).
 - **Scope.** `vallencli/src/cli-update-check.mjs` (new), called once per day from `cli.mjs`.
 - **Behaviour.** Compare `package.json` version with `npm view vallenemperor version` (cached 24 h in
@@ -124,6 +124,14 @@ Format per item: **why**, **scope**, **acceptance**, **effort** (S ≤ 1 session
 - **Acceptance.** Cache hit makes zero network calls; offline is silent; tests with injected fetcher
   and clock.
 - **Effort.** S · **Risk.** low.
+
+**Evidence (P0.1–P0.3 — done).** `vallencli/tests/setup_doctor_update.test.mjs` (8 tests): the wizard
+walks preset → base URL → model (live list with a manual fallback when the endpoint is offline) →
+approval and writes a valid config patch; non-TTY refuses with the `config set` alternative; doctor
+reports FAIL/WARN/OK per check with fixes and a JSON mode; the update check caches for 24 h (second
+call makes no network request), formats `update available: x → y`, honours
+`VALLENEMPEROR_NO_UPDATE_CHECK=1`, and `update --check` / install paths both work. Suite at the time:
+**365/365 + 131/131**.
 
 ### P1 — Parity with Antigravity CLI
 

@@ -321,7 +321,13 @@ vallenemperor --resume [id]       # resume last / given session
 vallenemperor --approval dangerous|all|off
 vallenemperor --model <name>
 vallenemperor config show|set provider|set model|set approval
+vallenemperor setup                # first-run wizard (provider → base URL → model → key → approval)
+vallenemperor doctor [--json]      # node/config/provider/skills/git checks with fixes, exit 1 on FAIL
+vallenemperor update [--check]     # update the global install from npm
 ```
+
+The update check also runs once per day at startup (cached in `<home>/update-check.json`, silent on
+failure, disabled by `VALLENEMPEROR_NO_UPDATE_CHECK=1` or `CI=true`).
 
 Review surfaces: `/artifact` lists this session's artifacts and opens one by number (or `last`),
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and

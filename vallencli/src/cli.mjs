@@ -13,6 +13,9 @@ import { createCardStream, formatResponseCard } from './cli-markdown.mjs'
 import { fileToken, suggestFiles } from './cli-files.mjs'
 import { suggestCommands, commandToken, findCommand, needsMoreInput } from './cli-suggest.mjs'
 import { createLocalCommandHandler } from './cli-commands.mjs'
+import { runSetupCommand } from './cli-setup.mjs'
+import { formatDoctor, runDoctorCommand } from './cli-doctor.mjs'
+import { currentVersion, maybeNotifyUpdate, runUpdateCommand } from './cli-update-check.mjs'
 import { backspacePicker, backPicker, createPickerState, enterPicker, fetchGatewayModels, formatModelCatalog, groupModelsByOwner, movePicker, pickerLines, typeInPicker } from './cli-model-picker.mjs'
 export { HELP, collectHealthChecks, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity } from './cli-ui.mjs'
 
@@ -694,6 +697,12 @@ export async function runCli(options = {}) {
   // scripted or embedded runs get clean output.
   if (!options.quiet) {
     out(`${startupBox(agent, bannerText, await healthCheck(agent, state.mcpServers), output.columns || 80, { fancy: interactive && supportsAnsi, compact: compactUi })}\n`)
+    // Daily update check: fire and forget, never blocks the prompt.
+    void maybeNotifyUpdate({
+      home: process.env.VALLENEMPEROR_HOME || join(homedir(), '.vallenemperor'),
+      current: currentVersion(ROOT),
+      print: line => out(`${color(line, 'dim')}\n`)
+    })
     if (interactive && !compactUi) out(`${formatTip()}\n`)
   }
   if (interactive) { if (supportsAnsi) output.write('\x1b[22;0t'); setTitle('VallenEmperor') }
@@ -938,6 +947,10 @@ function parseConfigArgs(args) {
  */
 export function parseArgs(argv) {
   const result = { mode: 'run', prompt: null, resumeId: null, approval: null, model: null, json: false, quiet: false, error: null }
+  const head = String(argv[0] || '')
+  if (head === 'setup') return { ...result, mode: 'setup' }
+  if (head === 'doctor') return { ...result, mode: 'doctor', json: argv.includes('--json') }
+  if (head === 'update') return { ...result, mode: 'update', json: argv.includes('--check') }
   for (let index = 0; index < argv.length; index++) {
     const arg = String(argv[index])
     if (arg === '--help' || arg === '-h') return { ...result, mode: 'help' }
@@ -1185,6 +1198,9 @@ export async function main(argv = process.argv.slice(2)) {
     applyRuntimeOverrides(config, parsed)
     const createAgent = options => createCliAgent(core, { ...options, config })
 
+    if (parsed.mode === 'setup') return await runSetupCommand({ core })
+    if (parsed.mode === 'doctor') return await runDoctorCommand({ core, json: parsed.json })
+    if (parsed.mode === 'update') return await runUpdateCommand({ root: ROOT, checkOnly: parsed.json })
     if (parsed.mode === 'config') return await runConfigCommand(core, parsed)
 
     if (parsed.mode === 'prompt') {
