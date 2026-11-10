@@ -291,12 +291,13 @@ execution so parallel batches cannot bypass it, and `/policy` views/sets/clears 
 `/worktree new [name]` creates a git worktree, retargets the session cwd and lists worktrees.
 Tests: `vallenagent/tests/policy_worktree.test.mjs` (4). Suite at the time: **397/397 + 143/143**.
 
-**Evidence (R15, R19, R34 — done).** Approvals are recorded to `approvals.jsonl` on every prompt;
+**Evidence (R15, R19 — done; R34 partial).** Approvals are recorded to `approvals.jsonl` on every prompt;
 `/approvals` mines them and proposes only unanimous rules (3+ decisions, no dissent), `/approvals apply`
 writes them into `tool_policy`. `/curator [days] [apply]` archives skill files untouched for N days
 (default 90) into `skills/archive/` — dry run by default, nothing is deleted. `/extensions` and
 `vallenemperor extensions [--json]` print a manifest of skills, custom agents, custom commands, hooks and
-MCP servers with their source and path. Tests: `vallenagent/tests/approvals_extensions.test.mjs` (4).
+MCP servers with their source and path — this is the read-only half of R34; packaging them into one
+installable unit is still open. Tests: `vallenagent/tests/approvals_extensions.test.mjs` (4).
 Suite at the time: **405/405 + 146/146**.
 
 ### P2 — Differentiators (only after P0/P1)
@@ -367,7 +368,7 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R16 | Profiles (`--profile`) | isolated config/sessions/skills | M | `[ ]` |
 | R17 | ACP server for editors | editor integration | L | `[ ]` |
 | R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[ ]` |
-| R19 | Approval mining (propose allowlist from history) | fewer prompts over time | M | `[ ]` |
+| R19 | Approval mining (propose allowlist from history) | fewer prompts over time | M | `[x]` |
 | R20 | `/handoff <platform>` | move a CLI session to Telegram | M | `[ ]` |
 | R21 | User-defined slash commands (`.vallenemperor/commands/*.md` → `/name`) | all three peers ship it; cheapest workflow win | S | `[x]` |
 | R22 | Rule-based tool policies (allow/ask/deny per tool or path) | replaces today's global modes with per-tool rules | M | `[x]` |
@@ -378,7 +379,7 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R27 | Curator — archive stale skills by usage | keeps the skill index lean | M | `[ ]` |
 | R28 | Skill-index budget/delta tracking | index growth silently eats the context window | S | `[x]` |
 | R32 | Background agent view (dashboard over the existing subagent registry) | Claude Code, Hermes, Antigravity all expose a monitor | M | `[ ]` |
-| R34 | Extension manifest: one installable unit carrying tools + commands + skills | Gemini extensions, Hermes plugins, opencode plugins | M | `[ ]` |
+| R34 | Extension manifest: one installable unit carrying tools + commands + skills | Gemini extensions, Hermes plugins, opencode plugins | M | `[ ]` (partial: read-only manifest landed; installable bundle remains) |
 
 Deliberately not on this list (see `REFERENCE-HERMES.md` §6): desktop app, web dashboard, pets,
 skins, voice/wake word, video generation, 20+ messaging platforms, Python library, API server,
