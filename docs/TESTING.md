@@ -90,6 +90,7 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 | Tool policy + /worktree | `vallenagent/tests/policy_worktree.test.mjs` |
 | Approval mining, curator, extension manifest | `vallenagent/tests/approvals_extensions.test.mjs` |
 | Dashboard, usage curator, /fast, extension pack | `vallenagent/tests/dashboard_usage_pack.test.mjs` |
+| Profiles (`--profile`) | `vallencli/tests/profile.test.mjs` |
 | /sandbox command | `vallencli/tests/sandbox_command.test.mjs` |
 | /artifact panel, /btw, /fork | `vallencli/tests/artifact_panel_btw.test.mjs` |
 | Engine session fork | `vallenagent/tests/fork_session.test.mjs` |

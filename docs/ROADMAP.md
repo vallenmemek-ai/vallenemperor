@@ -309,6 +309,13 @@ install <dir>` copies a pack's skills/commands/agents into the home (nothing is 
 executable tool bundles are still open. Tests: `vallenagent/tests/dashboard_usage_pack.test.mjs` (4).
 Suite at the time: **409/409 + 146/146**.
 
+**Evidence (R16 — done).** `--profile <name>` (or `--profile=<name>`) points `VALLENEMPEROR_HOME` at
+`<base>/profiles/<name>`, so config, sessions, skills and approvals are isolated; `vallenemperor profile
+list|create|delete` manages them. The base home is captured once (`VALLENEMPEROR_BASE_HOME`) so nested
+calls never build paths inside a profile, and `..` segments are neutralised. Tests:
+`vallencli/tests/profile.test.mjs` (3, including an end-to-end `--profile ci --version`). Suite at the
+time: **409/409 + 149/149**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -374,7 +381,7 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R13 | `vallenemperor update` (+ `/update`) | self-update without npm knowledge | S | `[x]` |
 | R14 | LSP tool (semantic diagnostics beyond tsc) | non-TypeScript projects | L | `[ ]` |
 | R15 | Curator — auto-archive stale skills | keeps the skill index lean | M | `[x]` |
-| R16 | Profiles (`--profile`) | isolated config/sessions/skills | M | `[ ]` |
+| R16 | Profiles (`--profile`) | isolated config/sessions/skills | M | `[x]` |
 | R17 | ACP server for editors | editor integration | L | `[ ]` |
 | R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[ ]` (partial: `/fast` done; `x_search` needs an X API key) |
 | R19 | Approval mining (propose allowlist from history) | fewer prompts over time | M | `[x]` |

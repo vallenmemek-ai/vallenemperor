@@ -19,6 +19,7 @@ import { currentVersion, maybeNotifyUpdate, runUpdateCommand } from './cli-updat
 import { runCompletionCommand } from './cli-completion.mjs'
 import { dumpReport, insightsReport, listLogs, promptSizeReport } from './cli-diagnostics.mjs'
 import { runSessionsCommand } from './cli-sessions.mjs'
+import { applyProfile, extractProfile, runProfileCommand } from './cli-profile.mjs'
 import { backspacePicker, backPicker, createPickerState, enterPicker, fetchGatewayModels, formatModelCatalog, groupModelsByOwner, movePicker, pickerLines, typeInPicker } from './cli-model-picker.mjs'
 export { HELP, collectHealthChecks, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity } from './cli-ui.mjs'
 
@@ -995,6 +996,7 @@ export function parseArgs(argv) {
   if (head === 'update') return { ...result, mode: 'update', json: argv.includes('--check') }
   if (head === 'completion') return { ...result, mode: 'completion', shell: String(argv[1] || '') }
   if (head === 'sessions') return { ...result, mode: 'sessions', args: argv.slice(1) }
+  if (head === 'profile') return { ...result, mode: 'profile', args: argv.slice(1) }
   if (head === 'prompt-size') return { ...result, mode: 'prompt-size' }
   if (head === 'insights') return { ...result, mode: 'insights' }
   if (head === 'logs') return { ...result, mode: 'logs' }
@@ -1240,6 +1242,9 @@ export function createCliAgent(core, options = {}) {
 }
 
 export async function main(argv = process.argv.slice(2)) {
+  const { profile, argv: argvWithoutProfile } = extractProfile(argv)
+  if (profile) applyProfile(profile)
+  argv = argvWithoutProfile
   const parsed = parseArgs(argv)
   if (parsed.mode === 'help') {
     console.log(HELP)
@@ -1280,6 +1285,7 @@ export async function main(argv = process.argv.slice(2)) {
     if (parsed.mode === 'update') return await runUpdateCommand({ root: ROOT, checkOnly: parsed.json })
     if (parsed.mode === 'completion') return runCompletionCommand({ shell: parsed.shell })
     if (parsed.mode === 'sessions') return runSessionsCommand({ args: parsed.args || [] })
+    if (parsed.mode === 'profile') return runProfileCommand({ args: parsed.args || [] })
     if (parsed.mode === 'prompt-size') {
       const probe = createAgent({})
       try {

@@ -366,6 +366,9 @@ Review surfaces: `/artifact` lists this session's artifacts and opens one by num
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
 `/fork` clones the conversation into a new session id.
 
+Isolation: `--profile <name>` runs against `<base>/profiles/<name>` (its own config, sessions, skills,
+approvals); `vallenemperor profile list|create|delete` manages them.
+
 Monitoring: `/agents runs` shows the subagent dashboard (status, elapsed, workspace, last progress).
 Speed: `/fast on|off` lowers reasoning effort and disables background review. Extensions:
 `vallenemperor extensions [--json]` lists what is installed, `extensions install <dir>` installs a pack of
