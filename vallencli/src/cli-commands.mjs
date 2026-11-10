@@ -100,6 +100,11 @@ export function createLocalCommandHandler(context) {
       }
       return true
     }
+    if (cmd === '/learn') {
+      const prompt = core.buildLearnPrompt(value)
+      await runTurn(prompt, text)
+      return true
+    }
     if (cmd === '/browser') {
       if (!value) {
         printResponse('Usage: /browser <task> — unlocks browser tools for 30 minutes and runs the task. Use /browser off to lock them again.')

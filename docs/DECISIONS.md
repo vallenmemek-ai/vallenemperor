@@ -296,3 +296,19 @@ pins it.
 
 **Consequence.** The stub is a *success* result, not an error — the model must learn to act on what it
 already has. Never widen the deny list by default; adding a path class means adding a test.
+
+---
+
+## D22 — Writes serialise per path; `/learn` is a prompt, not an engine
+
+**Decision.** `write_file` and `patch` run under `withPathLock(path)` (in-process mutex, keyed by the
+canonical path). `/learn` is a prompt builder (`agent/learn_prompt.ts`) that the live agent executes
+with its normal tools, exactly like `/plan`.
+
+**Why.** Subagents share a process and can target the same file; last-writer-wins silently destroys a
+diff. And every special-purpose engine we add is another surface to test — a prompt reuses the tool
+loop, the skill authoring path, and the verification gate for free.
+
+**Consequence.** The lock is in-process only: cross-process safety is the worktree/sandbox story.
+`/learn` must keep its standards text in sync with the bundled skill authoring rules; if those diverge,
+the skills it produces get rejected by review.

@@ -30,6 +30,7 @@ import { buildToolContext } from './tool_context'
 import { callProviderWithRetry, continueTruncatedResponse } from './turn_provider_call'
 import { finalizeSuccessfulTurn } from './turn_finalize'
 import { writeTurnWalkthrough } from './artifact_store'
+import { withPathLock } from '../core/path_lock'
 import { SessionManager } from '../session/session'
 import { loadConfig, getActiveProvider, getVallenHome, setProviderToken, saveConfig } from '../core/config'
 import { registerBuiltinTools } from '../tools/builtin_tools'
@@ -1027,7 +1028,14 @@ export class AIAgent {
       createSubagent: options => new AIAgent(options)
     })
 
-    let result = await registry.execute(toolName, toolArgs, context, this.toolWhitelist, this.abortController?.signal)
+    // Serialise writes to the same path so concurrent subagents cannot interleave and lose a diff.
+    const lockPath = (toolName === 'write_file' || toolName === 'patch') && typeof toolArgs?.path === 'string'
+      ? String(toolArgs.path)
+      : ''
+    const executeTool = () => registry.execute(toolName, toolArgs, context, this.toolWhitelist, this.abortController?.signal)
+    let result = lockPath
+      ? await withPathLock(lockPath, executeTool)
+      : await executeTool()
     if (context.workingDir) {
       if (!this.config.terminal) this.config.terminal = {}
       this.config.terminal.cwd = context.workingDir

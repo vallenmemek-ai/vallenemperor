@@ -215,6 +215,16 @@ delegation, screenshot proof for UI work, and plan-first for changes touching mo
   `VALLENEMPEROR_ALLOW_INSTRUCTION_EDITS=1`. Guards run in `write_file`, `patch`, `patch_batch`,
   `apply_patch` before the sandbox check.
 
+## 5e3. Write serialisation and `/learn`
+
+- `core/path_lock.ts` — in-process mutex keyed by canonical path. `write_file` and `patch` acquire it
+  in `agent.ts` before `registry.execute`, so two subagents writing one file queue instead of
+  interleaving. Different paths never block; a failed write does not block the next.
+- `agent/learn_prompt.ts` — `/learn [source]` builds a prompt that (1) gathers the source with normal
+  tools, (2) checks for an existing skill and updates it instead of duplicating, (3) authors it via
+  `skill_manage` under explicit standards (description ≤ 60 chars, procedure-first, pitfalls as rules,
+  no incident narration), (4) verifies the skill loads.
+
 ## 5f. Filesystem sandbox
 
 `core/sandbox.ts` bounds file **writes** (reads stay allowed):
