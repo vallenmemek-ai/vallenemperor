@@ -14,6 +14,8 @@ Companion documents (read before designing anything new):
   35 toolsets, mapped to us with adopt/adapt/ignore verdicts.
 - **[REFERENCE-ANTIGRAVITY.md](REFERENCE-ANTIGRAVITY.md)** — Antigravity CLI: full slash-command
   inventory, subagents, artifacts, permissions/sandbox.
+- **[COMPARE-HERMES-CORE.md](COMPARE-HERMES-CORE.md)** — deep dive on file tools (read/write/patch/
+  search) and the self-improvement review: why Hermes is more mature, gap by gap.
 - **[REFERENCE-OPENCODE.md](REFERENCE-OPENCODE.md)** — opencode: config-surface inventory plus a
   cross-reference table of where all three peers agree (the strongest ordering signal).
 
@@ -163,6 +165,28 @@ Format per item: **why**, **scope**, **acceptance**, **effort** (S ≤ 1 session
   clipboard writer.
 - **Effort.** S · **Risk.** low.
 
+### P1b — Core tool maturity (Hermes-informed, see COMPARE-HERMES-CORE.md)
+
+The file tools and the self-improvement loop are where Hermes is clearly ahead. These items make our
+tools stateful (dedup/staleness/locks) and make the learning loop trustworthy.
+
+| # | Item | Why | Effort | Status |
+| --- | --- | --- | --- | --- |
+| P1b.1 | Read dedup + loop detection: re-reading an unchanged file returns a stub; `read → read → read` is detected | stops silent context burn; Hermes keeps this state across compaction | M | `[ ]` |
+| P1b.2 | Staleness warning on every patch (not only when `expected_hash` is passed) | stale edits are our most expensive failure | S | `[ ]` |
+| P1b.3 | Sensitive-path deny list (`.ssh`, `.env`, `*.pem`, keychains) + protected instruction files always ask | blocks credential exfiltration and self-rewriting of `AGENTS.md`/`RULES.md` | S | `[ ]` |
+| P1b.4 | Per-path write lock for concurrent subagents | worktree isolation does not protect a shared file | S–M | `[ ]` |
+| P1b.5 | Git diff modes for `/diff` (`working` / `staged` / `all` / `session`, untracked folded in) | users expect `git diff` semantics | S | `[ ]` |
+| P1b.6 | Review prompt: DO-NOT-CAPTURE list + lesson-layer contract (procedure-first, pitfall = rule + why, no PR numbers, one rule per lesson, fix in place) | this is why Hermes skills read like a handbook and ours drift into logs | S | `[ ]` |
+| P1b.7 | Cache-aware review fork (inherit provider/model/cached system prompt) | makes frequent reviews affordable | M | `[ ]` |
+| P1b.8 | Pending/staged memory & skill writes (`pending/{memory,skills}/<id>.json`) | review before a lesson becomes permanent | M | `[ ]` |
+| P1b.9 | `/learn <source>` — capture a session/doc/dir as a reusable skill | the highest-intent learning request has no path today | S | `[ ]` |
+
+Acceptance for the whole package: a scripted session that re-reads a file twice must produce a stub on
+the second read; a patch against externally changed content must be refused with a staleness message;
+a write to `.ssh/id_rsa` must be denied; two concurrent subagents writing one file must serialize; a
+review run must produce zero writes when only environment failures occurred.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -238,6 +262,9 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R23 | Formatter hook after edits (respect the project's formatter) | keeps diffs clean without manual runs | S | `[ ]` |
 | R24 | `/grill-me` — interview the user one question at a time before starting | fits our clarify policy; prevents wrong builds | S | `[ ]` |
 | R25 | `/learn` — turn corrections into skills/rules through a reviewable proposal | closes the self-improvement loop | M | `[ ]` |
+| R26 | Skill provenance (who/when/why) + `/journey` learning timeline | audit and roll back a bad lesson | M | `[ ]` |
+| R27 | Curator — archive stale skills by usage | keeps the skill index lean | M | `[ ]` |
+| R28 | Skill-index budget/delta tracking | index growth silently eats the context window | S | `[ ]` |
 
 Deliberately not on this list (see `REFERENCE-HERMES.md` §6): desktop app, web dashboard, pets,
 skins, voice/wake word, video generation, 20+ messaging platforms, Python library, API server,
@@ -248,8 +275,8 @@ kanban board, egress proxy.
 | Package | Contents | Target |
 | --- | --- | --- |
 | **A** | P0.1 setup · P0.2 doctor · P0.3 update notifier · R3 `/save` · R4 `/title`,`/history`,`/prompt` · R12 completion | next release |
-| **B** | P1.1 codesearch · P1.2 effort · P1.3 diff viewer · P1.4 copy · R1 `/steer` · R5 `/<skill>` · R8 `/context all` · R10 sessions | after A |
-| **C** | P2.1 recording · P2.2 nested · P2.3 profiles · P2.4 ACP · P2.5 terminal sandbox · R2 `/rewind` · R6 `/goal` · R9 `/worktree` | after B |
+| **B** | **P1b.1–P1b.6 (tool maturity)** · P1.1 codesearch · P1.2 effort · P1.3 diff viewer · P1.4 copy · R1 `/steer` · R5 `/<skill>` · R8 `/context all` · R10 sessions | after A |
+| **C** | **P1b.7–P1b.9 (learning loop)** · P2.1 recording · P2.2 nested · P2.3 profiles · P2.4 ACP · P2.5 terminal sandbox · R2 `/rewind` · R6 `/goal` · R9 `/worktree` · R26–R28 | after B |
 | **D** | R11 diagnostics · R13 update · R14 LSP · R15 curator · R17 ACP · R19 approval mining · R20 handoff · R21 custom commands · R22 tool policies · R23 formatter · R24 grill-me · R25 learn | later |
 
 Each package: build → typecheck → tests → version bump → `npm install -g .` → smoke test → **owner

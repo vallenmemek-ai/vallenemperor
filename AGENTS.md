@@ -13,7 +13,8 @@ order — do not guess the architecture:
 5. **[docs/RELEASING.md](docs/RELEASING.md)** — release pipeline and owner approval
 6. **[docs/DECISIONS.md](docs/DECISIONS.md)** — why the code looks the way it does (do not undo these casually)
 7. **[docs/ROADMAP.md](docs/ROADMAP.md)** — the backlog: pick the top unchecked item, tick it when done
-8. **[docs/REFERENCE-HERMES.md](docs/REFERENCE-HERMES.md)**, **[docs/REFERENCE-ANTIGRAVITY.md](docs/REFERENCE-ANTIGRAVITY.md)**, **[docs/REFERENCE-OPENCODE.md](docs/REFERENCE-OPENCODE.md)** — peer inventories; read before designing a new feature
+8. **[docs/COMPARE-HERMES-CORE.md](docs/COMPARE-HERMES-CORE.md)** — why Hermes' file tools and self-improvement loop are more mature (gap-by-gap)
+9. **[docs/REFERENCE-HERMES.md](docs/REFERENCE-HERMES.md)**, **[docs/REFERENCE-ANTIGRAVITY.md](docs/REFERENCE-ANTIGRAVITY.md)**, **[docs/REFERENCE-OPENCODE.md](docs/REFERENCE-OPENCODE.md)** — peer inventories; read before designing a new feature
 
 ## The eight invariants
 
