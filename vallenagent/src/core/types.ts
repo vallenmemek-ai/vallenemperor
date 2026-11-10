@@ -29,6 +29,8 @@ export interface AgentConfig {
   max_output_tokens?: number
   /** Sampling temperature sent to the provider. Unset = provider/router default. 0-0.3 is recommended for coding. */
   temperature?: number
+  /** Reasoning effort for models that support it (low | medium | high). Sent as reasoning_effort. */
+  reasoning_effort?: 'low' | 'medium' | 'high'
   context_windows?: Record<string, number>
   /** Context window assumed for models missing from context_windows (default 128000). */
   default_context_window?: number

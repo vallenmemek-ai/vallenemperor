@@ -333,6 +333,12 @@ Review surfaces: `/artifact` lists this session's artifacts and opens one by num
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
 `/fork` clones the conversation into a new session id.
 
+`/codesearch <query>` searches the workspace (`core/code_search.ts`): grouped by file, line numbers,
+±2 lines of context, skips `node_modules`/`dist`/`.git`/binary files, caps at 5 000 files and 1 MB per
+file, marks truncation. `/effort low|medium|high` sets `reasoning_effort`, which is sent on every
+provider request. `/copy [n]` copies the last (or n-th) reply via the platform clipboard tool with an
+OSC 52 fallback (`core/clipboard.ts`).
+
 `/diff` takes a turn number (checkpoint diff) or a git mode: `/diff working` (unstaged + untracked),
 `/diff staged`, `/diff all` (since HEAD). Git modes use `core/working_diff.ts`, which folds untracked
 files in via `git diff --no-index`, caps at 50 untracked files and 200k chars, and never throws.

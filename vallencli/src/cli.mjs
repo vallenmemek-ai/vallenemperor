@@ -782,6 +782,7 @@ export async function runCli(options = {}) {
         closeStream(footer)
         if (result.completionStatus === 'incomplete') displayLine(color('Turn incomplete; check remaining work and errors above.', ANSI.yellow))
         if (!streamed) printResponse(result.response, { markdown: true, footer })
+        if (result?.response) state.lastReplies = [...(state.lastReplies || []), String(result.response)].slice(-10)
         if (result.artifacts?.summary) displayLine(result.artifacts.summary)
         if (result.artifacts?.dir) displayLine(color(`artifacts: ${result.artifacts.dir}`, 'dim'))
       } catch (error) {
@@ -1083,6 +1084,7 @@ async function runOneShot(agent, prompt, { core } = {}) {
     : { requestApproval: undefined, denied: [] }
   const result = await agent.runTurn({ message: prompt, surfaceId: 'cli' }, { requestApproval: gate.requestApproval })
   process.stdout.write(`${String(result.response || '').trim()}\n`)
+  if (result?.response) state.lastReplies = [...(state.lastReplies || []), String(result.response)].slice(-10)
   if (result.artifacts?.summary) process.stdout.write(`${result.artifacts.summary}\n`)
   if (result.artifacts?.dir) process.stdout.write(`artifacts: ${result.artifacts.dir}\n`)
   return { result, denied: gate.denied }

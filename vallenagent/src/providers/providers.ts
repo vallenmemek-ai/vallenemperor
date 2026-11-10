@@ -26,6 +26,7 @@ export interface CompletionRequest {
   tools?: any[]
   max_tokens?: number
   temperature?: number
+  reasoning_effort?: 'low' | 'medium' | 'high'
   stream?: boolean
   signal?: AbortSignal  // BUG-18: Support abort
   onChunk?: (chunk: string) => void
@@ -164,6 +165,7 @@ export class OpenAICompatibleProvider implements Provider {
         tools: request.tools,
         max_tokens: request.max_tokens,
         temperature: request.temperature,
+        ...(request.reasoning_effort ? { reasoning_effort: request.reasoning_effort } : {}),
         stream: isStream,
         ...(isStream ? { stream_options: { include_usage: true } } : {})
       }

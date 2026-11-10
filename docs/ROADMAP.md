@@ -135,7 +135,7 @@ call makes no network request), formats `update available: x → y`, honours
 
 ### P1 — Parity with Antigravity CLI
 
-#### P1.1 `/codesearch <query>` — ❌
+#### P1.1 `/codesearch <query>` — ✅
 - **Why.** `search_files` exists for the agent, but the user has no fast way to search the workspace
   from inside the REPL.
 - **Scope.** `vallencli/src/cli-codesearch.mjs` (new), command registration in
@@ -147,7 +147,7 @@ call makes no network request), formats `update available: x → y`, honours
   tests cover grouping, preview extraction, and non-TTY output.
 - **Effort.** M · **Risk.** medium (TUI key handling).
 
-#### P1.2 `/effort <low|medium|high>` — ❌
+#### P1.2 `/effort <low|medium|high>` — ✅
 - **Why.** Reasoning budget is the biggest cost/quality lever, and every peer CLI exposes it.
 - **Scope.** `vallenagent/src/core/types.ts` (`reasoning_effort`), `providers/providers.ts` (pass
   `reasoning_effort` in the OpenAI-compatible payload when set), command in `core/commands.ts`,
@@ -166,7 +166,7 @@ call makes no network request), formats `update available: x → y`, honours
   undo call; non-TTY keeps the current text output.
 - **Effort.** M · **Risk.** medium (undo must not be reachable by accident).
 
-#### P1.4 `/copy [n]` — ❌
+#### P1.4 `/copy [n]` — ✅
 - **Why.** Copying the last answer is the most-used utility in every peer CLI.
 - **Scope.** `cli-commands.mjs` + clipboard helper (OSC 52 fallback, `pbcopy`/`clip`/`xclip`).
 - **Acceptance.** Works over SSH via OSC 52; reports which mechanism was used; tests with an injected
@@ -219,6 +219,13 @@ Aider ship. They are not differentiators — they are the price of entry.
 | R30 | **Repo map**: tree-sitter/TS symbol map (classes, functions, signatures) ranked by relevance and token-budgeted, injected per request | the agent stops grepping blind on large repos; Aider's biggest quality lever | L | `[ ]` |
 | R31 | **Permissions panel**: one reviewable place showing the effective rule per tool/path, replacing the `/auto` + `/sandbox` split | Codex, Claude Code, Gemini, opencode all expose this | M | `[ ]` |
 | R33 | **Headless contract**: `-p --json` with stable exit codes (0 ok, 1 agent error, 2 usage) | CI/pipeline use; Codex `exec`, Gemini headless | S | `[ ]` |
+
+**Evidence (P1.1, P1.2, P1.4 — done).** `vallenagent/tests/p1_features.test.mjs` (5 tests): workspace
+search groups hits by file with line numbers and context, skips `node_modules`/binary files, respects
+the limit and marks truncation; `/codesearch` and `/effort` work through the shared handler and the
+effort value is persisted; a captured provider payload proves `reasoning_effort` reaches the request;
+clipboard prefers the platform tool and falls back to OSC 52 (encoded sequence asserted). Suite at the
+time: **370/370 + 131/131**. `/diff` interactive viewer (P1.3) is still open.
 
 ### P2 — Differentiators (only after P0/P1)
 

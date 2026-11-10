@@ -100,6 +100,16 @@ export function createLocalCommandHandler(context) {
       }
       return true
     }
+    if (cmd === '/copy') {
+      const replies = state.lastReplies || []
+      if (!replies.length) { printResponse('Nothing to copy yet — no assistant reply in this session.'); return true }
+      const requested = Number(value)
+      const index = Number.isFinite(requested) && requested > 0 ? replies.length - requested : replies.length - 1
+      const text = replies[Math.max(0, Math.min(replies.length - 1, index))]
+      const result = core.copyToClipboard(text)
+      printResponse(core.formatCopyResult(result, text.length))
+      return true
+    }
     if (cmd === '/learn') {
       const prompt = core.buildLearnPrompt(value)
       await runTurn(prompt, text)

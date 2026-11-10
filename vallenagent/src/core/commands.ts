@@ -10,6 +10,7 @@ import { removeSubagentWorktree } from '../agent/worktree'
 import { discoverCustomAgents, formatAgentList } from '../agent/custom_agents'
 import { formatSandboxStatus, sandboxPolicyFor } from './sandbox'
 import { collectWorkingDiff, formatDiffSummary } from './working_diff'
+import { formatCodeSearch, searchWorkspace } from './code_search'
 import { getVallenHome, saveConfig } from './config'
 import { handleMcpCommand } from './commands/mcp'
 import { handleGatewayCommand } from './commands/gateway'
@@ -79,7 +80,7 @@ export interface CommandResult {
 }
 
 const NOT_HANDLED: CommandResult = { handled: false, response: '' }
-const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn'])
+const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy'])
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -99,6 +100,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Sesi & model', name: '/status', desc: 'ringkasan sesi, model, konteks, turn' },
   { group: 'Sesi & model', name: '/stats', desc: 'telemetry token dan sesi' },
   { group: 'Sesi & model', name: '/model', args: '[nama | save <nama>]', desc: 'pilih provider & model dari gateway (live), atau ganti langsung' },
+  { group: 'Sesi & model', name: '/effort', args: '[low|medium|high|status]', desc: 'reasoning effort model' },
   { group: 'Sesi & model', name: '/sessions', desc: 'daftar sesi tersimpan' },
   { group: 'Sesi & model', name: '/resume', args: '[id | nomor]', desc: 'lanjutkan sesi' },
   { group: 'Sesi & model', name: '/new', desc: 'mulai sesi baru' },
@@ -110,6 +112,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Konteks', name: '/context', desc: 'pemakaian konteks' },
   { group: 'Konteks', name: '/compact', desc: 'ringkas riwayat percakapan' },
   { group: 'Konteks', name: '/search', args: '<kata>', desc: 'cari di riwayat sesi' },
+  { group: 'Konteks', name: '/codesearch', args: '<query>', desc: 'cari kode di workspace dengan konteks' },
   { group: 'Konteks', name: '/todos', desc: 'daftar todo' },
   { group: 'Konteks', name: '/memory', desc: 'isi memori jangka panjang' },
   { group: 'Kerja', name: '/tools', desc: 'daftar tool yang tersedia' },
@@ -136,6 +139,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'MCP & gateway', name: '/mcp', args: '[add|tools|reconnect|...]', desc: 'kelola server MCP' },
   { group: 'MCP & gateway', name: '/gateway', args: '[wa | tel ...]', desc: 'status dan kelola gateway' },
   { group: 'MCP & gateway', name: '/token', args: '[status | set <token>]', desc: 'token provider' },
+  { group: 'Tampilan', name: '/copy', args: '[n]', desc: 'salin balasan terakhir ke clipboard' },
   { group: 'Tampilan', name: '/theme', args: '[nama]', desc: 'ganti tema' },
   { group: 'Tampilan', name: '/themes', desc: 'daftar tema' },
   { group: 'Tampilan', name: '/settings', desc: 'pengaturan tampilan' },
@@ -337,6 +341,29 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     const active = runs.filter(run => !isTerminalStatus(run.status)).length
     const header = `Subagents · ${active} active · ${runs.length} total`
     return { handled: true, response: [header, ...runs.map(run => formatSubagentLine(run)), 'Commands: /agents show <id> · /agents stop <id> · /agents clean'].join('\n') }
+  }
+
+  if (cmd === '/codesearch') {
+    const query = args.join(' ').trim()
+    if (!query) return { handled: true, response: 'Usage: /codesearch <query> — searches the workspace and shows matching lines with context.' }
+    const workspace = ctx.agent.config?.terminal?.cwd || process.cwd()
+    const result = searchWorkspace({ cwd: workspace, query })
+    return { handled: true, response: formatCodeSearch(result) }
+  }
+
+  if (cmd === '/effort') {
+    const level = String(args[0] || '').toLowerCase()
+    const current = (ctx.agent.config as any).reasoning_effort
+    if (!level || level === 'status') {
+      return { handled: true, response: `Reasoning effort: ${current || 'provider default'} · set with /effort low|medium|high` }
+    }
+    if (!['low', 'medium', 'high'].includes(level)) {
+      return { handled: true, response: 'Usage: /effort [low|medium|high|status]' }
+    }
+    const agentConfig = ctx.agent.config as any
+    agentConfig.reasoning_effort = level
+    saveConfig(agentConfig)
+    return { handled: true, response: `Reasoning effort set to ${level} (saved). Applies to the next provider request.` }
   }
 
   if (cmd === '/sandbox') {

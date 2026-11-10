@@ -582,6 +582,7 @@ export class AIAgent {
           tools: tools.length > 0 ? tools : undefined,
           max_tokens: maxTokens,
           temperature: this.config.temperature,
+          reasoning_effort: this.config.reasoning_effort,
           fallbackModels: (() => {
             const activeProvider = getActiveProvider(this.config);
             const configured = this.config.providers[activeProvider.name];
