@@ -74,6 +74,32 @@ export function createLocalCommandHandler(context) {
       return true
     }
     if (cmd === '/sh' || cmd === '/pty') { await enterShell(); return true }
+    if (cmd === '/btw') {
+      if (!value) { printResponse('Usage: /btw <question> — side question in a clean context; this conversation is untouched.'); return true }
+      let side
+      try {
+        const createSideAgent = context.createSideAgent
+          || (() => new core.AIAgent({ config: structuredClone(agent.config), lightweight: true, backgroundReview: false, isSubagent: true }))
+        side = createSideAgent()
+        const answer = await side.chat(value, {})
+        printResponse(`[btw] ${String(answer?.response || '').trim() || '(empty answer)'}`)
+      } catch (err) {
+        printResponse(`[btw] failed: ${err?.message || err}`)
+      } finally {
+        try { side?.shutdown?.() } catch { }
+      }
+      return true
+    }
+    if (cmd === '/fork') {
+      try {
+        const forked = agent.forkSession()
+        printResponse(`Forked into ${forked}. This conversation continues in the fork; the previous session is still resumable with /resume.`)
+        refreshStatus()
+      } catch (err) {
+        printResponse(`Fork failed: ${err?.message || err}`)
+      }
+      return true
+    }
     if (cmd === '/browser') {
       if (!value) {
         printResponse('Usage: /browser <task> — unlocks browser tools for 30 minutes and runs the task. Use /browser off to lock them again.')

@@ -232,6 +232,25 @@ export class AIAgent {
     return this.sessionId
   }
 
+  /**
+   * Fork the current conversation into a new session id and switch to it.
+   * The original session stays on disk, so both branches remain resumable.
+   */
+  forkSession(): string {
+    if (this.isSubagent) throw new Error('A subagent session cannot be forked')
+    const forked = `session-${Date.now()}-fork`
+    this.sessionManager.saveSession(
+      forked,
+      this.conversationHistory,
+      this.config.terminal?.cwd || process.cwd(),
+      this.provider.model,
+      this.todoStore.read()
+    )
+    this.sessionId = forked
+    try { this.saveCurrentSession() } catch { }
+    return forked
+  }
+
   private getContextWindow(model = this.provider.model): number {
     return resolveContextWindow(this.config, model)
   }

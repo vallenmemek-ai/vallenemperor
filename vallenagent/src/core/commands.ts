@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { basename, join } from 'path'
 import { loadProjectContext } from './project_context'
 import { getCheckpointDiff, listCheckpoints, undoCheckpoints } from '../session/checkpoint'
-import { formatArtifactList, listArtifacts } from '../agent/artifact_store'
+import { formatArtifactList, listArtifacts, readArtifactPreview } from '../agent/artifact_store'
 import { formatSubagentDetail, formatSubagentLine, isTerminalStatus, subagentRegistry } from '../agent/subagent_registry'
 import { removeSubagentWorktree } from '../agent/worktree'
 import { discoverCustomAgents, formatAgentList } from '../agent/custom_agents'
@@ -78,7 +78,7 @@ export interface CommandResult {
 }
 
 const NOT_HANDLED: CommandResult = { handled: false, response: '' }
-const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan'])
+const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork'])
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -103,6 +103,8 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Sesi & model', name: '/new', desc: 'mulai sesi baru' },
   { group: 'Sesi & model', name: '/reset', desc: 'kosongkan percakapan' },
   { group: 'Sesi & model', name: '/session', args: '[clearall]', desc: 'kelola berkas sesi' },
+  { group: 'Sesi & model', name: '/fork', desc: 'clone percakapan ke sesi baru' },
+  { group: 'Sesi & model', name: '/btw', args: '<pertanyaan>', desc: 'pertanyaan sampingan tanpa ganggu sesi' },
   { group: 'Sesi & model', name: '/stop', desc: 'hentikan turn yang berjalan' },
   { group: 'Konteks', name: '/context', desc: 'pemakaian konteks' },
   { group: 'Konteks', name: '/compact', desc: 'ringkas riwayat percakapan' },
@@ -121,6 +123,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Kerja', name: '/schedule', args: '[list|history|add|remove]', desc: 'jadwal agent (lokal atau Telegram)' },
   { group: 'Berkas', name: '/checkpoints', desc: 'daftar checkpoint berkas' },
   { group: 'Berkas', name: '/artifacts', desc: 'daftar artifact sesi (walkthrough, screenshot)' },
+  { group: 'Berkas', name: '/artifact', args: '[nomor|last]', desc: 'panel review artifact sesi' },
   { group: 'Berkas', name: '/sandbox', args: '[status|workspace|off]', desc: 'batas tulis filesystem agent' },
   { group: 'Berkas', name: '/diff', args: '[turn]', desc: 'lihat perubahan checkpoint' },
   { group: 'Berkas', name: '/undo', args: '[1-20] [--force]', desc: 'pulihkan checkpoint' },
@@ -354,6 +357,23 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
         ? 'Filesystem sandbox ON: main-agent writes must stay inside the working directory. Subagents were already confined.'
         : 'Filesystem sandbox OFF: the main agent can write anywhere again. Subagents stay confined to their working directory.'
     }
+  }
+
+  if (cmd === '/artifact') {
+    const entries = listArtifacts({ home: getVallenHome(), sessionId: ctx.agent.getSessionId() })
+    if (!entries.length) {
+      return { handled: true, response: 'No artifacts in this session yet. A turn that changes files, runs verification, or captures a screenshot leaves one.' }
+    }
+    const target = String(args[0] || '').trim().toLowerCase()
+    if (!target) {
+      const lines = entries.slice(0, 20).map((entry, index) => `${String(index + 1).padStart(2)}. ${entry.kind.padEnd(11)} ${(entry.bytes / 1024).toFixed(1).padStart(6)} KB  ${entry.name}`)
+      if (entries.length > 20) lines.push(`… ${entries.length - 20} more`)
+      return { handled: true, response: [`Artifacts · ${entries.length} item(s)`, ...lines, 'Open one with /artifact <number>, or /artifact last.'].join('\n') }
+    }
+    const index = target === 'last' ? 0 : Number(target) - 1
+    const entry = Number.isInteger(index) && index >= 0 ? entries[index] : undefined
+    if (!entry) return { handled: true, response: `No artifact at "${target}". Use /artifact to list them.` }
+    return { handled: true, response: readArtifactPreview(entry) }
   }
 
   if (cmd === '/artifacts') {

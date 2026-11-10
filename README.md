@@ -198,6 +198,19 @@ Each folder owns an `index.ts` barrel; the root `src/index.ts` only re-exports f
 module is added in exactly one place. The turn loop is split per stage — every stage is a module
 with explicit dependencies, pinned by tests instead of by one thousand-line function.
 
+## Reviewing work
+
+```bash
+/artifact            # list this session's artifacts (walkthrough, screenshots, plans)
+/artifact 2          # open entry #2
+/artifact last       # open the newest one
+/artifacts           # flat list with full paths
+/btw what is a git worktree?   # side question in a clean context; this conversation is untouched
+/fork                # clone this conversation into a new session (the original stays resumable)
+```
+
+Artifact review never calls the model: it reads the files the turn already wrote.
+
 ## Filesystem sandbox
 
 Subagents are always confined to their working directory — a `workspace: "branch"` subagent can only

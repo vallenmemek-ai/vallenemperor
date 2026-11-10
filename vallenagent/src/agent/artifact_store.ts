@@ -225,3 +225,19 @@ export function writeTurnWalkthrough(options: TurnWalkthroughOptions): string | 
   writeArtifact({ home, sessionId, turn, kind: 'walkthrough', name: 'walkthrough.md', content: lines.join('\n'), now: options.now })
   return artifactDir(home, sessionId, turn)
 }
+
+/** First `lines` lines of a text artifact; binary artifacts report their size instead. */
+export function readArtifactPreview(entry: ArtifactEntry, lines = 40): string {
+  const header = `${entry.kind} · ${entry.name} · ${(entry.bytes / 1024).toFixed(1)} KB\n${entry.path}`
+  if (entry.kind === 'screenshot' || /\.(png|jpe?g|webp|gif)$/i.test(entry.name)) {
+    return `${header}\n\n[binary image — open the path above to view it]`
+  }
+  try {
+    const text = readFileSync(entry.path, 'utf8').split(/\r?\n/)
+    const shown = text.slice(0, Math.max(1, lines))
+    const truncated = text.length > shown.length ? `\n… ${text.length - shown.length} more line(s)` : ''
+    return `${header}\n\n${shown.join('\n')}${truncated}`
+  } catch (err: any) {
+    return `${header}\n\n[could not read artifact: ${err?.message || 'unknown error'}]`
+  }
+}

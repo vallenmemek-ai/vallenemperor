@@ -301,6 +301,10 @@ vallenemperor --model <name>
 vallenemperor config show|set provider|set model|set approval
 ```
 
+Review surfaces: `/artifact` lists this session's artifacts and opens one by number (or `last`),
+`/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
+`/fork` clones the conversation into a new session id.
+
 `/artifacts` lives in the shared command handler (`vallenagent/src/core/commands.ts`), so the
 terminal and the Telegram gateway behave the same. `/plan` (including `go/next/edit/skip/stop/status`)
 is terminal-local because it drives the REPL's turn loop; the pure state machine it uses lives in
@@ -331,6 +335,8 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | Plan-mode behavior | `agent/plan_mode.ts` (pure) + `cli-commands.mjs` wiring + tests |
 | Subagent behaviour | `agent/subagent_registry.ts` (state) + `agent/worktree.ts` (isolation) |
 | Agent routing | `agent/custom_agents.ts` (definitions + planner) |
+| Artifact review UI | `readArtifactPreview()` + `/artifact` |
+| Side questions / forks | `/btw` (isolated side agent) + `AIAgent.forkSession()` |
 | Browser gating | `core/browser_gate.ts` + `/browser` command |
 | Sandbox behaviour | `core/sandbox.ts` + guards in `file_tools.ts` |
 | New bundled skill | `.vallenemperor/skills/<category>/<name>/SKILL.md` with `name` + `description` frontmatter |
@@ -358,3 +364,6 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | A routed agent cannot use a tool | its `tools:` list becomes the subagent whitelist — add the tool name there |
 | "Path is outside the sandbox" | a subagent tried to write outside its worktree, or `/sandbox workspace` is on; write inside the root or run `/sandbox off` |
 | Writes to `/tmp` fail after enabling the sandbox | expected — add the path to the workspace or turn the sandbox off |
+| `/artifact <n>` says no artifact at that number | the list is per session and newest-first; run `/artifact` to see the current numbering |
+| `/fork` does not change what the agent remembers | the fork copies the conversation; the original session is untouched and resumable |
+| `/btw` returns an error about the provider | it uses the same provider config as the main agent; check `/model` and keys |

@@ -262,3 +262,19 @@ workflows (writing outside the project, `/tmp` scratch files), so it is opt-in.
 **Consequence.** New write tools must call `checkPathAllowed` with `context.sandboxRoots`. Claiming
 full sandboxing would be dishonest while the terminal is unconfined; the approval gate is the control
 for shell commands.
+
+---
+
+## D20 — Review surfaces read the artifact store; side questions never pollute history
+
+**Decision.** `/artifact` renders from the artifact store (list + preview of one entry) instead of
+re-running the model. `/btw` creates an isolated lightweight agent, asks once, and shuts it down. `/fork`
+copies the current conversation into a new session id and switches to it, leaving the original intact.
+
+**Why.** Reviewing work should not cost tokens or risk changing state, and a side question must not
+appear in the main conversation (which would confuse compaction and the verification gate). Forking
+gives a safe branch to experiment in without losing the original thread.
+
+**Consequence.** `/btw` uses the same provider config as the main agent — if the model is broken, the
+side question fails too, and it must report that instead of guessing. `forkSession()` throws for
+subagents because a subagent has no user-facing session.
