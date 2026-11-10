@@ -97,6 +97,7 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 | LSP client + framing | `vallenagent/tests/lsp.test.mjs` |
 | ACP server over stdio | `vallencli/tests/acp.test.mjs` |
 | Nested delegation depth cap | `vallenagent/tests/nested_agents.test.mjs` |
+| Browser recording script + gate | `vallenagent/tests/browser_record.test.mjs` |
 | /sandbox command | `vallencli/tests/sandbox_command.test.mjs` |
 | /artifact panel, /btw, /fork | `vallencli/tests/artifact_panel_btw.test.mjs` |
 | Engine session fork | `vallenagent/tests/fork_session.test.mjs` |

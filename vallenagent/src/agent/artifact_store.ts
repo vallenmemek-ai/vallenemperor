@@ -13,7 +13,7 @@ import { dirname, join } from 'node:path'
  * writes keep the turn loop and the tests deterministic.
  */
 
-export type ArtifactKind = 'plan' | 'diff' | 'screenshot' | 'walkthrough' | 'note'
+export type ArtifactKind = 'plan' | 'diff' | 'screenshot' | 'recording' | 'walkthrough' | 'note'
 
 export interface ArtifactEntry {
   kind: ArtifactKind
@@ -31,6 +31,7 @@ export interface ArtifactIndex {
 }
 
 const KIND_EXT: Record<ArtifactKind, string> = {
+  recording: '.webm',
   plan: '.md',
   diff: '.patch',
   screenshot: '.png',

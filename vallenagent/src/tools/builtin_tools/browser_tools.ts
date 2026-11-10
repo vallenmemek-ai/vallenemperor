@@ -1,5 +1,5 @@
 import { spawn } from 'child_process'
-import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { registry, ToolSchema } from '../tools'
@@ -55,6 +55,29 @@ function runPythonScript(options: {
     if (options.signal?.aborted) abortChild()
     else options.signal?.addEventListener('abort', abortChild, { once: true })
   })
+}
+
+/**
+ * Build the Playwright script for `browser_record` (P2.1). Kept pure so it can be asserted without a
+ * browser: Playwright writes one .webm per context, so recording is just a context with
+ * `record_video_dir` and a bounded wait before closing.
+ */
+export function buildRecordingScript(options: { url: string; seconds: number; width: number; height: number; videoDir: string }): string {
+return `from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+  context = p.chromium.launch_persistent_context(
+      user_data_dir=${JSON.stringify(options.videoDir + "/profile")},
+      record_video_dir=${JSON.stringify(options.videoDir)},
+      record_video_size={"width": ${options.width}, "height": ${options.height}},
+      viewport={"width": ${options.width}, "height": ${options.height}},
+      headless=True,
+  )
+  page = context.pages[0] if context.pages else context.new_page()
+  page.goto(${JSON.stringify(options.url)}, wait_until="load", timeout=30000)
+  page.wait_for_timeout(${Math.round(options.seconds * 1000)})
+  context.close()
+print("record-ok")
+`
 }
 
 export function registerBrowserTools(): void {
@@ -161,7 +184,7 @@ export function registerBrowserTools(): void {
   })
 
 
-  // 14. browser_screenshot
+// 14. browser_screenshot
   const browserScreenshotSchema: ToolSchema = {
     name: 'browser_screenshot',
     description: 'Open a URL in a headless browser and save a PNG screenshot as a turn artifact. Use it to prove UI work: the returned path is reviewable, shareable, and shows up in /artifacts.',
@@ -246,6 +269,77 @@ print("screenshot-ok")
         return JSON.stringify({ success: false, error: (outcome.stderr.trim() || `Screenshot failed (exit ${outcome.exitCode})`).slice(0, 800), hint })
       }
       return JSON.stringify({ success: true, kind: 'screenshot', path: outputPath, bytes: statSync(outputPath).size, url, dir })
+    }
+  })
+
+  // 15. browser_record
+  registry.register({
+    name: 'browser_record',
+    schema: {
+      name: 'browser_record',
+      description: 'Record a short headless-browser session to a WebM video artifact. Use it when a UI behaviour must be shown rather than described: the file lands in the turn artifacts and can be replayed.',
+      parameters: {
+        type: 'object',
+        properties: {
+          url: { type: 'string', description: 'Page URL (http or https)' },
+          seconds: { type: 'integer', description: 'Recording length in seconds (1-60, default 5)' },
+          width: { type: 'integer', description: 'Viewport width (default 1280)' },
+          height: { type: 'integer', description: 'Viewport height (default 720)' }
+        },
+        required: ['url']
+      }
+    },
+    toolset: 'browser-use',
+    handler: async (args, context, signal) => {
+      const url = String(args.url || '').trim()
+      if (!/^https?:\/\//i.test(url)) return JSON.stringify({ success: false, error: 'url must start with http:// or https://' })
+      if (!browserToolsUnlocked(context?.sessionId)) return JSON.stringify({ success: false, error: BROWSER_LOCKED_MESSAGE })
+
+      const python = resolvePython()
+      if (!python) return JSON.stringify({ success: false, error: 'Python interpreter not found (tried py -3, python3, python).' })
+
+      const seconds = Math.min(60, Math.max(1, Number(args.seconds) || 5))
+      const width = Math.min(3840, Math.max(320, Number(args.width) || 1280))
+      const height = Math.min(2160, Math.max(240, Number(args.height) || 720))
+      const home = getVallenHome()
+      const turn = Number(context.turnNumber) > 0 ? Number(context.turnNumber) : 1
+
+      let dir: string
+      let videoDir: string
+      let outputPath: string
+      try {
+        dir = artifactDir(home, context.sessionId || 'anonymous', turn)
+        mkdirSync(dir, { recursive: true, mode: 0o700 })
+        videoDir = mkdtempSync(join(tmpdir(), 'vallen-rec-'))
+        outputPath = join(dir, artifactFileName('recording', new URL(url).hostname).replace(/\.png$/, '.webm'))
+      } catch (err: any) {
+        return JSON.stringify({ success: false, error: err?.message || 'Could not prepare the artifact directory.' })
+      }
+
+      const code = buildRecordingScript({ url, seconds, width, height, videoDir })
+      const outcome = await runPythonScript({
+        python, code, env: process.env, cwd: context.workingDir || process.cwd(),
+        timeout: (seconds + 60) * 1000, signal
+      })
+      if (outcome.timedOut) return JSON.stringify({ success: false, error: 'Recording timed out' })
+
+      let produced = ''
+      try {
+        const files = readdirSync(videoDir).filter(name => name.endsWith('.webm'))
+        if (files.length) produced = join(videoDir, files[0])
+      } catch { }
+      if (!produced || !existsSync(produced)) {
+        const hint = /No module named|playwright/i.test(outcome.stderr)
+          ? 'Browser recording requires playwright: pip install playwright && playwright install chromium.'
+          : undefined
+        return JSON.stringify({ success: false, error: (outcome.stderr.trim() || `Recording failed (exit ${outcome.exitCode})`).slice(0, 800), hint })
+      }
+
+      try { renameSync(produced, outputPath) } catch (err: any) {
+        return JSON.stringify({ success: false, error: `Could not move the recording: ${err?.message || err}` })
+      }
+      try { rmSync(videoDir, { recursive: true, force: true }) } catch { }
+      return JSON.stringify({ success: true, kind: 'recording', path: outputPath, bytes: statSync(outputPath).size, seconds, url, dir })
     }
   })
 

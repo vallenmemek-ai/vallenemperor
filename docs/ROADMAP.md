@@ -356,9 +356,15 @@ depth 2 works; the cap is enforced in the tool executor (`Delegation depth limit
 as in registration, so a stale whitelist cannot bypass it. Tests:
 `vallenagent/tests/nested_agents.test.mjs` (3). Suite at the time: **428/428 + 153/153**.
 
+**Evidence (P2.1 — done).** `browser_record` opens a headless Chromium context with Playwright's
+`record_video_dir`, waits a bounded `seconds` (1–60), closes the context and moves the resulting `.webm`
+into the turn artifacts (`kind: recording`). It sits behind the same browser gate as screenshots, rejects
+non-http(s) URLs, and reports the exact install hint when Playwright is missing. Tests:
+`vallenagent/tests/browser_record.test.mjs` (3). Suite at the time: **431/431 + 153/153**.
+
 ### P2 — Differentiators (only after P0/P1)
 
-#### P2.1 Browser session recording (WebM) — ❌
+#### P2.1 Browser session recording (WebM) — ✅
 - **Why.** Antigravity records browser subagent actions; screenshots alone cannot show a flow.
 - **Scope.** `browser_tools.ts` (record via Playwright `record_video_dir`), artifact kind `recording`,
   ffmpeg presence check, `/artifact` playback hint.
