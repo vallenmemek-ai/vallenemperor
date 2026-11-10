@@ -3,6 +3,7 @@ import { basename, isAbsolute, join, resolve } from 'path'
 import { homedir } from 'os'
 import { registry, ToolSchema } from '../tools'
 import { captureTypeScriptDiagnostics } from '../../core/typescript_diagnostics'
+import { collectDiagnostics, formatDiagnostics, listLanguageServers } from '../../core/lsp'
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts']
 const SKIP_DIRS = ['node_modules', '.git', 'dist', 'build', '.next', 'coverage']
@@ -14,6 +15,47 @@ const MAX_FILES = 80
  * `npx tsc` and parse raw output to know whether an edit type-checked.
  */
 export function registerDiagnosticsTools(): void {
+  registry.register({
+    name: 'lsp_diagnostics',
+    toolset: 'diagnostics',
+    schema: {
+      name: 'lsp_diagnostics',
+      description: 'Semantic diagnostics from a real language server (TypeScript, Python, Go, Rust, C/C++, Lua) for one file. Use it after an edit in a non-TypeScript project, or when tsc alone cannot see the error. Returns errors and warnings with line:column. Fails clearly when the language server for that extension is not installed.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'File to check (relative to the working directory).' }
+        },
+        required: ['path']
+      }
+    },
+    handler: async (args: any, context: any) => {
+      const requested = String(args.path || '').trim()
+      if (!requested) return JSON.stringify({ error: 'path is required' })
+      const file = isAbsolute(requested) ? requested : resolve(context.workingDir || process.cwd(), requested)
+      const result = await collectDiagnostics({ file, timeoutMs: 20_000 })
+      return JSON.stringify({ ...result, summary: formatDiagnostics(result) })
+    }
+  })
+
+  registry.register({
+    name: 'lsp_servers',
+    toolset: 'diagnostics',
+    schema: {
+      name: 'lsp_servers',
+      description: 'List which language server command is used for each file extension, and whether it is installed on this host.',
+      parameters: { type: 'object', properties: {} }
+    },
+    handler: async () => {
+      const { spawnSync } = await import('node:child_process')
+      const servers = listLanguageServers().map(entry => ({
+        ...entry,
+        installed: spawnSync('which', [entry.command], { encoding: 'utf8' }).status === 0
+      }))
+      return JSON.stringify({ servers })
+    }
+  })
+
   const schema: ToolSchema = {
     name: 'typecheck',
     description: 'Report TypeScript diagnostics for a file or directory using the project tsconfig (no shell command). Returns the errors and warnings that exist right now, so an edit can be verified immediately.',

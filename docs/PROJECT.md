@@ -385,6 +385,9 @@ Auditing and hygiene: `/approvals [apply]` mines the recorded approval history i
 `/extensions` + `vallenemperor extensions [--json]` list every installed skill, agent, command, hook and
 MCP server with its source.
 
+Semantic diagnostics: `lsp_diagnostics` talks to a real language server (TS/JS, Python, Go, Rust,
+C/C++, Lua) over stdio JSON-RPC; `lsp_servers` lists which commands are installed.
+
 Terminal sandbox: `terminal.sandbox: off|auto|required` runs shell commands under bubblewrap —
 read-only root, writable working directory only, network off by default, own PID/IPC/UTS namespaces;
 `required` refuses instead of silently running unsandboxed. Toggle with `/sandbox terminal`.

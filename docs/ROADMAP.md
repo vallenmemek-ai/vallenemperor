@@ -336,6 +336,13 @@ running unsandboxed. Proven on this machine (bubblewrap 0.12.0): writing inside 
 writing `/etc/...` fails and the file does not exist. `/sandbox terminal auto|required|off` toggles it.
 Tests: `vallenagent/tests/terminal_sandbox.test.mjs` (4). Suite at the time: **421/421 + 149/149**.
 
+**Evidence (R14 — done).** `lsp_diagnostics` runs a real language server over stdio JSON-RPC
+(Content-Length framing, `initialize` → `initialized` → `textDocument/didOpen` → `publishDiagnostics`),
+mapped by extension for TypeScript/JS, Python, Go, Rust, C/C++ and Lua; `lsp_servers` reports which
+commands are installed. Missing file, unmapped extension and missing binary each fail with a clear
+message instead of hanging. Tests: `vallenagent/tests/lsp.test.mjs` (4, including a real spawned LSP
+process via `tests/fixtures/fake-lsp-server.mjs`). Suite at the time: **425/425 + 149/149**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -399,7 +406,7 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R11 | `prompt-size`, `insights`, `logs`, `dump` diagnostics | support and cost visibility | S–M | `[x]` |
 | R12 | `vallenemperor completion` (bash/zsh/fish) | terminal ergonomics | S | `[x]` |
 | R13 | `vallenemperor update` (+ `/update`) | self-update without npm knowledge | S | `[x]` |
-| R14 | LSP tool (semantic diagnostics beyond tsc) | non-TypeScript projects | L | `[ ]` |
+| R14 | LSP tool (semantic diagnostics beyond tsc) | non-TypeScript projects | L | `[x]` |
 | R15 | Curator — auto-archive stale skills | keeps the skill index lean | M | `[x]` |
 | R16 | Profiles (`--profile`) | isolated config/sessions/skills | M | `[x]` |
 | R17 | ACP server for editors | editor integration | L | `[ ]` |
