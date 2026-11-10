@@ -8,7 +8,7 @@
 > selesai tanpa izin owner. Setiap item selesai: centang di sini, tambah catatan bukti (angka test),
 > dan ikuti alur rilis di `docs/RELEASING.md` (owner yang menekan tombol publish).
 
-Companion documents (read before designing anything new):
+Companion documents (read before designing anything new) — index: **[REFERENCES.md](REFERENCES.md)**:
 
 - **[REFERENCE-HERMES.md](REFERENCE-HERMES.md)** — Hermes Agent: ≈70 CLI commands, ≈90 slash commands,
   35 toolsets, mapped to us with adopt/adapt/ignore verdicts.
@@ -187,6 +187,18 @@ the second read; a patch against externally changed content must be refused with
 a write to `.ssh/id_rsa` must be denied; two concurrent subagents writing one file must serialize; a
 review run must produce zero writes when only environment failures occurred.
 
+### P1c — Cross-peer table stakes (see docs/REFERENCES.md §3)
+
+Capabilities that at least two of Hermes / Antigravity / opencode / Claude Code / Codex / Gemini /
+Aider ship. They are not differentiators — they are the price of entry.
+
+| # | Item | Why | Effort | Status |
+| --- | --- | --- | --- | --- |
+| R29 | **Hooks**: `session_start`, `user_prompt`, `pre_tool`, `post_tool`, `turn_end`, `session_end`; handler = shell command with JSON stdin/stdout; can block or rewrite | policy, formatting, audit, notifications without patching core; shipped by Claude Code, Gemini, Hermes, Antigravity | M | `[ ]` |
+| R30 | **Repo map**: tree-sitter/TS symbol map (classes, functions, signatures) ranked by relevance and token-budgeted, injected per request | the agent stops grepping blind on large repos; Aider's biggest quality lever | L | `[ ]` |
+| R31 | **Permissions panel**: one reviewable place showing the effective rule per tool/path, replacing the `/auto` + `/sandbox` split | Codex, Claude Code, Gemini, opencode all expose this | M | `[ ]` |
+| R33 | **Headless contract**: `-p --json` with stable exit codes (0 ok, 1 agent error, 2 usage) | CI/pipeline use; Codex `exec`, Gemini headless | S | `[ ]` |
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -265,6 +277,8 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R26 | Skill provenance (who/when/why) + `/journey` learning timeline | audit and roll back a bad lesson | M | `[ ]` |
 | R27 | Curator — archive stale skills by usage | keeps the skill index lean | M | `[ ]` |
 | R28 | Skill-index budget/delta tracking | index growth silently eats the context window | S | `[ ]` |
+| R32 | Background agent view (dashboard over the existing subagent registry) | Claude Code, Hermes, Antigravity all expose a monitor | M | `[ ]` |
+| R34 | Extension manifest: one installable unit carrying tools + commands + skills | Gemini extensions, Hermes plugins, opencode plugins | M | `[ ]` |
 
 Deliberately not on this list (see `REFERENCE-HERMES.md` §6): desktop app, web dashboard, pets,
 skins, voice/wake word, video generation, 20+ messaging platforms, Python library, API server,
@@ -275,9 +289,9 @@ kanban board, egress proxy.
 | Package | Contents | Target |
 | --- | --- | --- |
 | **A** | P0.1 setup · P0.2 doctor · P0.3 update notifier · R3 `/save` · R4 `/title`,`/history`,`/prompt` · R12 completion | next release |
-| **B** | **P1b.1–P1b.6 (tool maturity)** · P1.1 codesearch · P1.2 effort · P1.3 diff viewer · P1.4 copy · R1 `/steer` · R5 `/<skill>` · R8 `/context all` · R10 sessions | after A |
-| **C** | **P1b.7–P1b.9 (learning loop)** · P2.1 recording · P2.2 nested · P2.3 profiles · P2.4 ACP · P2.5 terminal sandbox · R2 `/rewind` · R6 `/goal` · R9 `/worktree` · R26–R28 | after B |
-| **D** | R11 diagnostics · R13 update · R14 LSP · R15 curator · R17 ACP · R19 approval mining · R20 handoff · R21 custom commands · R22 tool policies · R23 formatter · R24 grill-me · R25 learn | later |
+| **B** | **P1b.1–P1b.6 (tool maturity)** · P1.1 codesearch · P1.2 effort · P1.3 diff viewer · P1.4 copy · R1 `/steer` · R5 `/<skill>` · R8 `/context all` · R10 sessions · R33 headless | after A |
+| **C** | **P1b.7–P1b.9 (learning loop)** · **R29 hooks** · **R31 permissions panel** · P2.1 recording · P2.2 nested · P2.3 profiles · P2.4 ACP · P2.5 terminal sandbox · R2 `/rewind` · R6 `/goal` · R9 `/worktree` · R26–R28 | after B |
+| **D** | R11 diagnostics · R13 update · R14 LSP · R15 curator · R17 ACP · R19 approval mining · R20 handoff · R21 custom commands · R22 tool policies · R23 formatter · R24 grill-me · R25 learn · **R30 repo map** · R32 agent view · R34 extension manifest | later |
 
 Each package: build → typecheck → tests → version bump → `npm install -g .` → smoke test → **owner
 approval** → commit/push → publish → approve staging → verify from the registry

@@ -308,7 +308,7 @@ read in this order:
 5. **[docs/RELEASING.md](docs/RELEASING.md)** — release pipeline (the owner holds the publish button)
 6. **[docs/DECISIONS.md](docs/DECISIONS.md)** — decisions not to reverse by accident
 7. **[docs/ROADMAP.md](docs/ROADMAP.md)** — prioritized backlog: what to build next and how we know it is done
-8. **Reference inventories** — [Hermes](docs/REFERENCE-HERMES.md), [Antigravity](docs/REFERENCE-ANTIGRAVITY.md), [opencode](docs/REFERENCE-OPENCODE.md)
+8. **[docs/REFERENCES.md](docs/REFERENCES.md)** — reference library: Hermes, Antigravity, opencode, Claude Code, Codex, Gemini, Aider + cross-peer adoption matrix
 
 In short: never publish without the owner's explicit approval, bump the patch version for every
 change and install it (`npm install -g .`), prove changes with real test output, never read or commit
