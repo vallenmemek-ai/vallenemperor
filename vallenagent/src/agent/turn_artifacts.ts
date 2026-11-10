@@ -47,7 +47,7 @@ export function recordArtifacts(state: TurnArtifactState, toolName: string, args
     if (command && isVerificationCommand(command) && parsed.exit_code === 0) pushUnique(state.verification, command)
     return
   }
-  if (parsed.path && (toolName === 'image_generate' || toolName === 'vision_analyze' || toolName === 'browser_exec')) {
+  if (parsed.path && (toolName === 'image_generate' || toolName === 'vision_analyze' || toolName === 'browser_exec' || toolName === 'browser_screenshot')) {
     pushUnique(state.saved, parsed.path)
   }
 }

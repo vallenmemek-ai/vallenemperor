@@ -36,6 +36,7 @@ export const COMMANDS = [
   { name: '/undo', args: '[count]', desc: 'Restore file checkpoints', fillOnly: true },
   { name: '/compact', desc: 'Compact conversation history' },
   { name: '/auto', args: '[on|safe|off]', desc: 'Set tool approval mode' },
+  { name: '/artifacts', desc: 'List session artifacts' },
   { name: '/health', desc: 'Run diagnostics' },
   { name: '/perf', desc: 'Process CPU / memory sample' },
   { name: '/clear', desc: 'Clear the screen' },

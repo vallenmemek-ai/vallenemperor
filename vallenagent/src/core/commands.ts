@@ -4,6 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { basename, join } from 'path'
 import { loadProjectContext } from './project_context'
 import { getCheckpointDiff, listCheckpoints, undoCheckpoints } from '../session/checkpoint'
+import { formatArtifactList, listArtifacts } from '../agent/artifact_store'
 import { getVallenHome } from './config'
 import { handleMcpCommand } from './commands/mcp'
 import { handleGatewayCommand } from './commands/gateway'
@@ -113,6 +114,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Kerja', name: '/review', args: '[fokus | log]', desc: 'review skill/memory di latar belakang' },
   { group: 'Kerja', name: '/schedule', args: '[list|history|add|remove]', desc: 'jadwal agent (lokal atau Telegram)' },
   { group: 'Berkas', name: '/checkpoints', desc: 'daftar checkpoint berkas' },
+  { group: 'Berkas', name: '/artifacts', desc: 'daftar artifact sesi (walkthrough, screenshot)' },
   { group: 'Berkas', name: '/diff', args: '[turn]', desc: 'lihat perubahan checkpoint' },
   { group: 'Berkas', name: '/undo', args: '[1-20] [--force]', desc: 'pulihkan checkpoint' },
   { group: 'Berkas', name: '/cd', args: '<dir>', desc: 'pindah direktori kerja' },
@@ -288,6 +290,11 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     initDrafts.set(ctx.agent, { cwd, draft, existingHash: existing === null ? null : contentHash(existing) })
     const preview = existing === null ? draft : initDiff(existing, draft)
     return { handled: true, response: `${existing === null ? 'Draf VALLEN.md (belum disimpan):' : 'VALLEN.md sudah ada; diff draf:'}\n${preview}\n\nTinjau draf, lalu jalankan /init confirm untuk menyimpan.` }
+  }
+
+  if (cmd === '/artifacts') {
+    const entries = listArtifacts({ home: getVallenHome(), sessionId: ctx.agent.getSessionId() })
+    return { handled: true, response: formatArtifactList(entries) }
   }
 
   if (cmd === '/checkpoints') {

@@ -13,7 +13,7 @@ order — do not guess the architecture:
 5. **[docs/RELEASING.md](docs/RELEASING.md)** — release pipeline and owner approval
 6. **[docs/DECISIONS.md](docs/DECISIONS.md)** — why the code looks the way it does (do not undo these casually)
 
-## The seven invariants
+## The eight invariants
 
 1. **Owner gate.** Never publish a release without the owner explicitly saying go. Prepare, test,
    report, wait. The owner decides whether to release or to add features first.
@@ -27,7 +27,9 @@ order — do not guess the architecture:
    do not resend the same payload — re-read the file and rebuild the change.
 6. **No unprompted commits or pushes.** When the owner asks, use `./update.sh` (token comes from
    `.env`; it is never written to git config).
-7. **Docs move with the code.** New flags, commands, or behavior require updating `README.md`,
+7. **Artifacts are the proof.** A turn that changed files or verified work must leave a reviewable
+   record under `~/.vallenemperor/artifacts/` (walkthrough + screenshots). Do not break that store.
+8. **Docs move with the code.** New flags, commands, or behavior require updating `README.md`,
    `HELP` in `vallencli/src/cli-ui.mjs`, the command registry in `vallencli/src/cli-suggest.mjs`,
    and the relevant file under `docs/`.
 
@@ -56,6 +58,7 @@ vallenagent/src/
   session/     sessions, checkpoints, todo, SQLite search index
   gateway/     Telegram adapter (pairing, allowlist, approvals, daemon)
   core/        config, approval policy, project context, cron, display
+  agent/artifact_store.ts   turn artifacts: walkthrough.md, screenshots, index.json manifest
 
 vallencli/src/
   cli.mjs              REPL, argument parsing, one-shot mode, config commands, model picker glue

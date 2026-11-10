@@ -621,3 +621,39 @@ test('the CLI still runs when invoked through a symlink, as npm global installs 
   const output = execFileSync(process.execPath, [link, '--version'], { encoding: 'utf8' })
   assert.match(output, /vallenemperor v\d+\.\d+\.\d+/)
 })
+
+test('/artifacts lists the current session artifacts and explains the empty state', async () => {
+  const core = await import(new URL('../../vallenagent/dist/index.js', import.meta.url).href)
+  const home = mkdtempSync(join(tmpdir(), 'vallen-cli-artifacts-'))
+  const previous = process.env.VALLENEMPEROR_HOME
+  process.env.VALLENEMPEROR_HOME = home
+  try {
+    const ctx = { channel: 'terminal', agent: { getSessionId: () => 'cli-session' } }
+
+    const empty = await core.handleCommand(ctx, '/artifacts')
+    assert.equal(empty.handled, true)
+    assert.match(empty.response, /No artifacts yet/)
+
+    core.writeArtifact({
+      home,
+      sessionId: 'cli-session',
+      turn: 1,
+      kind: 'walkthrough',
+      name: 'walkthrough.md',
+      content: '# Turn 1\n'
+    })
+    const filled = await core.handleCommand(ctx, '/artifacts')
+    assert.match(filled.response, /walkthrough/)
+    assert.match(filled.response, /walkthrough\.md/)
+  } finally {
+    if (previous === undefined) delete process.env.VALLENEMPEROR_HOME
+    else process.env.VALLENEMPEROR_HOME = previous
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('HELP and suggestions advertise /artifacts', async () => {
+  const { COMMANDS } = await import('../src/cli-suggest.mjs')
+  assert.ok(HELP.includes('/artifacts'), 'HELP must document /artifacts')
+  assert.ok(COMMANDS.some(entry => entry.name === '/artifacts'), 'suggestions must include /artifacts')
+})

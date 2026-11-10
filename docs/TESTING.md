@@ -61,6 +61,8 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 | Two-level model picker | `vallencli/tests/model_picker.test.mjs` |
 | Bin invoked through a symlink | `vallencli/tests/cli.test.mjs` (spawn `node <symlink> --version`) |
 | Turn artifacts summary | `vallenagent/tests/turn_artifacts.test.mjs` |
+| Artifact store (paths, manifest, traversal) | `vallenagent/tests/artifact_store.test.mjs` |
+| Screenshot tool validation | `vallenagent/tests/browser_screenshot.test.mjs` |
 
 ## Coverage that must never regress
 
@@ -68,7 +70,9 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 - **Sessions**: resume, checkpoints, compaction, search.
 - **Skills**: distinct-word relevance, preload budget, release when the topic changes, explicit stickiness.
 - **Tools**: file/patch read-before-write rules, partial-read safety, process manager across sessions,
-  deferred tools (`tool_search` returns `parameters`).
+  deferred tools (`tool_search` returns `parameters`), `browser_screenshot` rejects non-http URLs.
+- **Artifacts**: manifest round-trip, name validation/traversal rejection, session isolation,
+  walkthrough contents, corrupt-manifest recovery.
 - **CLI**: argument parsing, config subcommands, `/model` picker, renderer, installer, symlink bin.
 - **Gateway**: pairing (single use, attempts), allowlist, rate limit, approve/deny callbacks.
 - **Config**: provider presets valid, missing `active`/`base_url` reported clearly.

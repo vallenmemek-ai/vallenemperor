@@ -29,6 +29,7 @@ import { runToolBatch } from './turn_tool_batch'
 import { buildToolContext } from './tool_context'
 import { callProviderWithRetry, continueTruncatedResponse } from './turn_provider_call'
 import { finalizeSuccessfulTurn } from './turn_finalize'
+import { writeTurnWalkthrough } from './artifact_store'
 import { SessionManager } from '../session/session'
 import { loadConfig, getActiveProvider, getVallenHome, setProviderToken, saveConfig } from '../core/config'
 import { registerBuiltinTools } from '../tools/builtin_tools'
@@ -788,6 +789,21 @@ export class AIAgent {
         this.sessionPromptTotal += finalization.sessionPromptDelta;
         this.sessionCompletionTotal += finalization.sessionCompletionDelta;
         this.completedUserTurns = finalization.completedUserTurns;
+        // Stage 6 — persist the reviewable artifact record for this turn.
+        try {
+          const artifactPath = writeTurnWalkthrough({
+            home: getVallenHome(),
+            sessionId: this.sessionId,
+            turn: this.completedUserTurns,
+            userMessage: currentUserMessage.content,
+            finalContent,
+            artifacts: finalization.result.artifacts,
+            toolCalls: toolCallCount,
+            iterations
+          });
+          if (artifactPath && finalization.result.artifacts) finalization.result.artifacts.dir = artifactPath;
+        }
+        catch { }
         return finalization.result;
       }
       this.sessionPromptTotal += turnPromptTokens;

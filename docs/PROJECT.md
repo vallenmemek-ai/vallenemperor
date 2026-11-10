@@ -29,6 +29,7 @@ dependencies, pinned by tests:
 | 4 | Tool dispatch | `agent/turn_tool_batch.ts` | `parallelSafe` groups (max 4) then ordered execution; appends `tool` messages; detects checklist changes |
 | 5 | Tool context | `agent/tool_context.ts` | assembles `ToolContext` (paths, coverage, provider info, subagent factory, stream callbacks) |
 | 6 | Bookkeeping | `agent/tool_result_evidence.ts` | verification evidence groups, turn artifacts, explicit-skill marker |
+| 6b | Artifacts | `agent/artifact_store.ts` | writes the reviewable turn record (`walkthrough.md`, screenshots) and exposes its directory |
 | 7 | Finalize | `agent/turn_finalize.ts` | checkpoint, session save, counters, skill stats, background review, result object |
 
 Supporting modules: `turn_setup.ts` (skill selection + preload cap), `turn_artifacts.ts`,
@@ -86,6 +87,28 @@ vallencli/src/
 - Before a final answer: a dirty group triggers **one nudge**, then **blocks** with
   `completionStatus: 'incomplete'`. Read-only commands (`ls`, `git status`) never count.
 - Skill stats record `verified` / `failed` / `unknown` from the last verification entry.
+
+## 5b. Turn artifacts
+
+Every turn that produced something reviewable writes a directory:
+
+```text
+~/.vallenemperor/artifacts/<sha256(sessionId)[0:16]>/turn-<n>/
+  index.json        manifest: kind, name, path, bytes, createdAt per entry
+  walkthrough.md    request + result + created/changed/saved + verification
+  screenshot-*.png  captured by browser_screenshot
+  plan-*.md         written by planning flows
+  *.patch           diffs attached to a turn
+```
+
+- `artifact_store.ts` is synchronous by design (a few small files per turn) and hashes the session
+  id, so no user-controlled string ever becomes a path segment.
+- Artifact names are validated (`[A-Za-z0-9][A-Za-z0-9._-]{0,63}`, `index.json` reserved), so
+  traversal and manifest clobbering are rejected.
+- `AgentResponse.artifacts.dir` carries the directory to the CLI, which prints it after the summary;
+  `/artifacts` lists this session's entries newest-first.
+- `browser_screenshot` writes straight into the current turn directory and returns the path, so the
+  model can cite a real file and the user can open it.
 
 ## 6. Clarify policy
 
@@ -146,7 +169,8 @@ Provider presets live in `core/config.ts` (`PROVIDER_PRESETS`): `openrouter`, `o
   tracking, partial reads allowed only for a unique target, atomic writes, diff returned to the model.
 - **Execution**: `terminal` (foreground/background), `process_manage` (list/poll/wait/kill, including
   other sessions with `confirm: true`), `execute_code`.
-- **Web**: `web_search`, `web_extract`, `browser_exec`.
+- **Web**: `web_search`, `web_extract`, `browser_exec`, `browser_screenshot` (saves a PNG artifact
+  for the current turn; http/https only, optional named session, selector or full page).
 - **MCP**: project servers, tool names prefixed `mcp__<server>__<tool>`.
 - **State**: `todo_list`, `memory`, `deep_memory`, `clarify`, `skill_view`, `skill_manage`,
   `tool_search` / `tool_call` (deferred tools), `session_view`.
@@ -162,8 +186,9 @@ vallenemperor --model <name>
 vallenemperor config show|set provider|set model|set approval
 ```
 
-Slash commands live in `vallencli/src/cli-commands.mjs` (local) and `vallenagent/src/core/commands.ts`
-(shared across surfaces). The registry for autocomplete is `cli-suggest.mjs`; `HELP` is in
+`/artifacts` lives in the shared command handler (`vallenagent/src/core/commands.ts`), so the
+terminal and the Telegram gateway behave the same. Local-only commands live in
+`vallencli/src/cli-commands.mjs`. The registry for autocomplete is `cli-suggest.mjs`; `HELP` is in
 `cli-ui.mjs`.
 
 ## 12. Invariants covered by tests (do not change without a test)
@@ -202,3 +227,5 @@ Slash commands live in `vallencli/src/cli-commands.mjs` (local) and `vallenagent
 | `exports is not defined in ES module scope` | root `package.json` must not set `"type": "module"` (dist is CommonJS) |
 | Skill feels sticky | auto-match must not be stored in `activeSkill`; only `skill_view` sets it |
 | Gateway/Telegram auth errors | `gateway/store.ts` config + `telegram.ts` pairing logic |
+| `/artifacts` says "No artifacts yet" | the turn changed no files, ran no verification, and captured no screenshot — nothing to record |
+| Screenshot tool fails | playwright missing (`pip install playwright && playwright install chromium`) or the page did not load |

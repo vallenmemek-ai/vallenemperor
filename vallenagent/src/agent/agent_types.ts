@@ -35,6 +35,8 @@ export interface AgentResponse {
     saved: string[]
     verification: string[]
     summary: string
+    /** Directory holding this turn's reviewable artifacts (walkthrough, screenshots). */
+    dir?: string
   }
 }
 

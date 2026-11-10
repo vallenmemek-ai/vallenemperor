@@ -181,3 +181,19 @@ files; no POSIX-only assumptions are allowed without a platform guard.
 **Why.** CI runs a 3-OS matrix plus a Termux-shaped (arm64, no native build) job.
 
 **Consequence.** Use `node:path`, `node:os.tmpdir()`, and Node APIs instead of shell commands.
+
+---
+
+## D15 — Artifacts are files on disk with a manifest, not chat text
+
+**Decision.** A turn's deliverables are written to
+`<home>/artifacts/<sha256(sessionId)[0:16]>/turn-<n>/` with an `index.json` manifest. The CLI prints
+the directory and `/artifacts` lists entries. `browser_screenshot` writes PNGs into the same turn
+directory.
+
+**Why.** "What did the agent actually produce?" should be answerable by opening a folder — not by
+scrolling a transcript. This is the Antigravity artifact model applied to a terminal agent.
+
+**Consequence.** The store is synchronous (small files, once per turn) and hashes the session id, so
+user-controlled strings never become path segments. Artifact names are validated and `index.json` is
+reserved. Adding a new artifact kind means extending `KIND_EXT` and `ArtifactKind`.

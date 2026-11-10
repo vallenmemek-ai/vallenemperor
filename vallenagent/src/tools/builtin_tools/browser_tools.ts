@@ -1,5 +1,5 @@
 import { spawn } from 'child_process'
-import { mkdtempSync, writeFileSync, rmSync } from 'fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { registry, ToolSchema } from '../tools'
@@ -7,6 +7,54 @@ import { getVallenHome } from '../../core/config'
 import { browserProfilePath, browserSessionBootstrap } from '../../core/browser_sessions'
 import { truncateOutput } from './tool_output'
 import { SUPPORTS_PROCESS_GROUPS, killTree, resolvePython } from '../../core/platform'
+import { artifactDir, artifactFileName } from '../../agent/artifact_store'
+
+
+interface PythonRunResult {
+  exitCode: number
+  stdout: string
+  stderr: string
+  timedOut: boolean
+}
+
+/** Run a staged Python snippet and capture its output (bounded). Used by browser_screenshot. */
+function runPythonScript(options: {
+  python: { command: string; args: string[] }
+  code: string
+  env: NodeJS.ProcessEnv
+  cwd: string
+  timeout: number
+  signal?: AbortSignal
+}): Promise<PythonRunResult> {
+  return new Promise(resolveResult => {
+    const child = spawn(options.python.command, [...options.python.args, '-c', options.code], {
+      cwd: options.cwd,
+      env: options.env,
+      detached: SUPPORTS_PROCESS_GROUPS,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
+    let stdout = ''
+    let stderr = ''
+    let timedOut = false
+    let settled = false
+    const finish = (result: PythonRunResult) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      options.signal?.removeEventListener('abort', abortChild)
+      resolveResult(result)
+    }
+    const abortChild = () => killTree(child.pid, 'SIGKILL')
+    const timer = setTimeout(() => { timedOut = true; abortChild() }, options.timeout)
+    child.stdout.on('data', (chunk: Buffer) => { if (stdout.length < 100_000) stdout += chunk.toString() })
+    child.stderr.on('data', (chunk: Buffer) => { if (stderr.length < 100_000) stderr += chunk.toString() })
+    child.on('error', (err: any) => finish({ exitCode: 1, stdout, stderr: stderr + (err?.message || 'Process error'), timedOut }))
+    child.on('close', (code: number | null) => finish({ exitCode: code ?? 1, stdout, stderr, timedOut }))
+    if (options.signal?.aborted) abortChild()
+    else options.signal?.addEventListener('abort', abortChild, { once: true })
+  })
+}
 
 export function registerBrowserTools(): void {
   // 13. browser_exec
@@ -105,6 +153,91 @@ export function registerBrowserTools(): void {
         timeoutTimer = setTimeout(() => { timedOut = true; abortChild() }, timeout)
         child.on('error', (err: any) => finish(JSON.stringify({ exit_code: 1, output: '', error: err.message || 'Process error' })))
       })
+    }
+  })
+
+
+  // 14. browser_screenshot
+  const browserScreenshotSchema: ToolSchema = {
+    name: 'browser_screenshot',
+    description: 'Open a URL in a headless browser and save a PNG screenshot as a turn artifact. Use it to prove UI work: the returned path is reviewable, shareable, and shows up in /artifacts.',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Page URL (http or https)' },
+        session: { type: 'string', description: 'Named browser session to reuse cookies/storage' },
+        full_page: { type: 'boolean', description: 'Capture the full scrollable page (default true)' },
+        selector: { type: 'string', description: 'CSS selector to capture instead of the page' },
+        width: { type: 'integer', description: 'Viewport width (default 1440)' },
+        height: { type: 'integer', description: 'Viewport height (default 900)' },
+        timeout_s: { type: 'integer', description: 'Timeout in seconds (default 120)' }
+      },
+      required: ['url']
+    }
+  }
+
+  registry.register({
+    name: 'browser_screenshot',
+    schema: browserScreenshotSchema,
+    toolset: 'browser-use',
+    handler: async (args, context, signal) => {
+      const url = String(args.url || '').trim()
+      if (!/^https?:\/\//i.test(url)) return JSON.stringify({ success: false, error: 'url must start with http:// or https://' })
+
+      const home = getVallenHome()
+      const turn = Number(context.turnNumber) > 0 ? Number(context.turnNumber) : 1
+      let dir: string
+      let outputPath: string
+      try {
+        dir = artifactDir(home, context.sessionId || 'anonymous', turn)
+        mkdirSync(dir, { recursive: true, mode: 0o700 })
+        outputPath = join(dir, artifactFileName('screenshot', new URL(url).hostname))
+      } catch (err: any) {
+        return JSON.stringify({ success: false, error: err?.message || 'Could not prepare the artifact directory.' })
+      }
+
+      let env = process.env
+      if (args.session !== undefined) {
+        if (typeof args.session !== 'string') return JSON.stringify({ success: false, error: 'Browser session name must be a string.' })
+        if (!context.sessionId) return JSON.stringify({ success: false, error: 'Named browser sessions require an owner-scoped agent session.' })
+        try {
+          const profile = await browserProfilePath(home, context.sessionId, args.session)
+          env = { ...process.env, VALLENEMPEROR_BROWSER_PROFILE: profile }
+        } catch (err: any) {
+          return JSON.stringify({ success: false, error: err?.message || 'Could not prepare browser profile.' })
+        }
+      }
+
+      const python = resolvePython()
+      if (!python) return JSON.stringify({ success: false, error: 'Python interpreter not found (tried py -3, python3, python).' })
+
+      const width = Math.min(3840, Math.max(320, Number(args.width) || 1440))
+      const height = Math.min(2160, Math.max(240, Number(args.height) || 900))
+      const fullPage = args.full_page !== false
+      const selector = typeof args.selector === 'string' && args.selector.trim() ? args.selector.trim() : ''
+      const timeout = Math.min(600, Math.max(10, Number(args.timeout_s) || 120)) * 1000
+      const capture = selector
+        ? `page.locator(${JSON.stringify(selector)}).first.screenshot(path=${JSON.stringify(outputPath)})`
+        : `page.screenshot(path=${JSON.stringify(outputPath)}, full_page=${fullPage ? 'True' : 'False'})`
+
+      const code = `${browserSessionBootstrap}
+with browser_session() as page:
+    page.set_viewport_size({"width": ${width}, "height": ${height}})
+    page.goto(${JSON.stringify(url)}, wait_until="load", timeout=30000)
+    page.wait_for_timeout(400)
+    ${capture}
+print("screenshot-ok")
+`
+
+      const outcome = await runPythonScript({ python, code, env, cwd: context.workingDir || process.cwd(), timeout, signal })
+      if (outcome.timedOut) return JSON.stringify({ success: false, error: 'Screenshot timed out' })
+      if (!existsSync(outputPath)) {
+        const hint = /No module named|playwright/i.test(outcome.stderr)
+          ? 'Browser screenshots require playwright: pip install playwright && playwright install chromium.'
+          : undefined
+        return JSON.stringify({ success: false, error: (outcome.stderr.trim() || `Screenshot failed (exit ${outcome.exitCode})`).slice(0, 800), hint })
+      }
+      return JSON.stringify({ success: true, kind: 'screenshot', path: outputPath, bytes: statSync(outputPath).size, url, dir })
     }
   })
 

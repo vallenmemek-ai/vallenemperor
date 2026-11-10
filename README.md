@@ -198,6 +198,21 @@ Each folder owns an `index.ts` barrel; the root `src/index.ts` only re-exports f
 module is added in exactly one place. The turn loop is split per stage — every stage is a module
 with explicit dependencies, pinned by tests instead of by one thousand-line function.
 
+## Turn artifacts
+
+Every turn that produces work leaves a reviewable record, not just chat text:
+
+```text
+~/.vallenemperor/artifacts/<session>/turn-<n>/
+  walkthrough.md      request, result, files created/changed, verification commands
+  screenshot-*.png    captured by the browser_screenshot tool
+  index.json          manifest (kind, name, bytes, timestamp)
+```
+
+Print it with `/artifacts`, or open the directory printed after each turn. `browser_screenshot`
+drives a headless browser and saves a PNG into that turn's folder — proof that UI work actually
+renders.
+
 ## For AI agents
 
 If you are an AI starting fresh in this repository (new session, cleared context, different tool),
