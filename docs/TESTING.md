@@ -95,6 +95,7 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 | /handoff export, redaction, delivery | `vallenagent/tests/handoff.test.mjs` |
 | Terminal sandbox (bwrap) | `vallenagent/tests/terminal_sandbox.test.mjs` |
 | LSP client + framing | `vallenagent/tests/lsp.test.mjs` |
+| ACP server over stdio | `vallencli/tests/acp.test.mjs` |
 | /sandbox command | `vallencli/tests/sandbox_command.test.mjs` |
 | /artifact panel, /btw, /fork | `vallencli/tests/artifact_panel_btw.test.mjs` |
 | Engine session fork | `vallenagent/tests/fork_session.test.mjs` |

@@ -385,6 +385,9 @@ Auditing and hygiene: `/approvals [apply]` mines the recorded approval history i
 `/extensions` + `vallenemperor extensions [--json]` list every installed skill, agent, command, hook and
 MCP server with its source.
 
+Editor bridge: `vallenemperor acp` runs an Agent Client Protocol server over stdio JSON-RPC
+(initialize, session/new, session/prompt with streamed updates, session/cancel, session/close).
+
 Semantic diagnostics: `lsp_diagnostics` talks to a real language server (TS/JS, Python, Go, Rust,
 C/C++, Lua) over stdio JSON-RPC; `lsp_servers` lists which commands are installed.
 

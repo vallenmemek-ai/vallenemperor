@@ -343,6 +343,13 @@ commands are installed. Missing file, unmapped extension and missing binary each
 message instead of hanging. Tests: `vallenagent/tests/lsp.test.mjs` (4, including a real spawned LSP
 process via `tests/fixtures/fake-lsp-server.mjs`). Suite at the time: **425/425 + 149/149**.
 
+**Evidence (P2.4 / R17 — done).** `vallenemperor acp` speaks the Agent Client Protocol over stdio
+JSON-RPC: `initialize` (protocol version + capabilities), `session/new`, `session/prompt` with streaming
+`session/update` → `agent_message_chunk` notifications and `stopReason: end_turn`, `session/cancel` and
+`session/close`. Both newline-delimited and `Content-Length` framing are accepted; unknown methods return
+-32601, unknown sessions -32602, and sessions are closed when the client disconnects. Tests:
+`vallencli/tests/acp.test.mjs` (4, including a real stdio pipe). Suite at the time: **425/425 + 153/153**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -368,7 +375,7 @@ process via `tests/fixtures/fake-lsp-server.mjs`). Suite at the time: **425/425 
   by every command; migration path for the default profile.
 - **Effort.** M · **Risk.** medium (path plumbing everywhere).
 
-#### P2.4 ACP / IDE bridge — ❌
+#### P2.4 ACP / IDE bridge — ✅
 - **Why.** Hermes and opencode both expose an IDE surface; this is the difference between "terminal
   tool" and "tool I use inside my editor".
 - **Scope.** new `vallenagent/src/acp/` server (JSON-RPC over stdio), docs for VS Code/Zed wiring.
@@ -409,7 +416,7 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R14 | LSP tool (semantic diagnostics beyond tsc) | non-TypeScript projects | L | `[x]` |
 | R15 | Curator — auto-archive stale skills | keeps the skill index lean | M | `[x]` |
 | R16 | Profiles (`--profile`) | isolated config/sessions/skills | M | `[x]` |
-| R17 | ACP server for editors | editor integration | L | `[ ]` |
+| R17 | ACP server for editors | editor integration | L | `[x]` |
 | R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[ ]` (partial: `/fast` done; `x_search` needs an X API key) |
 | R19 | Approval mining (propose allowlist from history) | fewer prompts over time | M | `[x]` |
 | R20 | `/handoff <platform>` | move a CLI session to Telegram | M | `[x]` |

@@ -20,6 +20,7 @@ import { runCompletionCommand } from './cli-completion.mjs'
 import { dumpReport, insightsReport, listLogs, promptSizeReport } from './cli-diagnostics.mjs'
 import { runSessionsCommand } from './cli-sessions.mjs'
 import { applyProfile, extractProfile, runProfileCommand } from './cli-profile.mjs'
+import { runAcpServer } from './cli-acp.mjs'
 import { backspacePicker, backPicker, createPickerState, enterPicker, fetchGatewayModels, formatModelCatalog, groupModelsByOwner, movePicker, pickerLines, typeInPicker } from './cli-model-picker.mjs'
 export { HELP, collectHealthChecks, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity } from './cli-ui.mjs'
 
@@ -997,6 +998,7 @@ export function parseArgs(argv) {
   if (head === 'completion') return { ...result, mode: 'completion', shell: String(argv[1] || '') }
   if (head === 'sessions') return { ...result, mode: 'sessions', args: argv.slice(1) }
   if (head === 'profile') return { ...result, mode: 'profile', args: argv.slice(1) }
+  if (head === 'acp') return { ...result, mode: 'acp' }
   if (head === 'prompt-size') return { ...result, mode: 'prompt-size' }
   if (head === 'insights') return { ...result, mode: 'insights' }
   if (head === 'logs') return { ...result, mode: 'logs' }
@@ -1286,6 +1288,12 @@ export async function main(argv = process.argv.slice(2)) {
     if (parsed.mode === 'completion') return runCompletionCommand({ shell: parsed.shell })
     if (parsed.mode === 'sessions') return runSessionsCommand({ args: parsed.args || [] })
     if (parsed.mode === 'profile') return runProfileCommand({ args: parsed.args || [] })
+    if (parsed.mode === 'acp') {
+      return await runAcpServer({
+        version,
+        createAgent: async () => createAgent({})
+      })
+    }
     if (parsed.mode === 'prompt-size') {
       const probe = createAgent({})
       try {
