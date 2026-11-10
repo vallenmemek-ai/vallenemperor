@@ -198,6 +198,27 @@ Each folder owns an `index.ts` barrel; the root `src/index.ts` only re-exports f
 module is added in exactly one place. The turn loop is split per stage — every stage is a module
 with explicit dependencies, pinned by tests instead of by one thousand-line function.
 
+## Subagents and `/agents`
+
+`delegate_task` can run in the background and in an isolated git worktree:
+
+```text
+delegate_task({ tasks: [{ goal: "port the picker to the new API",
+                          background: true,
+                          workspace: "branch" }] })
+```
+
+`workspace` is `inherit` (same tree), `branch` (own worktree + branch `vallen/subagent-<id>`, the
+subagent's cwd points at it), or `share`. Background runs return an id immediately and keep working
+while you continue.
+
+```bash
+/agents                 # list: status · id · elapsed · workspace · goal
+/agents show <id>       # detail + last progress events
+/agents stop <id>       # cancel and interrupt
+/agents clean           # remove worktrees of finished runs
+```
+
 ## Plan mode
 
 ```bash

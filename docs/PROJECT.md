@@ -135,6 +135,40 @@ run state lives in the CLI (`state.planRun`); progress is also written to the ar
 Parser shapes accepted: `### Step 1 — title`, `1. title`, `- Step 1: title`. The step body is kept
 verbatim (file paths, commands, expected output), because that is what makes a plan executable.
 
+## 5d. Subagents and the agent manager
+
+`delegate_task` has two modes:
+
+| Mode | Behaviour |
+| --- | --- |
+| foreground (default) | waits for the result, batches three at a time, returns summaries in the tool result |
+| `background: true` | registers the run, returns an id immediately, keeps working after the tool call |
+
+Workspace isolation (`workspace`):
+
+- `inherit` (default) — same tree as the parent;
+- `branch` — a git worktree under `<home>/worktrees/<repo-hash>/<id>` on branch
+  `vallen/subagent-<id>`, and the subagent's `terminal.cwd` is set to it, so it cannot fight the
+  parent over the same files;
+- `share` — same directory, no isolation (useful for read-only research).
+
+State lives in `agent/subagent_registry.ts` (`SubagentRegistry` + a process-wide
+`subagentRegistry`): status (`queued → running → completed|failed|cancelled`), capped progress log,
+concurrency limit (default 4), and pruning of finished runs (default keep 20). Cancellation calls the
+handle the factory exposes (`onHandle({ interrupt })`), which aborts the subagent's turn.
+
+`/agents` is the manager panel (shared command handler, so the gateway sees it too):
+
+| Command | Effect |
+| --- | --- |
+| `/agents` | list runs: status icon, id, elapsed, workspace, goal |
+| `/agents show <id>` | detail: status, workspace path, goal, summary/error, last 10 progress events |
+| `/agents stop <id>` | cancel and interrupt the run |
+| `/agents clean` | remove worktrees of finished runs (branch + checkout) |
+
+Worktrees are intentionally **not** deleted automatically on completion: the user reviews the branch
+first. `/agents clean` is the explicit cleanup step.
+
 ## 6. Clarify policy
 
 `agent/clarify_policy.ts` decides whether asking is allowed at all:
@@ -194,6 +228,8 @@ Provider presets live in `core/config.ts` (`PROVIDER_PRESETS`): `openrouter`, `o
   tracking, partial reads allowed only for a unique target, atomic writes, diff returned to the model.
 - **Execution**: `terminal` (foreground/background), `process_manage` (list/poll/wait/kill, including
   other sessions with `confirm: true`), `execute_code`.
+- **Delegation**: `delegate_task` (foreground batches or `background: true`, `workspace:`
+  `inherit|branch|share`) — see §5d.
 - **Web**: `web_search`, `web_extract`, `browser_exec`, `browser_screenshot` (saves a PNG artifact
   for the current turn; http/https only, optional named session, selector or full page).
 - **MCP**: project servers, tool names prefixed `mcp__<server>__<tool>`.
@@ -239,6 +275,7 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | New provider preset | `core/config.ts` (`PROVIDER_PRESETS`), plus `providers/` if the API differs |
 | New turn stage | `agent/turn_*.ts`, call it from `agent.ts`, add an event-order test |
 | Plan-mode behavior | `agent/plan_mode.ts` (pure) + `cli-commands.mjs` wiring + tests |
+| Subagent behaviour | `agent/subagent_registry.ts` (state) + `agent/worktree.ts` (isolation) |
 | New bundled skill | `.vallenemperor/skills/<category>/<name>/SKILL.md` with `name` + `description` frontmatter |
 | New config key | `core/types.ts`, `core/config.ts` (default + validation), docs |
 
@@ -256,3 +293,6 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | Gateway/Telegram auth errors | `gateway/store.ts` config + `telegram.ts` pairing logic |
 | `/artifacts` says "No artifacts yet" | the turn changed no files, ran no verification, and captured no screenshot — nothing to record |
 | Screenshot tool fails | playwright missing (`pip install playwright && playwright install chromium`) or the page did not load |
+| `/agents` is empty after a delegation | the subagent ran in the foreground (no `background: true`) — those are not registered |
+| `workspace="branch"` fails | the working directory is not a git repository, or `git worktree add` failed (dirty index, branch exists) |
+| A worktree keeps the branch after a run | by design; `/agents clean` removes finished worktrees |

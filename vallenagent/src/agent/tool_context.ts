@@ -84,9 +84,12 @@ export function buildToolContext(deps: ToolContextDeps): ToolContext {
       } catch { return null }
     },
     onSubagentProgress: deps.onSubagentProgress,
-    delegateAgentFactory: async (task, onProgress) => {
+    delegateAgentFactory: async (task, onProgress, onHandle) => {
       const subConfig = structuredClone(deps.config)
       subConfig.max_tokens_per_turn = task.max_output_tokens || 4000
+      if (task.cwd) {
+        subConfig.terminal = { ...(subConfig.terminal || {}), cwd: task.cwd }
+      }
       if (task.model) {
         const active = String(subConfig.providers.active)
         const provider = subConfig.providers[active]
@@ -95,6 +98,7 @@ export function buildToolContext(deps: ToolContextDeps): ToolContext {
       const sub = deps.createSubagent({ config: subConfig, maxIterations: task.max_iterations || 10, isSubagent: true, backgroundReview: false })
       const parentSignal = deps.abortSignal
       const interruptSub = () => sub.interrupt()
+      try { onHandle?.({ interrupt: interruptSub }) } catch { }
       if (parentSignal?.aborted) interruptSub()
       else parentSignal?.addEventListener('abort', interruptSub, { once: true })
       try {

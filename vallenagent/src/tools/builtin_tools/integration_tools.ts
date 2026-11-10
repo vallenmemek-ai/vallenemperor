@@ -1,3 +1,6 @@
+import { getVallenHome } from '../../core/config'
+import { subagentRegistry } from '../../agent/subagent_registry'
+import { createSubagentWorktree } from '../../agent/worktree'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
@@ -52,7 +55,9 @@ export function registerIntegrationTools(isSubagent: boolean, delegateAgentFacto
                 context: { type: 'string', description: 'Background context for subagent' },
                 max_iterations: { type: 'integer', description: 'Optional iteration limit (1-30)' },
                 max_output_tokens: { type: 'integer', description: 'Optional output token budget (1-20000)' },
-                model: { type: 'string', description: 'Optional configured provider model for lightweight work' }
+                model: { type: 'string', description: 'Optional configured provider model for lightweight work' },
+                workspace: { type: 'string', enum: ['inherit', 'branch', 'share'], description: 'inherit = same tree (default), branch = isolated git worktree, share = same directory as the parent' },
+                background: { type: 'boolean', description: 'Run after this tool call returns; track with /agents' }
               },
               required: ['goal']
             },
@@ -72,20 +77,33 @@ export function registerIntegrationTools(isSubagent: boolean, delegateAgentFacto
           return JSON.stringify({ error: 'Subagents cannot call delegate_task (delegation depth limit reached).' })
         }
         const tasks = Array.isArray(args.tasks) ? args.tasks : []
-        const summaries: Array<{ goal: string; summary: string }> = []
+        const summaries: Array<Record<string, any>> = []
         const delegateFn = context?.delegateAgentFactory || delegateAgentFactory
+        const repo = context?.workingDir || process.cwd()
 
-        for (let start = 0; start < tasks.length; start += 3) {
-          const batch = tasks.slice(start, start + 3)
+        const normalize = (task: any) => ({
+          ...task,
+          max_iterations: Math.min(30, Math.max(1, Number(task.max_iterations) || 10)),
+          max_output_tokens: Math.min(20_000, Math.max(1, Number(task.max_output_tokens) || 4000))
+        })
+
+        const foreground: any[] = []
+        const background: any[] = []
+        for (const task of tasks) (task?.background ? background : foreground).push(task)
+
+        // Foreground: unchanged behaviour, three at a time.
+        for (let start = 0; start < foreground.length; start += 3) {
+          const batch = foreground.slice(start, start + 3)
           const results = await Promise.all(batch.map(async (t, index) => {
             if (!delegateFn) return { goal: t.goal, summary: `Subagent delegated task completed with goal: ${t.goal}` }
             const taskId = `${context?.toolCallId || 'delegate'}:${start + index + 1}`
             const report = (status: 'started' | 'thinking' | 'tool_start' | 'tool_end' | 'completed' | 'failed', message?: string) => {
-              try { context?.onSubagentProgress?.({ taskId, goal: String(t.goal || ''), status, message }) } catch {}
+              try { context?.onSubagentProgress?.({ taskId, goal: String(t.goal || ''), status, message }) } catch { }
             }
             report('started')
             try {
-              const summary = await delegateFn({ ...t, taskId, max_iterations: Math.min(30, Math.max(1, Number(t.max_iterations) || 10)), max_output_tokens: Math.min(20_000, Math.max(1, Number(t.max_output_tokens) || 4000)) }, event => report(event.status, event.message))
+              const task = normalize(t)
+              const summary = await delegateFn(task, event => report(event.status, event.message))
               report('completed')
               return { goal: t.goal, summary }
             } catch (err: any) {
@@ -95,6 +113,60 @@ export function registerIntegrationTools(isSubagent: boolean, delegateAgentFacto
             }
           }))
           summaries.push(...results)
+        }
+
+        // Background: queue in the registry and return immediately so the turn can continue.
+        for (const t of background) {
+          const goal = String(t.goal || '').trim()
+          const workspace = ['inherit', 'branch', 'share'].includes(t.workspace) ? t.workspace : 'inherit'
+          if (!goal) { summaries.push({ goal: '', error: 'goal is required' }); continue }
+          if (!delegateFn) { summaries.push({ goal, error: 'Subagent factory unavailable in this context.' }); continue }
+          if (!subagentRegistry.canStart()) {
+            summaries.push({ goal, error: `Subagent limit reached (${subagentRegistry.activeCount()} active). Wait or stop one with /agents stop <id>.` })
+            continue
+          }
+
+          const run = subagentRegistry.create({ goal, workspace })
+          let worktree: { repo: string; path: string; branch: string } | undefined
+          if (workspace === 'branch') {
+            try {
+              const created = createSubagentWorktree({ repo, home: getVallenHome(), id: run.id })
+              worktree = { repo: created.repo, path: created.path, branch: created.branch }
+              subagentRegistry.setWorktree(run.id, worktree)
+            } catch (err: any) {
+              const message = String(err?.message || err || 'Could not create a worktree').slice(0, 500)
+              subagentRegistry.fail(run.id, message)
+              summaries.push({ goal, id: run.id, error: message })
+              continue
+            }
+          }
+
+          subagentRegistry.markRunning(run.id)
+          const task = normalize(t)
+          void (async () => {
+            try {
+              const summary = await delegateFn(
+                { ...task, goal, taskId: run.id, cwd: worktree?.path },
+                event => subagentRegistry.update(run.id, event.status, event.message),
+                handle => {
+                  const current = subagentRegistry.get(run.id)
+                  if (current) current.cancel = handle.interrupt
+                }
+              )
+              subagentRegistry.complete(run.id, summary)
+            } catch (err: any) {
+              subagentRegistry.fail(run.id, String(err?.message || err || 'Unknown subagent error'))
+            }
+          })()
+
+          summaries.push({
+            id: run.id,
+            goal,
+            workspace,
+            worktree: worktree?.path,
+            status: 'running',
+            hint: 'Track with /agents, stop with /agents stop <id>.'
+          })
         }
 
         return JSON.stringify({ results: summaries })

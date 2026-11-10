@@ -60,6 +60,8 @@ vallenagent/src/
   core/        config, approval policy, project context, cron, display
   agent/artifact_store.ts   turn artifacts: walkthrough.md, screenshots, index.json manifest
   agent/plan_mode.ts        plan parsing + step-by-step run state machine (pure logic)
+  agent/subagent_registry.ts background subagent state behind /agents
+  agent/worktree.ts         git worktree isolation for workspace="branch"
 
 vallencli/src/
   cli.mjs              REPL, argument parsing, one-shot mode, config commands, model picker glue

@@ -214,3 +214,18 @@ gateway, and it is testable without a terminal.
 **Consequence.** Each step is a normal turn, so verification gates, artifacts, and approvals still
 apply. Adding a new steering action means extending `plan_mode.ts` plus the `/plan` subcommand
 switch; do not add hidden auto-advance.
+
+---
+
+## D17 — Background subagents are registry-tracked and worktree-isolated
+
+**Decision.** `delegate_task` keeps its synchronous contract by default and adds
+`background: true`, which registers the run in `SubagentRegistry` and returns an id immediately.
+`workspace: 'branch'` creates a git worktree under `<home>/worktrees/<repo-hash>/<id>` and runs the
+subagent with `terminal.cwd` set to it. Worktrees are removed only by `/agents clean`.
+
+**Why.** Antigravity's agent manager works because parallel agents are visible and isolated. Running
+two agents in one tree corrupts edits; running them invisibly makes the user lose track.
+
+**Consequence.** Cancellation must go through the handle the factory exposes (`onHandle`), because the
+subagent owns its own turn. Never auto-delete a worktree: the branch is the reviewable output.

@@ -24,6 +24,7 @@ export const COMMANDS = [
   { name: '/gateway', args: '[wa|tel ...]', desc: 'Gateway status and control' },
   { name: '/settings', desc: 'Display settings' },
   { name: '/schedule', args: '[list|history|add|remove]', desc: 'Manage scheduled agent jobs' },
+  { name: '/agents', args: '[show|stop|clean]', desc: 'Subagent panel' },
   { name: '/plan', args: '[task|go|next|edit|skip|stop|status]', desc: 'Plan mode: write a plan, then run it step by step', fillOnly: true },
   { name: '/plans', desc: 'List saved plans' },
   { name: '/gamedev', args: '[off]', desc: 'Toggle game-development mode' },

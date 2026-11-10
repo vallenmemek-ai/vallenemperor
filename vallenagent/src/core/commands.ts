@@ -5,6 +5,8 @@ import { basename, join } from 'path'
 import { loadProjectContext } from './project_context'
 import { getCheckpointDiff, listCheckpoints, undoCheckpoints } from '../session/checkpoint'
 import { formatArtifactList, listArtifacts } from '../agent/artifact_store'
+import { formatSubagentDetail, formatSubagentLine, isTerminalStatus, subagentRegistry } from '../agent/subagent_registry'
+import { removeSubagentWorktree } from '../agent/worktree'
 import { getVallenHome } from './config'
 import { handleMcpCommand } from './commands/mcp'
 import { handleGatewayCommand } from './commands/gateway'
@@ -108,6 +110,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Kerja', name: '/tools', desc: 'daftar tool yang tersedia' },
   { group: 'Kerja', name: '/skills', args: '[list|search|install|...]', desc: 'kelola skill' },
   { group: 'Kerja', name: '/plan', args: '[task|go|next|edit|skip|stop|status]', desc: 'mode rencana + eksekusi bertahap' },
+  { group: 'Kerja', name: '/agents', args: '[show <id>|stop <id>|clean]', desc: 'panel subagent: status, detail, stop' },
   { group: 'Kerja', name: '/plans', desc: 'daftar rencana' },
   { group: 'Kerja', name: '/auto', desc: 'mode otomatis' },
   { group: 'Kerja', name: '/gamedev', desc: 'alur kerja gamedev' },
@@ -290,6 +293,37 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     initDrafts.set(ctx.agent, { cwd, draft, existingHash: existing === null ? null : contentHash(existing) })
     const preview = existing === null ? draft : initDiff(existing, draft)
     return { handled: true, response: `${existing === null ? 'Draf VALLEN.md (belum disimpan):' : 'VALLEN.md sudah ada; diff draf:'}\n${preview}\n\nTinjau draf, lalu jalankan /init confirm untuk menyimpan.` }
+  }
+
+  if (cmd === '/agents') {
+    const [sub, id] = args
+    if (sub === 'show') {
+      const run = id ? subagentRegistry.get(id) : undefined
+      return { handled: true, response: run ? formatSubagentDetail(run) : `No subagent ${id || ''}. Use /agents to list them.` }
+    }
+    if (sub === 'stop') {
+      if (!id) return { handled: true, response: 'Usage: /agents stop <id>' }
+      const cancelled = subagentRegistry.cancel(id)
+      return { handled: true, response: cancelled ? `Cancelled subagent ${id}.` : `No running subagent ${id}.` }
+    }
+    if (sub === 'clean') {
+      let removed = 0
+      for (const run of subagentRegistry.list()) {
+        if (run.worktree && isTerminalStatus(run.status)) {
+          removeSubagentWorktree(run.worktree)
+          removed++
+        }
+      }
+      return { handled: true, response: removed ? `Removed ${removed} finished worktree(s).` : 'No finished worktrees to clean.' }
+    }
+
+    const runs = subagentRegistry.list()
+    if (!runs.length) {
+      return { handled: true, response: 'No subagents yet. The agent can spawn them with delegate_task (background: true, workspace: branch).' }
+    }
+    const active = runs.filter(run => !isTerminalStatus(run.status)).length
+    const header = `Subagents · ${active} active · ${runs.length} total`
+    return { handled: true, response: [header, ...runs.map(run => formatSubagentLine(run)), 'Commands: /agents show <id> · /agents stop <id> · /agents clean'].join('\n') }
   }
 
   if (cmd === '/artifacts') {

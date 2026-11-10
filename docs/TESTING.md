@@ -65,6 +65,9 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 | Screenshot tool validation | `vallenagent/tests/browser_screenshot.test.mjs` |
 | Plan parsing / state machine | `vallenagent/tests/plan_mode.test.mjs` |
 | /plan commands end-to-end | `vallencli/tests/plan_commands.test.mjs` |
+| Subagent registry + worktrees | `vallenagent/tests/subagent_registry.test.mjs` |
+| Background delegation tool | `vallenagent/tests/delegate_background.test.mjs` |
+| /agents panel | `vallencli/tests/agents_command.test.mjs` |
 
 ## Coverage that must never regress
 
@@ -77,6 +80,8 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
   walkthrough contents, corrupt-manifest recovery.
 - **Plan mode**: step parsing (heading/numbered/bullet), one-step-per-turn execution, steering notes,
   skip/stop semantics, plan saved as an artifact.
+- **Subagents**: registry lifecycle, concurrency cap, pruning, cancellation handle, foreground vs
+  background contract, worktree creation/removal (skips cleanly when git is unavailable).
 - **CLI**: argument parsing, config subcommands, `/model` picker, renderer, installer, symlink bin.
 - **Gateway**: pairing (single use, attempts), allowlist, rate limit, approve/deny callbacks.
 - **Config**: provider presets valid, missing `active`/`base_url` reported clearly.
