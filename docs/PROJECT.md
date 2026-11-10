@@ -366,6 +366,11 @@ Review surfaces: `/artifact` lists this session's artifacts and opens one by num
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
 `/fork` clones the conversation into a new session id.
 
+Auditing and hygiene: `/approvals [apply]` mines the recorded approval history into unanimous
+`tool_policy` rules; `/curator [days] [apply]` archives stale skills (dry run by default);
+`/extensions` + `vallenemperor extensions [--json]` list every installed skill, agent, command, hook and
+MCP server with its source.
+
 Least privilege: `tool_policy` per tool (`allow|ask|deny`) enforced in the tool executor — `deny` never
 runs, `ask` forces approval and sequential execution. `/policy` views and edits it. `/worktree new [name]`
 creates a git worktree and retargets the session to it.

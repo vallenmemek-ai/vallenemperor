@@ -291,6 +291,14 @@ execution so parallel batches cannot bypass it, and `/policy` views/sets/clears 
 `/worktree new [name]` creates a git worktree, retargets the session cwd and lists worktrees.
 Tests: `vallenagent/tests/policy_worktree.test.mjs` (4). Suite at the time: **397/397 + 143/143**.
 
+**Evidence (R15, R19, R34 — done).** Approvals are recorded to `approvals.jsonl` on every prompt;
+`/approvals` mines them and proposes only unanimous rules (3+ decisions, no dissent), `/approvals apply`
+writes them into `tool_policy`. `/curator [days] [apply]` archives skill files untouched for N days
+(default 90) into `skills/archive/` — dry run by default, nothing is deleted. `/extensions` and
+`vallenemperor extensions [--json]` print a manifest of skills, custom agents, custom commands, hooks and
+MCP servers with their source and path. Tests: `vallenagent/tests/approvals_extensions.test.mjs` (4).
+Suite at the time: **405/405 + 146/146**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -355,7 +363,7 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R12 | `vallenemperor completion` (bash/zsh/fish) | terminal ergonomics | S | `[x]` |
 | R13 | `vallenemperor update` (+ `/update`) | self-update without npm knowledge | S | `[x]` |
 | R14 | LSP tool (semantic diagnostics beyond tsc) | non-TypeScript projects | L | `[ ]` |
-| R15 | Curator — auto-archive stale skills | keeps the skill index lean | M | `[ ]` |
+| R15 | Curator — auto-archive stale skills | keeps the skill index lean | M | `[x]` |
 | R16 | Profiles (`--profile`) | isolated config/sessions/skills | M | `[ ]` |
 | R17 | ACP server for editors | editor integration | L | `[ ]` |
 | R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[ ]` |

@@ -14,6 +14,9 @@ import { formatCodeSearch, searchWorkspace } from './code_search'
 import { formatPendingList, listPendingWrites, readPendingWrite, removePendingWrite } from './pending_writes'
 import { browserToolsUnlocked } from './browser_gate'
 import { buildContextReport } from './context_report'
+import { formatApprovals, mineApprovals, readApprovals } from './approval_mining'
+import { buildExtensionManifest, formatManifest } from './extension_manifest'
+import { archiveSkills, findStaleSkills, formatCuratorReport } from '../skills/curator'
 import { registry } from '../tools/tools'
 import { getVallenHome, saveConfig } from './config'
 import { handleMcpCommand } from './commands/mcp'
@@ -84,7 +87,7 @@ export interface CommandResult {
 }
 
 const NOT_HANDLED: CommandResult = { handled: false, response: '' }
-const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer', '/queue', '/rewind', '/goal', '/grill-me', '/policy', '/worktree'])
+const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer', '/queue', '/rewind', '/goal', '/grill-me', '/policy', '/worktree', '/approvals', '/extensions', '/curator'])
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -146,6 +149,9 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Berkas', name: '/sandbox', args: '[status|workspace|off]', desc: 'batas tulis filesystem agent' },
   { group: 'Berkas', name: '/permissions', desc: 'ringkasan izin: approval, sandbox, browser, kredensial' },
   { group: 'Berkas', name: '/policy', args: '[tool] [allow|ask|deny|clear]', desc: 'aturan per-tool' },
+  { group: 'Berkas', name: '/approvals', args: '[apply]', desc: 'tambang riwayat approval jadi policy' },
+  { group: 'Berkas', name: '/extensions', desc: 'manifest skill, agent, command, hook, MCP' },
+  { group: 'Berkas', name: '/curator', args: '[hari] [apply]', desc: 'arsipkan skill yang lama tidak dipakai' },
   { group: 'Berkas', name: '/worktree', args: '[new [nama]|list]', desc: 'worktree git untuk sesi utama' },
   { group: 'Berkas', name: '/diff', args: '[turn | working | staged | all]', desc: 'lihat perubahan checkpoint atau git diff' },
   { group: 'Berkas', name: '/undo', args: '[1-20] [--force]', desc: 'pulihkan checkpoint' },
@@ -401,6 +407,38 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     agentConfig.reasoning_effort = level
     saveConfig(agentConfig)
     return { handled: true, response: `Reasoning effort set to ${level} (saved). Applies to the next provider request.` }
+  }
+
+  if (cmd === '/curator') {
+    const home = getVallenHome()
+    const days = Number(args.find(arg => /^\d+$/.test(arg))) || 90
+    const dirs = [join(projectCwd(ctx.agent), 'skills'), join(home, 'skills')]
+    const stale = findStaleSkills(dirs, { staleDays: days })
+    if (args.includes('apply')) {
+      const moved = archiveSkills(stale, join(home, 'skills', 'archive'))
+      return { handled: true, response: formatCuratorReport(stale, { staleDays: days, applied: moved }) }
+    }
+    return { handled: true, response: formatCuratorReport(stale, { staleDays: days }) }
+  }
+
+  if (cmd === '/approvals') {
+    const home = getVallenHome()
+    const suggestions = mineApprovals(readApprovals(home))
+    if (args[0] === 'apply') {
+      const confident = suggestions.filter(item => item.suggestion)
+      if (!confident.length) return { handled: true, response: 'No confident proposals yet (need 3 decisions with no dissent).' }
+      const policy = { ...((ctx.agent.config as any).tool_policy || {}) }
+      for (const item of confident) policy[item.tool] = item.suggestion
+      ;(ctx.agent.config as any).tool_policy = policy
+      saveConfig(ctx.agent.config)
+      return { handled: true, response: `Applied ${confident.length} policy rule(s):\n${confident.map(item => `  ${item.tool} → ${item.suggestion}`).join('\n')}` }
+    }
+    return { handled: true, response: formatApprovals(suggestions) }
+  }
+
+  if (cmd === '/extensions') {
+    const manifest = buildExtensionManifest({ cwd: projectCwd(ctx.agent), home: getVallenHome(), config: ctx.agent.config })
+    return { handled: true, response: formatManifest(manifest) }
   }
 
   if (cmd === '/policy') {

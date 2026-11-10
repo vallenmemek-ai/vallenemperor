@@ -608,6 +608,7 @@ export async function runCli(options = {}) {
   function settleApproval(allowed) {
     const pending = state.pendingApproval
     if (!pending) return
+    try { core.recordApproval(core.getVallenHome(), { tool: String(pending.name || ''), approved: Boolean(allowed), cwd: process.cwd() }) } catch { }
     state.pendingApproval = null
     clearTimeout(pending.timer)
     // Wipe the approval box so the chat stays clean, but only if nothing else was printed under it meanwhile.
@@ -998,6 +999,7 @@ export function parseArgs(argv) {
   if (head === 'insights') return { ...result, mode: 'insights' }
   if (head === 'logs') return { ...result, mode: 'logs' }
   if (head === 'dump') return { ...result, mode: 'dump' }
+  if (head === 'extensions') return { ...result, mode: 'extensions', json: argv.includes('--json') }
   for (let index = 0; index < argv.length; index++) {
     const arg = String(argv[index])
     if (arg === '--help' || arg === '-h') return { ...result, mode: 'help' }
@@ -1301,6 +1303,11 @@ export async function main(argv = process.argv.slice(2)) {
       process.stdout.write(logs.length
         ? `${logs.length} log file(s) in ${core.getVallenHome()}/logs\n${logs.map(log => `  ${String(log.size).padStart(9)}  ${log.path}`).join('\n')}\n`
         : `No log files in ${core.getVallenHome()}/logs yet.\n`)
+      return 0
+    }
+    if (parsed.mode === 'extensions') {
+      const manifest = core.buildExtensionManifest({ cwd: process.cwd(), home: core.getVallenHome(), config })
+      process.stdout.write(parsed.json ? `${JSON.stringify(manifest, null, 2)}\n` : `${core.formatManifest(manifest)}\n`)
       return 0
     }
     if (parsed.mode === 'dump') {

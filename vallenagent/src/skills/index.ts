@@ -1,5 +1,6 @@
 export * from './skills'
 export * from './skills_sync'
 export * from './skill_history'
+export * from './curator'
 export * from './skill_stats'
 export * from './skill_index_budget'
