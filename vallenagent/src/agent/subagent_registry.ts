@@ -28,6 +28,8 @@ export interface SubagentRun {
   id: string
   goal: string
   workspace: SubagentWorkspace
+  /** Custom agent definition used for this run, when the planner routed one. */
+  agent?: string
   status: SubagentStatus
   startedAt: string
   finishedAt?: string
@@ -42,6 +44,7 @@ export interface SubagentRun {
 export interface CreateSubagentInput {
   goal: string
   workspace?: SubagentWorkspace
+  agent?: string
   worktree?: SubagentWorktree
   id?: string
   now?: Date
@@ -80,6 +83,7 @@ export class SubagentRegistry {
       id,
       goal,
       workspace: input.workspace || 'inherit',
+      agent: input.agent,
       status: 'queued',
       startedAt: now,
       worktree: input.worktree,
@@ -176,7 +180,8 @@ export function formatSubagentLine(run: SubagentRun, now: number = Date.now()): 
   const end = run.finishedAt ? Date.parse(run.finishedAt) : now
   const seconds = Math.max(0, Math.round((end - started) / 1000))
   const where = run.workspace === 'branch' && run.worktree ? `branch:${run.worktree.branch}` : run.workspace
-  return `${icon} ${run.id.padEnd(14)} ${run.status.padEnd(9)} ${String(seconds).padStart(4)}s  ${where.padEnd(16)} ${run.goal.slice(0, 60)}`
+  const agent = run.agent ? ` [${run.agent}]` : ''
+  return `${icon} ${run.id.padEnd(14)} ${run.status.padEnd(9)} ${String(seconds).padStart(4)}s  ${where.padEnd(16)} ${run.goal.slice(0, 48)}${agent}`
 }
 
 export function formatSubagentDetail(run: SubagentRun): string {
@@ -185,6 +190,7 @@ export function formatSubagentDetail(run: SubagentRun): string {
     `  status   : ${run.status}`,
     `  workspace: ${run.workspace}${run.worktree ? ` (${run.worktree.path})` : ''}`,
     `  goal     : ${run.goal}`,
+    ...(run.agent ? [`  agent    : ${run.agent}`] : []),
     `  started  : ${run.startedAt}${run.finishedAt ? ` → ${run.finishedAt}` : ''}`
   ]
   if (run.summary) lines.push(`  summary  : ${run.summary}`)

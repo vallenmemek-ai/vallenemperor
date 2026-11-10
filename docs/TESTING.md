@@ -68,6 +68,9 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 | Subagent registry + worktrees | `vallenagent/tests/subagent_registry.test.mjs` |
 | Background delegation tool | `vallenagent/tests/delegate_background.test.mjs` |
 | /agents panel | `vallencli/tests/agents_command.test.mjs` |
+| Custom agents + planner | `vallenagent/tests/custom_agents.test.mjs` |
+| Browser gate + prompt triggers | `vallenagent/tests/browser_gate.test.mjs` |
+| /browser command | `vallencli/tests/browser_command.test.mjs` |
 
 ## Coverage that must never regress
 
@@ -82,6 +85,10 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
   skip/stop semantics, plan saved as an artifact.
 - **Subagents**: registry lifecycle, concurrency cap, pruning, cancellation handle, foreground vs
   background contract, worktree creation/removal (skips cleanly when git is unavailable).
+- **Routing**: frontmatter parsing, workspace-over-global precedence, planner threshold, agent tools
+  and model applied, explicit agent name beating routing.
+- **Browser gate**: locked by default, per-session unlock with ttl, expiry, locked message instructing
+  the model to ask the user.
 - **CLI**: argument parsing, config subcommands, `/model` picker, renderer, installer, symlink bin.
 - **Gateway**: pairing (single use, attempts), allowlist, rate limit, approve/deny callbacks.
 - **Config**: provider presets valid, missing `active`/`base_url` reported clearly.

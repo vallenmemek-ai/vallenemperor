@@ -8,6 +8,7 @@ import { browserProfilePath, browserSessionBootstrap } from '../../core/browser_
 import { truncateOutput } from './tool_output'
 import { SUPPORTS_PROCESS_GROUPS, killTree, resolvePython } from '../../core/platform'
 import { artifactDir, artifactFileName } from '../../agent/artifact_store'
+import { BROWSER_LOCKED_MESSAGE, browserToolsUnlocked } from '../../core/browser_gate'
 
 
 interface PythonRunResult {
@@ -77,6 +78,9 @@ export function registerBrowserTools(): void {
     schema: browserExecSchema,
     toolset: 'browser-use',
     handler: async (args, context, signal) => {
+      if (!browserToolsUnlocked(context?.sessionId)) {
+        return JSON.stringify({ exit_code: 1, output: '', error: BROWSER_LOCKED_MESSAGE })
+      }
       let code = String(args.code || '')
       let env = process.env
       if (args.session !== undefined) {
@@ -183,6 +187,10 @@ export function registerBrowserTools(): void {
     handler: async (args, context, signal) => {
       const url = String(args.url || '').trim()
       if (!/^https?:\/\//i.test(url)) return JSON.stringify({ success: false, error: 'url must start with http:// or https://' })
+
+      if (!browserToolsUnlocked(context?.sessionId)) {
+        return JSON.stringify({ success: false, error: BROWSER_LOCKED_MESSAGE })
+      }
 
       const home = getVallenHome()
       const turn = Number(context.turnNumber) > 0 ? Number(context.turnNumber) : 1

@@ -109,7 +109,7 @@ export interface ToolContext {
     callTool(serverName: string, toolName: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<string>
   }
   onTerminalOutput?: (stream: 'stdout' | 'stderr', chunk: string) => void
-  delegateAgentFactory?: (task: { taskId: string; goal: string; context?: string; max_iterations?: number; max_output_tokens?: number; model?: string; cwd?: string }, onProgress?: (event: { status: 'thinking' | 'tool_start' | 'tool_end'; message?: string }) => void, onHandle?: (handle: { interrupt: () => void }) => void) => Promise<string>
+  delegateAgentFactory?: (task: { taskId: string; goal: string; context?: string; max_iterations?: number; max_output_tokens?: number; model?: string; cwd?: string; agentInstructions?: string; tools?: string[] }, onProgress?: (event: { status: 'thinking' | 'tool_start' | 'tool_end'; message?: string }) => void, onHandle?: (handle: { interrupt: () => void }) => void) => Promise<string>
   onSubagentProgress?: (event: { taskId: string; goal: string; status: 'started' | 'thinking' | 'tool_start' | 'tool_end' | 'completed' | 'failed'; message?: string }) => void
   summarizeSessionHits?: (query: string, hits: Array<{ sessionId: string; snippet: string }>) => Promise<string | null>
   stores?: {

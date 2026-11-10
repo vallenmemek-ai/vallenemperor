@@ -198,6 +198,26 @@ Each folder owns an `index.ts` barrel; the root `src/index.ts` only re-exports f
 module is added in exactly one place. The turn loop is split per stage — every stage is a module
 with explicit dependencies, pinned by tests instead of by one thousand-line function.
 
+## Custom agents and routing
+
+Define reusable roles; the planner routes work to them by description:
+
+```markdown
+<!-- .agents/agents/code-reviewer.md (workspace) or ~/.vallenemperor/agents/code-reviewer.md -->
+---
+name: code-reviewer
+description: Reviews diffs for edge cases and security before merging.
+tools: [read_file, search_files, patch]
+---
+You are a rigorous reviewer. Cite file paths and line numbers.
+```
+
+`delegate_task` uses the matched agent's instructions, tool whitelist and model. Pass
+`agent: "code-reviewer"` to force one, or omit it and let the planner match on two distinct words.
+
+Browser tools are **on demand**: they stay locked until you run `/browser <task>`, exactly so the
+agent cannot wander onto the web by itself. `/browser off` locks them again.
+
 ## Subagents and `/agents`
 
 `delegate_task` can run in the background and in an isolated git worktree:

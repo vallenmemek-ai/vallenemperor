@@ -96,13 +96,17 @@ export function buildToolContext(deps: ToolContextDeps): ToolContext {
         if (provider && typeof provider === 'object') provider.model = task.model
       }
       const sub = deps.createSubagent({ config: subConfig, maxIterations: task.max_iterations || 10, isSubagent: true, backgroundReview: false })
+      if (task.tools && task.tools.length) (sub as any).toolWhitelist = task.tools
+      const goal = task.agentInstructions
+        ? `${task.agentInstructions}\n\nTask: ${task.goal}${task.context ? `\nContext: ${task.context}` : ''}`
+        : task.goal + (task.context ? `\nContext: ${task.context}` : '')
       const parentSignal = deps.abortSignal
       const interruptSub = () => sub.interrupt()
       try { onHandle?.({ interrupt: interruptSub }) } catch { }
       if (parentSignal?.aborted) interruptSub()
       else parentSignal?.addEventListener('abort', interruptSub, { once: true })
       try {
-        const res = await sub.chat(task.goal + (task.context ? `\nContext: ${task.context}` : ''), {
+        const res = await sub.chat(goal, {
           onBeforeTool: deps.onBeforeTool,
           onThinking: (message: string) => onProgress?.({ status: 'thinking', message }),
           onToolStart: (info: any) => onProgress?.({ status: 'tool_start', message: info.preview }),

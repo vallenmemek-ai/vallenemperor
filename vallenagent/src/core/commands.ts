@@ -7,6 +7,7 @@ import { getCheckpointDiff, listCheckpoints, undoCheckpoints } from '../session/
 import { formatArtifactList, listArtifacts } from '../agent/artifact_store'
 import { formatSubagentDetail, formatSubagentLine, isTerminalStatus, subagentRegistry } from '../agent/subagent_registry'
 import { removeSubagentWorktree } from '../agent/worktree'
+import { discoverCustomAgents, formatAgentList } from '../agent/custom_agents'
 import { getVallenHome } from './config'
 import { handleMcpCommand } from './commands/mcp'
 import { handleGatewayCommand } from './commands/gateway'
@@ -76,7 +77,7 @@ export interface CommandResult {
 }
 
 const NOT_HANDLED: CommandResult = { handled: false, response: '' }
-const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review'])
+const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan'])
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -110,7 +111,8 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Kerja', name: '/tools', desc: 'daftar tool yang tersedia' },
   { group: 'Kerja', name: '/skills', args: '[list|search|install|...]', desc: 'kelola skill' },
   { group: 'Kerja', name: '/plan', args: '[task|go|next|edit|skip|stop|status]', desc: 'mode rencana + eksekusi bertahap' },
-  { group: 'Kerja', name: '/agents', args: '[show <id>|stop <id>|clean]', desc: 'panel subagent: status, detail, stop' },
+  { group: 'Kerja', name: '/agents', args: '[available|show <id>|stop <id>|clean]', desc: 'panel subagent + daftar custom agent' },
+  { group: 'Kerja', name: '/browser', args: '<task|off>', desc: 'buka tool browser untuk sesi ini lalu jalankan task' },
   { group: 'Kerja', name: '/plans', desc: 'daftar rencana' },
   { group: 'Kerja', name: '/auto', desc: 'mode otomatis' },
   { group: 'Kerja', name: '/gamedev', desc: 'alur kerja gamedev' },
@@ -297,6 +299,10 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
 
   if (cmd === '/agents') {
     const [sub, id] = args
+    if (sub === 'available' || sub === 'list') {
+      const workspace = ctx.agent.config?.terminal?.cwd || process.cwd()
+      return { handled: true, response: formatAgentList(discoverCustomAgents({ workspace, home: getVallenHome() })) }
+    }
     if (sub === 'show') {
       const run = id ? subagentRegistry.get(id) : undefined
       return { handled: true, response: run ? formatSubagentDetail(run) : `No subagent ${id || ''}. Use /agents to list them.` }

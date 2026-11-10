@@ -62,6 +62,8 @@ vallenagent/src/
   agent/plan_mode.ts        plan parsing + step-by-step run state machine (pure logic)
   agent/subagent_registry.ts background subagent state behind /agents
   agent/worktree.ts         git worktree isolation for workspace="branch"
+  agent/custom_agents.ts    .agents/agents/*.md discovery + planner routing
+  core/browser_gate.ts      browser tools are locked until /browser <task>
 
 vallencli/src/
   cli.mjs              REPL, argument parsing, one-shot mode, config commands, model picker glue

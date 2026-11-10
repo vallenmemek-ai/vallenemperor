@@ -169,6 +169,40 @@ handle the factory exposes (`onHandle({ interrupt })`), which aborts the subagen
 Worktrees are intentionally **not** deleted automatically on completion: the user reviews the branch
 first. `/agents clean` is the explicit cleanup step.
 
+## 5e. Routing: custom agents, planner, on-demand browser
+
+Three mechanisms keep tool choice from being pure model whim:
+
+**1. Custom agents** (`agent/custom_agents.ts`) — Antigravity-compatible definitions:
+
+```text
+<workspace>/.agents/agents/<name>.md        (or <name>/agent.md)
+~/.vallenemperor/agents/<name>.md
+---
+name: code-reviewer
+description: Reviews diffs for edge cases and security before merging.
+tools: [read_file, search_files, patch]
+model: gpt-4o            # optional
+---
+You are a rigorous reviewer...
+```
+
+Workspace definitions override global ones with the same name. `/agents available` lists them.
+
+**2. Planner routing** — `delegate_task` accepts `agent: "<name>"`. When omitted,
+`selectAgentForTask()` scores the goal against each agent's `description` using **distinct words**
+(same rule as skills) and only routes on a strong match (two words or a name hit, score ≥ 3). A routed
+agent contributes its instruction block, its `tools` (becomes the subagent's tool whitelist) and its
+`model` override.
+
+**3. On-demand browser** (`core/browser_gate.ts`) — browser tools refuse to run until the session is
+unlocked. `/browser <task>` unlocks for 30 minutes and runs the task; `/browser off` locks again. This
+mirrors Antigravity hiding its browser subagent from the normal tool list: the model cannot decide on
+its own to browse the web.
+
+The system prompt (`# Delegation, Artifacts and Plan Mode`) states the triggers: background/branch
+delegation, screenshot proof for UI work, and plan-first for changes touching more than five files.
+
 ## 6. Clarify policy
 
 `agent/clarify_policy.ts` decides whether asking is allowed at all:
@@ -229,9 +263,10 @@ Provider presets live in `core/config.ts` (`PROVIDER_PRESETS`): `openrouter`, `o
 - **Execution**: `terminal` (foreground/background), `process_manage` (list/poll/wait/kill, including
   other sessions with `confirm: true`), `execute_code`.
 - **Delegation**: `delegate_task` (foreground batches or `background: true`, `workspace:`
-  `inherit|branch|share`) — see §5d.
-- **Web**: `web_search`, `web_extract`, `browser_exec`, `browser_screenshot` (saves a PNG artifact
-  for the current turn; http/https only, optional named session, selector or full page).
+  `inherit|branch|share`, `agent:` custom definition) — see §5d and §5e.
+- **Web**: `web_search`, `web_extract` (always available), and `browser_exec` /
+  `browser_screenshot` which are **on demand** — locked until `/browser <task>` unlocks the session.
+  Screenshots save into the current turn's artifact directory (http/https only).
 - **MCP**: project servers, tool names prefixed `mcp__<server>__<tool>`.
 - **State**: `todo_list`, `memory`, `deep_memory`, `clarify`, `skill_view`, `skill_manage`,
   `tool_search` / `tool_call` (deferred tools), `session_view`.
@@ -276,6 +311,8 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | New turn stage | `agent/turn_*.ts`, call it from `agent.ts`, add an event-order test |
 | Plan-mode behavior | `agent/plan_mode.ts` (pure) + `cli-commands.mjs` wiring + tests |
 | Subagent behaviour | `agent/subagent_registry.ts` (state) + `agent/worktree.ts` (isolation) |
+| Agent routing | `agent/custom_agents.ts` (definitions + planner) |
+| Browser gating | `core/browser_gate.ts` + `/browser` command |
 | New bundled skill | `.vallenemperor/skills/<category>/<name>/SKILL.md` with `name` + `description` frontmatter |
 | New config key | `core/types.ts`, `core/config.ts` (default + validation), docs |
 
@@ -296,3 +333,6 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | `/agents` is empty after a delegation | the subagent ran in the foreground (no `background: true`) — those are not registered |
 | `workspace="branch"` fails | the working directory is not a git repository, or `git worktree add` failed (dirty index, branch exists) |
 | A worktree keeps the branch after a run | by design; `/agents clean` removes finished worktrees |
+| Browser tool says "on demand and currently locked" | run `/browser <task>`; use `web_search`/`web_extract` for read-only research |
+| A custom agent never gets picked | its `description` must contain the words the task uses; two distinct matches are required |
+| A routed agent cannot use a tool | its `tools:` list becomes the subagent whitelist — add the tool name there |

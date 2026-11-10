@@ -74,6 +74,20 @@ export function createLocalCommandHandler(context) {
       return true
     }
     if (cmd === '/sh' || cmd === '/pty') { await enterShell(); return true }
+    if (cmd === '/browser') {
+      if (!value) {
+        printResponse('Usage: /browser <task> — unlocks browser tools for 30 minutes and runs the task. Use /browser off to lock them again.')
+        return true
+      }
+      if (value === 'off' || value === 'lock') {
+        core.lockBrowserTools(agent.getSessionId())
+        printResponse('Browser tools locked. The agent can only use web_search / web_extract now.')
+        return true
+      }
+      core.unlockBrowserTools(agent.getSessionId(), 30 * 60_000)
+      await runTurn(`[browser task] ${value}\n\nBrowser tools are unlocked for this session. Prove what you saw with browser_screenshot and cite the saved PNG path.`, text)
+      return true
+    }
     if (cmd === '/plan') {
       const cwd = agent.config.terminal?.cwd || process.cwd()
       const [sub, ...rest] = value.split(/\s+/).filter(Boolean)

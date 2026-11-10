@@ -1,6 +1,7 @@
 import { getVallenHome } from '../../core/config'
 import { subagentRegistry } from '../../agent/subagent_registry'
 import { createSubagentWorktree } from '../../agent/worktree'
+import { buildAgentInstructions, discoverCustomAgents, selectAgentForTask } from '../../agent/custom_agents'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
@@ -57,7 +58,8 @@ export function registerIntegrationTools(isSubagent: boolean, delegateAgentFacto
                 max_output_tokens: { type: 'integer', description: 'Optional output token budget (1-20000)' },
                 model: { type: 'string', description: 'Optional configured provider model for lightweight work' },
                 workspace: { type: 'string', enum: ['inherit', 'branch', 'share'], description: 'inherit = same tree (default), branch = isolated git worktree, share = same directory as the parent' },
-                background: { type: 'boolean', description: 'Run after this tool call returns; track with /agents' }
+                background: { type: 'boolean', description: 'Run after this tool call returns; track with /agents' },
+                agent: { type: 'string', description: 'Custom agent name from .agents/agents/*.md; omit to let the planner route by description' }
               },
               required: ['goal']
             },
@@ -80,6 +82,14 @@ export function registerIntegrationTools(isSubagent: boolean, delegateAgentFacto
         const summaries: Array<Record<string, any>> = []
         const delegateFn = context?.delegateAgentFactory || delegateAgentFactory
         const repo = context?.workingDir || process.cwd()
+        const customAgents = discoverCustomAgents({ workspace: repo, home: getVallenHome() })
+
+        const resolveAgent = (task: any) => {
+          const requested = String(task.agent || '').trim().toLowerCase()
+          if (requested) return customAgents.find(agent => agent.name.toLowerCase() === requested) || null
+          const routed = selectAgentForTask(String(task.goal || ''), customAgents)
+          return routed && routed.score >= 3 ? routed.agent : null
+        }
 
         const normalize = (task: any) => ({
           ...task,
@@ -103,9 +113,15 @@ export function registerIntegrationTools(isSubagent: boolean, delegateAgentFacto
             report('started')
             try {
               const task = normalize(t)
+              const agent = resolveAgent(t)
+              if (agent) {
+                task.agentInstructions = buildAgentInstructions(agent)
+                if (agent.tools.length) task.tools = agent.tools
+                if (agent.model) task.model = agent.model
+              }
               const summary = await delegateFn(task, event => report(event.status, event.message))
               report('completed')
-              return { goal: t.goal, summary }
+              return { goal: t.goal, summary, ...(agent ? { agent: agent.name } : {}) }
             } catch (err: any) {
               const message = String(err?.message || err || 'Unknown subagent error').slice(0, 500)
               report('failed', message)
@@ -126,7 +142,8 @@ export function registerIntegrationTools(isSubagent: boolean, delegateAgentFacto
             continue
           }
 
-          const run = subagentRegistry.create({ goal, workspace })
+          const agent = resolveAgent(t)
+          const run = subagentRegistry.create({ goal, workspace, agent: agent?.name })
           let worktree: { repo: string; path: string; branch: string } | undefined
           if (workspace === 'branch') {
             try {
@@ -143,6 +160,11 @@ export function registerIntegrationTools(isSubagent: boolean, delegateAgentFacto
 
           subagentRegistry.markRunning(run.id)
           const task = normalize(t)
+          if (agent) {
+            task.agentInstructions = buildAgentInstructions(agent)
+            if (agent.tools.length) task.tools = agent.tools
+            if (agent.model) task.model = agent.model
+          }
           void (async () => {
             try {
               const summary = await delegateFn(
@@ -163,6 +185,7 @@ export function registerIntegrationTools(isSubagent: boolean, delegateAgentFacto
             id: run.id,
             goal,
             workspace,
+            agent: agent?.name,
             worktree: worktree?.path,
             status: 'running',
             hint: 'Track with /agents, stop with /agents stop <id>.'

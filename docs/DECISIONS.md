@@ -229,3 +229,19 @@ two agents in one tree corrupts edits; running them invisibly makes the user los
 
 **Consequence.** Cancellation must go through the handle the factory exposes (`onHandle`), because the
 subagent owns its own turn. Never auto-delete a worktree: the branch is the reviewable output.
+
+---
+
+## D18 — Tool choice is routed, and browser access is on demand
+
+**Decision.** Custom agents are markdown files with a `description` used by a planner
+(`selectAgentForTask`) that requires two distinct word matches or a name hit. `delegate_task` applies
+the matched agent's instructions, tool whitelist and model. Browser tools are locked behind
+`/browser <task>` (30-minute unlock per session).
+
+**Why.** Antigravity does exactly this: its planner routes by agent `description`, and its browser
+subagent is "on demand only — hidden from the agent's normal subagent list". Relying on model
+judgement alone produces silent under-use (never delegating) and unsafe over-use (browsing on its own).
+
+**Consequence.** `browser_exec` / `browser_screenshot` return a clear locked message that tells the
+model to ask the user instead of retrying. Adding a new browser tool means adding the same gate.

@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 
 import { registerBuiltinTools } from '../dist/tools/builtin_tools.js'
 import { registry } from '../dist/tools/tools.js'
+import { resetBrowserGate, unlockBrowserTools } from '../dist/core/browser_gate.js'
 
 registerBuiltinTools()
 
@@ -24,6 +25,9 @@ test('browser_screenshot is registered as a browser-use tool that requires a url
 })
 
 test('browser_screenshot rejects non-http urls and malformed sessions before spawning anything', async () => {
+  resetBrowserGate()
+  unlockBrowserTools('shot-test')
+  unlockBrowserTools(undefined)
   assert.match((await screenshot({})).error, /url must start with http/)
 
   for (const url of ['file:///etc/passwd', 'ftp://example.com', 'javascript:alert(1)', 'example.com']) {
@@ -42,6 +46,8 @@ test('browser_screenshot rejects non-http urls and malformed sessions before spa
 })
 
 test('browser_screenshot never throws and only reports a path inside the artifact directory', async () => {
+  resetBrowserGate()
+  unlockBrowserTools('shot-test')
   const home = mkdtempSync(join(tmpdir(), 'vallen-shot-'))
   const previous = process.env.VALLENEMPEROR_HOME
   process.env.VALLENEMPEROR_HOME = home

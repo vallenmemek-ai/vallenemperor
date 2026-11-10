@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -98,6 +98,76 @@ test('branch workspace creates a worktree and refuses outside a git repo', async
     else process.env.VALLENEMPEROR_HOME = previous
     rmSync(home, { recursive: true, force: true })
     rmSync(plain, { recursive: true, force: true })
+    subagentRegistry.clear()
+  }
+})
+
+test('the planner routes a matching task to a custom agent and applies its tools', async () => {
+  subagentRegistry.clear()
+  const workspace = mkdtempSync(join(tmpdir(), 'vallen-delegate-agents-'))
+  const home = mkdtempSync(join(tmpdir(), 'vallen-delegate-agents-home-'))
+  const previous = process.env.VALLENEMPEROR_HOME
+  process.env.VALLENEMPEROR_HOME = home
+  try {
+    mkdirSync(join(workspace, '.agents', 'agents'), { recursive: true })
+    writeFileSync(join(workspace, '.agents', 'agents', 'reviewer.md'), [
+      '---',
+      'name: code-reviewer',
+      'description: Reviews diffs for edge cases and security issues before merging.',
+      'tools: [read_file, search_files]',
+      '---',
+      'You are a rigorous reviewer. Cite line numbers.'
+    ].join('\n'))
+
+    let received = null
+    const factory = async task => { received = task; return 'reviewed' }
+    const result = JSON.parse(await delegate(
+      { tasks: [{ goal: 'review the security of this diff before merging' }] },
+      { workingDir: workspace, delegateAgentFactory: factory }
+    ))
+
+    assert.equal(result.results[0].agent, 'code-reviewer')
+    assert.match(received.agentInstructions, /You are the "code-reviewer" agent/)
+    assert.match(received.agentInstructions, /Cite line numbers/)
+    assert.deepEqual(received.tools, ['read_file', 'search_files'])
+  } finally {
+    if (previous === undefined) delete process.env.VALLENEMPEROR_HOME
+    else process.env.VALLENEMPEROR_HOME = previous
+    rmSync(workspace, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
+    subagentRegistry.clear()
+  }
+})
+
+test('an explicit agent name wins over planner routing and is recorded on the run', async () => {
+  subagentRegistry.clear()
+  const workspace = mkdtempSync(join(tmpdir(), 'vallen-delegate-explicit-'))
+  const home = mkdtempSync(join(tmpdir(), 'vallen-delegate-explicit-home-'))
+  const previous = process.env.VALLENEMPEROR_HOME
+  process.env.VALLENEMPEROR_HOME = home
+  try {
+    mkdirSync(join(workspace, '.agents', 'agents'), { recursive: true })
+    writeFileSync(join(workspace, '.agents', 'agents', 'researcher.md'), '---\nname: researcher\ndescription: Reads documentation and summarizes findings.\n---\nResearch carefully.\n')
+
+    let received = null
+    const factory = async task => { received = task; return 'ok' }
+    const result = JSON.parse(await delegate(
+      { tasks: [{ goal: 'look into the flaky test', agent: 'researcher' }] },
+      { workingDir: workspace, delegateAgentFactory: factory }
+    ))
+    assert.equal(result.results[0].agent, 'researcher')
+    assert.match(received.agentInstructions, /Research carefully/)
+
+    const bg = JSON.parse(await delegate(
+      { tasks: [{ goal: 'background research', agent: 'researcher', background: true }] },
+      { workingDir: workspace, delegateAgentFactory: factory }
+    ))
+    assert.equal(subagentRegistry.get(bg.results[0].id).agent, 'researcher')
+  } finally {
+    if (previous === undefined) delete process.env.VALLENEMPEROR_HOME
+    else process.env.VALLENEMPEROR_HOME = previous
+    rmSync(workspace, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
     subagentRegistry.clear()
   }
 })
