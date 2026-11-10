@@ -107,7 +107,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Konteks', name: '/memory', desc: 'isi memori jangka panjang' },
   { group: 'Kerja', name: '/tools', desc: 'daftar tool yang tersedia' },
   { group: 'Kerja', name: '/skills', args: '[list|search|install|...]', desc: 'kelola skill' },
-  { group: 'Kerja', name: '/plan', desc: 'mode rencana' },
+  { group: 'Kerja', name: '/plan', args: '[task|go|next|edit|skip|stop|status]', desc: 'mode rencana + eksekusi bertahap' },
   { group: 'Kerja', name: '/plans', desc: 'daftar rencana' },
   { group: 'Kerja', name: '/auto', desc: 'mode otomatis' },
   { group: 'Kerja', name: '/gamedev', desc: 'alur kerja gamedev' },

@@ -110,6 +110,31 @@ Every turn that produced something reviewable writes a directory:
 - `browser_screenshot` writes straight into the current turn directory and returns the path, so the
   model can cite a real file and the user can open it.
 
+## 5c. Plan mode and milestone steering
+
+`/plan <task>` runs a planning turn (read-only) whose deliverable is a markdown plan saved by the
+agent to `.vallenemperor/plans/YYYY-MM-DD_HHMMSS-<slug>.md`. The CLI then copies that file into the
+artifact store as `plan-<slug>.md`.
+
+Execution is a state machine in `agent/plan_mode.ts` (pure logic, no I/O):
+
+| Command | Effect |
+| --- | --- |
+| `/plan go` | load the newest plan, parse its steps, run **step 1 only** |
+| `/plan next` | mark the current step done, run the next one |
+| `/plan edit <feedback>` | record a steering note and re-run the current step with it |
+| `/plan skip` | mark the current step skipped, move on |
+| `/plan stop` | freeze the run (resume later with `/plan next`) |
+| `/plan status` | progress, per-step markers (`✓` done, `→` current, `–` skipped) |
+
+Step prompts are built by `buildStepPrompt()` and explicitly scope the turn to one step ("Implement
+ONLY this step"), so each milestone ends with a review point instead of a long unattended run. The
+run state lives in the CLI (`state.planRun`); progress is also written to the artifact store as
+`plan-progress.md` after every step.
+
+Parser shapes accepted: `### Step 1 — title`, `1. title`, `- Step 1: title`. The step body is kept
+verbatim (file paths, commands, expected output), because that is what makes a plan executable.
+
 ## 6. Clarify policy
 
 `agent/clarify_policy.ts` decides whether asking is allowed at all:
@@ -187,8 +212,9 @@ vallenemperor config show|set provider|set model|set approval
 ```
 
 `/artifacts` lives in the shared command handler (`vallenagent/src/core/commands.ts`), so the
-terminal and the Telegram gateway behave the same. Local-only commands live in
-`vallencli/src/cli-commands.mjs`. The registry for autocomplete is `cli-suggest.mjs`; `HELP` is in
+terminal and the Telegram gateway behave the same. `/plan` (including `go/next/edit/skip/stop/status`)
+is terminal-local because it drives the REPL's turn loop; the pure state machine it uses lives in
+`vallenagent/src/agent/plan_mode.ts`. The registry for autocomplete is `cli-suggest.mjs`; `HELP` is in
 `cli-ui.mjs`.
 
 ## 12. Invariants covered by tests (do not change without a test)
@@ -212,6 +238,7 @@ terminal and the Telegram gateway behave the same. Local-only commands live in
 | New shared command | `vallenagent/src/core/commands.ts` |
 | New provider preset | `core/config.ts` (`PROVIDER_PRESETS`), plus `providers/` if the API differs |
 | New turn stage | `agent/turn_*.ts`, call it from `agent.ts`, add an event-order test |
+| Plan-mode behavior | `agent/plan_mode.ts` (pure) + `cli-commands.mjs` wiring + tests |
 | New bundled skill | `.vallenemperor/skills/<category>/<name>/SKILL.md` with `name` + `description` frontmatter |
 | New config key | `core/types.ts`, `core/config.ts` (default + validation), docs |
 

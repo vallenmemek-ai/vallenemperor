@@ -63,6 +63,8 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 | Turn artifacts summary | `vallenagent/tests/turn_artifacts.test.mjs` |
 | Artifact store (paths, manifest, traversal) | `vallenagent/tests/artifact_store.test.mjs` |
 | Screenshot tool validation | `vallenagent/tests/browser_screenshot.test.mjs` |
+| Plan parsing / state machine | `vallenagent/tests/plan_mode.test.mjs` |
+| /plan commands end-to-end | `vallencli/tests/plan_commands.test.mjs` |
 
 ## Coverage that must never regress
 
@@ -73,6 +75,8 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
   deferred tools (`tool_search` returns `parameters`), `browser_screenshot` rejects non-http URLs.
 - **Artifacts**: manifest round-trip, name validation/traversal rejection, session isolation,
   walkthrough contents, corrupt-manifest recovery.
+- **Plan mode**: step parsing (heading/numbered/bullet), one-step-per-turn execution, steering notes,
+  skip/stop semantics, plan saved as an artifact.
 - **CLI**: argument parsing, config subcommands, `/model` picker, renderer, installer, symlink bin.
 - **Gateway**: pairing (single use, attempts), allowlist, rate limit, approve/deny callbacks.
 - **Config**: provider presets valid, missing `active`/`base_url` reported clearly.

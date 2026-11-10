@@ -198,6 +198,21 @@ Each folder owns an `index.ts` barrel; the root `src/index.ts` only re-exports f
 module is added in exactly one place. The turn loop is split per stage — every stage is a module
 with explicit dependencies, pinned by tests instead of by one thousand-line function.
 
+## Plan mode
+
+```bash
+/plan add rate limiting to the API   # writes .vallenemperor/plans/<stamp>-<slug>.md (read-only turn)
+/plan go                             # runs step 1 only
+/plan next                           # step 2
+/plan edit use the existing limiter   # re-run this step with your guidance
+/plan skip                           # drop this step
+/plan status                         # ✓ done · → current · – skipped
+/plan stop                           # pause; resume with /plan next
+```
+
+Every step is a normal turn, so approvals, verification gates, and artifacts still apply. The plan
+file is also copied into the artifact store, and progress is written as `plan-progress.md`.
+
 ## Turn artifacts
 
 Every turn that produces work leaves a reviewable record, not just chat text:

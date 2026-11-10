@@ -197,3 +197,20 @@ scrolling a transcript. This is the Antigravity artifact model applied to a term
 **Consequence.** The store is synchronous (small files, once per turn) and hashes the session id, so
 user-controlled strings never become path segments. Artifact names are validated and `index.json` is
 reserved. Adding a new artifact kind means extending `KIND_EXT` and `ArtifactKind`.
+
+---
+
+## D16 — Plan execution is a command-driven state machine, not a hidden loop
+
+**Decision.** `/plan go` parses the saved plan into steps and runs exactly one step per turn. Between
+steps the user drives the next action with `/plan next`, `/plan edit <feedback>`, `/plan skip`,
+`/plan stop`, or `/plan status`. The state machine (`agent/plan_mode.ts`) is pure and lives in core;
+the CLI only wires it to `runTurn`.
+
+**Why.** A plan that executes end-to-end unattended is exactly the failure mode Antigravity's
+milestone review exists to prevent. Command-driven steering also works in a pipe and over the
+gateway, and it is testable without a terminal.
+
+**Consequence.** Each step is a normal turn, so verification gates, artifacts, and approvals still
+apply. Adding a new steering action means extending `plan_mode.ts` plus the `/plan` subcommand
+switch; do not add hidden auto-advance.

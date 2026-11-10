@@ -59,6 +59,7 @@ vallenagent/src/
   gateway/     Telegram adapter (pairing, allowlist, approvals, daemon)
   core/        config, approval policy, project context, cron, display
   agent/artifact_store.ts   turn artifacts: walkthrough.md, screenshots, index.json manifest
+  agent/plan_mode.ts        plan parsing + step-by-step run state machine (pure logic)
 
 vallencli/src/
   cli.mjs              REPL, argument parsing, one-shot mode, config commands, model picker glue

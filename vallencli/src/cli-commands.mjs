@@ -1,4 +1,4 @@
-import { rmSync } from 'node:fs'
+import { readFileSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { color, startupBox, refreshThemeColors } from './cli-ui.mjs'
@@ -75,8 +75,99 @@ export function createLocalCommandHandler(context) {
     }
     if (cmd === '/sh' || cmd === '/pty') { await enterShell(); return true }
     if (cmd === '/plan') {
+      const cwd = agent.config.terminal?.cwd || process.cwd()
+      const [sub, ...rest] = value.split(/\s+/).filter(Boolean)
+      const feedback = rest.join(' ').trim()
+
+      const savePlanProgress = () => {
+        if (!state.planRun) return
+        try {
+          core.writeArtifact({
+            home: core.getVallenHome(),
+            sessionId: agent.getSessionId(),
+            turn: Math.max(1, agent.getContextStats().turns || 1),
+            kind: 'note',
+            name: 'plan-progress.md',
+            content: core.formatPlanStatus(state.planRun)
+          })
+        } catch { }
+      }
+
+      const runPlanStep = async (stepFeedback) => {
+        const step = core.currentStep(state.planRun)
+        if (!step) { printResponse(core.formatPlanPause(state.planRun)); return }
+        const prompt = core.buildStepPrompt({ run: state.planRun, step, feedback: stepFeedback })
+        await runTurn(prompt, `[plan ${step.index}/${state.planRun.steps.length}] ${step.title}`)
+        state.planRun = core.advancePlanRun(state.planRun)
+        printResponse(core.formatPlanPause(state.planRun))
+        savePlanProgress()
+      }
+
+      if (sub === 'status') {
+        printResponse(state.planRun ? core.formatPlanStatus(state.planRun) : 'No plan run yet. Run /plan <task> to write one, then /plan go.')
+        return true
+      }
+      if (sub === 'stop') {
+        if (!state.planRun) { printResponse('No plan run to stop.'); return true }
+        state.planRun = core.stopPlanRun(state.planRun)
+        printResponse(core.formatPlanPause(state.planRun))
+        savePlanProgress()
+        return true
+      }
+      if (sub === 'skip') {
+        if (!state.planRun || state.planRun.status !== 'running') { printResponse('No running plan. Use /plan go to start one.'); return true }
+        const skipped = core.currentStep(state.planRun)
+        state.planRun = core.skipCurrentStep(state.planRun)
+        printResponse(`[plan] Skipped step ${skipped ? skipped.index : ''}: ${skipped ? skipped.title : ''}\n${core.formatPlanPause(state.planRun)}`)
+        savePlanProgress()
+        return true
+      }
+      if (sub === 'next') {
+        if (!state.planRun || state.planRun.status !== 'running') { printResponse('No running plan. Use /plan go to start one.'); return true }
+        await runPlanStep()
+        return true
+      }
+      if (sub === 'edit') {
+        if (!state.planRun || state.planRun.status !== 'running') { printResponse('No running plan. Use /plan go to start one.'); return true }
+        if (!feedback) { printResponse('Usage: /plan edit <feedback> — re-runs the current step with your guidance.'); return true }
+        state.planRun = core.addPlanFeedback(state.planRun, feedback)
+        await runPlanStep(feedback)
+        return true
+      }
+      if (sub === 'go' || sub === 'start') {
+        const plans = core.listPlans(cwd)
+        if (!plans.length) { printResponse('No plan file found. Run /plan <task> first.'); return true }
+        let markdown = ''
+        try { markdown = readFileSync(plans[0].path, 'utf8') } catch { }
+        if (!markdown.trim()) { printResponse(`Could not read ${plans[0].path}.`); return true }
+        state.planRun = core.createPlanRun({ planPath: plans[0].path, markdown })
+        if (!state.planRun.steps.length) {
+          printResponse(`Plan ${plans[0].filename} has no numbered steps, so there is nothing to execute step by step.`)
+          return true
+        }
+        printResponse(core.formatPlanStatus(state.planRun))
+        await runPlanStep()
+        return true
+      }
+
       const task = core.buildPlanPrompt(value)
       await runTurn(task, text)
+      try {
+        const plans = core.listPlans(cwd)
+        const newest = plans[0]
+        if (newest && Date.now() - newest.createdAt.getTime() < 10 * 60_000) {
+          const slug = newest.filename.replace(/^\d{4}-\d{2}-\d{2}_\d{6}-/, '').replace(/\.md$/, '')
+          core.writeArtifact({
+            home: core.getVallenHome(),
+            sessionId: agent.getSessionId(),
+            turn: Math.max(1, agent.getContextStats().turns || 1),
+            kind: 'plan',
+            name: `plan-${slug}.md`.slice(0, 64),
+            content: readFileSync(newest.path, 'utf8')
+          })
+          printResponse(`Plan saved: ${newest.path}\nExecute it step by step with /plan go.`)
+        }
+      } catch { }
       return true
     }
     if (cmd === '/plans') {
