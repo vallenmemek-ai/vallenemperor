@@ -54,12 +54,12 @@ export function normalizeGatewayModels(payload) {
  * Fetch models from an OpenAI-compatible gateway (9router included).
  * Never throws: returns `{ ok: false, error }` so the CLI can fall back to a manual name.
  */
-export async function fetchGatewayModels({ baseUrl, apiKey = '', timeoutMs = 4000, fetchImpl = globalThis.fetch } = {}) {
+export async function fetchGatewayModels({ baseUrl, apiKey = '', timeoutMs = 15000, fetchImpl = globalThis.fetch } = {}) {
   const root = String(baseUrl || '').trim().replace(/\/+$/, '')
   if (!root) return { ok: false, error: 'base_url provider kosong' }
   if (typeof fetchImpl !== 'function') return { ok: false, error: 'fetch tidak tersedia' }
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), Math.max(500, Number(timeoutMs) || 4000))
+  const timer = setTimeout(() => controller.abort(), Math.max(500, Number(timeoutMs) || 15000))
   timer.unref?.()
   try {
     const response = await fetchImpl(`${root}/models`, {

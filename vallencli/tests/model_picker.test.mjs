@@ -251,3 +251,24 @@ test('non-interactive /model falls back cleanly when the gateway is down', async
   assert.match(captured.text, /Pakai \/model <nama>/)
   assert.equal(agent.calls.some(call => call[0] === 'setModel'), false)
 })
+
+test('the gateway catalog is cached for the session, so the second /model is instant', async () => {
+  const input = new PassThrough()
+  input.isTTY = false
+  const captured = capture()
+  const agent = fakeAgent()
+  let calls = 0
+  const run = runCli({
+    input,
+    output: captured.output,
+    agent,
+    bannerText: '',
+    healthCheck: async () => [],
+    fetchModels: async () => { calls++; return { ok: true, models: normalizeGatewayModels(gatewayPayload) } }
+  })
+  input.end('/model\n/model\n/exit\n')
+  await run
+
+  assert.equal(calls, 1, 'the second picker open reuses the cached catalog')
+  assert.equal((captured.text.match(/antigravity \(ag\) · 2 model/g) || []).length, 2, 'both opens rendered the catalog')
+})

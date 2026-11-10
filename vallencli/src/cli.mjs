@@ -73,7 +73,7 @@ export async function runCli(options = {}) {
   const input = options.input || process.stdin
   const output = options.output || process.stdout
   const core = options.core || await import(pathToFileURL(CORE_PATH).href)
-  const state = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map() }
+  const state = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, modelCache: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map() }
   let agent = options.agent
   if (!agent) agent = options.createAgent ? options.createAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } }) : new core.AIAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } })
   state.mcpServers = agent.mcpManager?.getStatus?.() || []
@@ -362,6 +362,16 @@ export async function runCli(options = {}) {
 
   // ---- /model picker: provider/account first, then the model ----
   const fetchModels = options.fetchModels || fetchGatewayModels
+  const MODEL_CACHE_MS = 5 * 60_000
+  async function loadGatewayModels({ baseUrl, apiKey }) {
+    const cached = state.modelCache
+    if (cached && cached.baseUrl === baseUrl && Date.now() - cached.at < MODEL_CACHE_MS) {
+      return { ok: true, models: cached.models, cached: true }
+    }
+    const result = await fetchModels({ baseUrl, apiKey, timeoutMs: 15000 })
+    if (result.ok) state.modelCache = { baseUrl, models: result.models, at: Date.now() }
+    return result
+  }
   function pickerWidth() { return Math.max(40, Math.min(termWidth() - 2, 100)) }
 
   function paintModelPicker() {
@@ -394,7 +404,7 @@ export async function runCli(options = {}) {
     }
     if (!interactive) {
       // Piped/non-TTY run: print the catalog instead of taking over the keyboard.
-      const result = await fetchModels({ baseUrl, apiKey })
+      const result = await loadGatewayModels({ baseUrl, apiKey })
       if (!result.ok) { displayLine(color(`Gagal memuat model dari ${baseUrl} (${result.error}). Pakai /model <nama>.`, ANSI.yellow)); return }
       const groups = groupModelsByOwner(result.models)
       displayLine(`${formatModelCatalog(groups, { currentModel: agent.provider?.model || '' })}\n\nPakai /model <nama> untuk memilih.`)
@@ -405,8 +415,8 @@ export async function runCli(options = {}) {
     // Claim the keyboard immediately: keys pressed while the gateway responds must not
     // turn into empty REPL lines (that used to redraw the prompt over the picker).
     state.modelPicker = { loading: true, groups: [], level: 'owner', ownerIndex: 0, modelIndex: 0, query: '', rows: 0 }
-    out(color(`  Memuat model dari ${baseUrl} …\n`, ANSI.dim))
-    const result = await fetchModels({ baseUrl, apiKey })
+    out(color(`  Memuat model dari ${baseUrl} … ${color('(Esc untuk batal)', ANSI.dim)}\n`, ANSI.dim))
+    const result = await loadGatewayModels({ baseUrl, apiKey })
     if (!result.ok) {
       state.modelPicker = null
       out('\r\x1b[1A\x1b[J')
