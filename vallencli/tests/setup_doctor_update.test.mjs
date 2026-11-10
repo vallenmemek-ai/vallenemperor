@@ -181,3 +181,48 @@ test('parseArgs routes the new subcommands', () => {
   assert.equal(parseArgs(['update', '--check']).json, true)
   assert.equal(parseArgs(['--version']).mode, 'version')
 })
+
+test('-p --json emits a stable machine-readable result', async () => {
+  const { formatOneShotJson, runOneShot } = await import('../src/cli.mjs')
+  const result = {
+    response: 'done',
+    completionStatus: 'complete',
+    iterations: 3,
+    toolCalls: 2,
+    promptTokens: 100,
+    completionTokens: 20,
+    totalTokens: 120,
+    artifacts: { created: ['a.ts'], changed: [], saved: [], verification: ['npm test'], dir: '/tmp/art', summary: 'x' }
+  }
+  const parsed = JSON.parse(formatOneShotJson(result))
+  assert.equal(parsed.ok, true)
+  assert.equal(parsed.response, 'done')
+  assert.equal(parsed.iterations, 3)
+  assert.deepEqual(parsed.tokens, { prompt: 100, completion: 20, total: 120 })
+  assert.deepEqual(parsed.artifacts.created, ['a.ts'])
+  assert.equal(JSON.parse(formatOneShotJson({ response: 'x', completionStatus: 'incomplete' })).ok, false)
+
+  const lines = []
+  const fakeAgent = { runTurn: async () => result }
+  const { denied } = await runOneShot(fakeAgent, 'hello', { json: true, stdout: { write: line => lines.push(line) } })
+  assert.deepEqual(denied, [])
+  const payload = JSON.parse(lines[0])
+  assert.equal(payload.response, 'done')
+})
+
+test('/permissions summarises the effective policy', async () => {
+  const core = await import(new URL('../../vallenagent/dist/index.js', import.meta.url).href)
+  const ctx = {
+    channel: 'terminal',
+    agent: {
+      config: { providers: {}, terminal: { cwd: process.cwd() }, approval: 'dangerous', security: { filesystem: 'workspace' }, write_approval: { memory: true } },
+      getSessionId: () => 'perm-session'
+    }
+  }
+  const result = await core.handleCommand(ctx, '/permissions')
+  assert.match(result.response, /approval {2,}: dangerous/)
+  assert.match(result.response, /filesystem {2,}: workspace/)
+  assert.match(result.response, /subagents {3,}: always confined/)
+  assert.match(result.response, /browser tools : locked/)
+  assert.match(result.response, /staged writes : memory on/)
+})

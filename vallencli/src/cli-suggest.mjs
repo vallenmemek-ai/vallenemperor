@@ -47,6 +47,7 @@ export const COMMANDS = [
   { name: '/btw', args: '<question>', desc: 'Side question, clean context' },
   { name: '/fork', desc: 'Clone conversation to a new session' },
   { name: '/sandbox', args: '[status|workspace|off]', desc: 'Filesystem write boundary' },
+  { name: '/permissions', desc: 'Effective permission summary' },
   { name: '/health', desc: 'Run diagnostics' },
   { name: '/perf', desc: 'Process CPU / memory sample' },
   { name: '/clear', desc: 'Clear the screen' },

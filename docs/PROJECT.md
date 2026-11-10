@@ -215,6 +215,14 @@ delegation, screenshot proof for UI work, and plan-first for changes touching mo
   `VALLENEMPEROR_ALLOW_INSTRUCTION_EDITS=1`. Guards run in `write_file`, `patch`, `patch_batch`,
   `apply_patch` before the sandbox check.
 
+## 5e4. Pending writes (review before permanence)
+
+`core/pending_writes.ts` stages cross-session writes under `<home>/pending/<subsystem>/<id>.json`.
+Enabled per subsystem with `write_approval: { memory: true, skills: true }`. The memory tool returns
+`{ staged: true, id }` instead of applying; `/memory pending` lists, `/memory approve <id>` applies,
+`/memory reject <id>` discards. The background review fork now reuses the parent's provider instance
+(same model/credentials/connection) instead of constructing a new one.
+
 ## 5e3. Write serialisation and `/learn`
 
 - `core/path_lock.ts` — in-process mutex keyed by canonical path. `write_file` and `patch` acquire it
@@ -332,6 +340,11 @@ failure, disabled by `VALLENEMPEROR_NO_UPDATE_CHECK=1` or `CI=true`).
 Review surfaces: `/artifact` lists this session's artifacts and opens one by number (or `last`),
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
 `/fork` clones the conversation into a new session id.
+
+`/permissions` prints the effective policy in one block: approval mode, filesystem sandbox mode and
+roots, subagent confinement, browser gate state, credential/instruction rules, staged-write status.
+`-p --json` (R33) prints one JSON object — `{ok, response, completionStatus, iterations, toolCalls,
+tokens, artifacts}` — with exit code 1 when the turn is incomplete or a tool was denied.
 
 `/codesearch <query>` searches the workspace (`core/code_search.ts`): grouped by file, line numbers,
 ±2 lines of context, skips `node_modules`/`dist`/`.git`/binary files, caps at 5 000 files and 1 MB per

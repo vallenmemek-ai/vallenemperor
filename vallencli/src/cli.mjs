@@ -1076,17 +1076,44 @@ export function createOneShotApproval(core, agent, { onBlocked } = {}) {
 }
 
 /** One-shot run: send one prompt, print the answer, shut down. */
-async function runOneShot(agent, prompt, { core } = {}) {
+/** Stable machine-readable shape for `-p --json`. Keep the keys additive-only. */
+export function formatOneShotJson(result) {
+  return JSON.stringify({
+    ok: result?.completionStatus !== 'incomplete',
+    response: String(result?.response || ''),
+    completionStatus: result?.completionStatus || 'complete',
+    iterations: Number(result?.iterations || 0),
+    toolCalls: Number(result?.toolCalls || 0),
+    tokens: {
+      prompt: Number(result?.promptTokens || 0),
+      completion: Number(result?.completionTokens || 0),
+      total: Number(result?.totalTokens || 0)
+    },
+    artifacts: result?.artifacts ? {
+      created: result.artifacts.created || [],
+      changed: result.artifacts.changed || [],
+      saved: result.artifacts.saved || [],
+      verification: result.artifacts.verification || [],
+      dir: result.artifacts.dir || null
+    } : null
+  })
+}
+
+export async function runOneShot(agent, prompt, { core, json = false, stdout = process.stdout } = {}) {
   const gate = core
     ? createOneShotApproval(core, agent, {
         onBlocked: (name, mode) => process.stderr.write(`Blocked risky tool "${name}" (approval mode: ${mode}, no approval prompt in one-shot mode). Re-run with --approval off to allow it.\n`)
       })
     : { requestApproval: undefined, denied: [] }
   const result = await agent.runTurn({ message: prompt, surfaceId: 'cli' }, { requestApproval: gate.requestApproval })
-  process.stdout.write(`${String(result.response || '').trim()}\n`)
+  if (json) {
+    stdout.write(`${formatOneShotJson(result)}\n`)
+    return { result, denied: gate.denied }
+  }
+  stdout.write(`${String(result.response || '').trim()}\n`)
   if (result?.response) state.lastReplies = [...(state.lastReplies || []), String(result.response)].slice(-10)
-  if (result.artifacts?.summary) process.stdout.write(`${result.artifacts.summary}\n`)
-  if (result.artifacts?.dir) process.stdout.write(`artifacts: ${result.artifacts.dir}\n`)
+  if (result.artifacts?.summary) stdout.write(`${result.artifacts.summary}\n`)
+  if (result.artifacts?.dir) stdout.write(`artifacts: ${result.artifacts.dir}\n`)
   return { result, denied: gate.denied }
 }
 
@@ -1210,7 +1237,7 @@ export async function main(argv = process.argv.slice(2)) {
       try {
         // Slash input must never reach the model: it used to answer as if it were the CLI.
         if (isSlashCommandLine(parsed.prompt)) return await runOneShotCommand(core, agent, parsed.prompt, { json: parsed.json })
-        const { result, denied } = await runOneShot(agent, parsed.prompt, { core })
+        const { result, denied } = await runOneShot(agent, parsed.prompt, { core, json: parsed.json })
         // A blocked tool means the requested work did not happen; report that to the shell.
         if (denied.length) return 1
         return result?.completionStatus === 'incomplete' ? 1 : 0

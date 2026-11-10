@@ -13,6 +13,8 @@ export interface AgentOptions {
   reviewUserMessages?: string[]
   lightweight?: boolean
   skillLoader?: SkillLoader
+  /** Reuse an existing provider instance (same model/credentials/connection) instead of building one. */
+  provider?: any
   onMcpStatus?: (servers: McpServerSnapshot[]) => void
 }
 

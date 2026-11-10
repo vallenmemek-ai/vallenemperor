@@ -143,7 +143,7 @@ export class AIAgent {
 
     // Initialize provider
     const activeProvider = getActiveProvider(this.config)
-    this.provider = createProvider(
+    this.provider = options.provider || createProvider(
       activeProvider.name,
       activeProvider.base_url,
       activeProvider.api_key,
@@ -1200,7 +1200,7 @@ export class AIAgent {
       conversationSnapshot,
       async (userPrompt: string, systemPrompt: string, toolWhitelist: string[], signal?: AbortSignal) => {
         if (signal?.aborted) return 'No updates needed'
-        const reviewAgent = new AIAgent({ config: reviewConfig, maxIterations: 5, isSubagent: true, lightweight: true, reviewMode: true, reviewUserMessages: createReviewSnapshot(conversationSnapshot).filter(message => message.role === 'user').map(message => message.content), skillLoader: this.skillLoader })
+        const reviewAgent = new AIAgent({ config: reviewConfig, maxIterations: 5, isSubagent: true, lightweight: true, reviewMode: true, reviewUserMessages: createReviewSnapshot(conversationSnapshot).filter(message => message.role === 'user').map(message => message.content), skillLoader: this.skillLoader, provider: this.provider })
         this.backgroundReviewAgent = reviewAgent
         const abortReview = () => reviewAgent.interrupt()
         signal?.addEventListener('abort', abortReview, { once: true })

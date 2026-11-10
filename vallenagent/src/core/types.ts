@@ -18,6 +18,11 @@ export interface AgentConfig {
   security?: {
     filesystem?: 'workspace' | 'unrestricted'
   }
+  /** Stage cross-session writes for review instead of committing them immediately. */
+  write_approval?: {
+    memory?: boolean
+    skills?: boolean
+  }
   providers: {
     active: string
     [key: string]: string | ProviderConfig

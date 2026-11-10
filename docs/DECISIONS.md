@@ -327,3 +327,19 @@ cache.
 
 **Consequence.** `setup` refuses non-TTY and prints the `config set` alternative — never attempt an
 interactive prompt in a pipe. `doctor` must never print a key value, only its presence.
+
+---
+
+## D24 — The learning loop can be staged, and the review fork reuses the parent provider
+
+**Decision.** `write_approval: { memory: true }` makes the memory tool stage writes in
+`<home>/pending/memory/` instead of committing; the owner applies them with `/memory approve <id>`.
+The background review agent is constructed with the parent's provider instance.
+
+**Why.** A single turn (or a bad review) must not be able to rewrite long-term memory silently — the
+same reason Hermes ships a pending store. Reusing the provider keeps the model, credentials and
+connection identical, so the review request hits the same prefix cache instead of paying full price.
+
+**Consequence.** Staged writes must still be visible to the review prompt (it reads memory, not the
+pending queue) — the agent is told it was staged. Skill staging needs a skill authoring tool first
+(skills are plain files today), tracked as P1b.10.

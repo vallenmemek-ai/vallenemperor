@@ -11,6 +11,8 @@ import { discoverCustomAgents, formatAgentList } from '../agent/custom_agents'
 import { formatSandboxStatus, sandboxPolicyFor } from './sandbox'
 import { collectWorkingDiff, formatDiffSummary } from './working_diff'
 import { formatCodeSearch, searchWorkspace } from './code_search'
+import { formatPendingList, listPendingWrites, readPendingWrite, removePendingWrite } from './pending_writes'
+import { browserToolsUnlocked } from './browser_gate'
 import { getVallenHome, saveConfig } from './config'
 import { handleMcpCommand } from './commands/mcp'
 import { handleGatewayCommand } from './commands/gateway'
@@ -114,7 +116,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Konteks', name: '/search', args: '<kata>', desc: 'cari di riwayat sesi' },
   { group: 'Konteks', name: '/codesearch', args: '<query>', desc: 'cari kode di workspace dengan konteks' },
   { group: 'Konteks', name: '/todos', desc: 'daftar todo' },
-  { group: 'Konteks', name: '/memory', desc: 'isi memori jangka panjang' },
+  { group: 'Konteks', name: '/memory', args: '[list|pending|approve <id>|reject <id>]', desc: 'isi memori jangka panjang + pending review' },
   { group: 'Kerja', name: '/tools', desc: 'daftar tool yang tersedia' },
   { group: 'Kerja', name: '/skills', args: '[list|search|install|...]', desc: 'kelola skill' },
   { group: 'Kerja', name: '/plan', args: '[task|go|next|edit|skip|stop|status]', desc: 'mode rencana + eksekusi bertahap' },
@@ -130,6 +132,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Berkas', name: '/artifacts', desc: 'daftar artifact sesi (walkthrough, screenshot)' },
   { group: 'Berkas', name: '/artifact', args: '[nomor|last]', desc: 'panel review artifact sesi' },
   { group: 'Berkas', name: '/sandbox', args: '[status|workspace|off]', desc: 'batas tulis filesystem agent' },
+  { group: 'Berkas', name: '/permissions', desc: 'ringkasan izin: approval, sandbox, browser, kredensial' },
   { group: 'Berkas', name: '/diff', args: '[turn | working | staged | all]', desc: 'lihat perubahan checkpoint atau git diff' },
   { group: 'Berkas', name: '/undo', args: '[1-20] [--force]', desc: 'pulihkan checkpoint' },
   { group: 'Berkas', name: '/cd', args: '<dir>', desc: 'pindah direktori kerja' },
@@ -366,6 +369,26 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     return { handled: true, response: `Reasoning effort set to ${level} (saved). Applies to the next provider request.` }
   }
 
+  if (cmd === '/permissions') {
+    const config = ctx.agent.config as any
+    const approval = config.approval || 'dangerous'
+    const sandbox = sandboxPolicyFor({ isSubagent: false, config })
+    const sessionId = typeof ctx.agent.getSessionId === 'function' ? ctx.agent.getSessionId() : undefined
+    const browser = browserToolsUnlocked(sessionId) ? 'unlocked (on demand window)' : 'locked (use /browser <task>)'
+    const writeApproval = config.write_approval || {}
+    const lines = [
+      'Permissions',
+      `  approval      : ${approval}  (/auto dangerous|all|off)`,
+      `  filesystem    : ${sandbox.mode === 'workspace' ? `workspace (${sandbox.roots.join(', ')})` : 'unrestricted (/sandbox workspace to bound it)'}`,
+      `  subagents     : always confined to their working directory / worktree`,
+      `  browser tools : ${browser}`,
+      `  credentials   : hard deny (.ssh, .env, *.pem, .npmrc, …)`,
+      `  instruction   : AGENTS.md/RULES.md/CLAUDE.md/GEMINI.md/SOUL.md denied unless VALLENEMPEROR_ALLOW_INSTRUCTION_EDITS=1`,
+      `  staged writes : memory ${writeApproval.memory ? 'on (/memory pending)' : 'off'}, skills ${writeApproval.skills ? 'on' : 'off'}`
+    ]
+    return { handled: true, response: lines.join('\n') }
+  }
+
   if (cmd === '/sandbox') {
     const mode = String(args[0] || '').toLowerCase()
     const current = (ctx.agent.config as any).security?.filesystem === 'workspace' ? 'workspace' : 'unrestricted'
@@ -446,6 +469,29 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
   if (cmd === '/memory' && ctx.channel === 'terminal') {
     const { memoryStore } = ctx.agent
     const [action = 'list', ...rest] = args
+
+    if (action === 'pending') {
+      return { handled: true, response: formatPendingList(listPendingWrites(getVallenHome(), 'memory')) }
+    }
+    if (action === 'reject' || action === 'approve') {
+      const id = rest[0]
+      if (!id) return { handled: true, response: `Penggunaan: /memory ${action} <id>` }
+      const write = readPendingWrite(getVallenHome(), id)
+      if (!write || write.subsystem !== 'memory') return { handled: true, response: `Tidak ada pending memory ${id}.` }
+      if (action === 'reject') {
+        removePendingWrite(getVallenHome(), id)
+        return { handled: true, response: `Pending ${id} ditolak dan dihapus.` }
+      }
+      const kind = (write.kind || 'memory') as 'memory' | 'user'
+      let applied: Record<string, any>
+      if (write.action === 'replace') applied = await memoryStore.replace(kind, String(write.old_text || ''), String(write.content || ''))
+      else if (write.action === 'remove') applied = await memoryStore.remove(kind, String(write.old_text || ''))
+      else applied = await memoryStore.add(kind, String(write.content || ''))
+      if (!applied.success) return { handled: true, response: `Gagal menerapkan ${id}: ${applied.error || 'operasi gagal'}` }
+      removePendingWrite(getVallenHome(), id)
+      return { handled: true, response: `Pending ${id} disetujui dan diterapkan ke memori ${kind}.` }
+    }
+
     if (action === 'list') return { handled: true, response: memoryStore.formatForSystemPrompt() || 'Belum ada memori tersimpan.' }
     if (!['add', 'replace', 'remove'].includes(action)) {
       return { handled: true, response: 'Penggunaan: /memory [list|add|replace|remove] [project|user] <teks>. Replace: /memory replace [scope] <teks lama> => <teks baru>.' }

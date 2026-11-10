@@ -186,11 +186,12 @@ tools stateful (dedup/staleness/locks) and make the learning loop trustworthy.
 | P1b.4 | Per-path write lock for concurrent subagents | worktree isolation does not protect a shared file | S–M | `[x]` |
 | P1b.5 | Git diff modes for `/diff` (`working` / `staged` / `all` / `session`, untracked folded in) | users expect `git diff` semantics | S | `[x]` |
 | P1b.6 | Review prompt: DO-NOT-CAPTURE list + lesson-layer contract (procedure-first, pitfall = rule + why, no PR numbers, one rule per lesson, fix in place) | this is why Hermes skills read like a handbook and ours drift into logs | S | `[x]` |
-| P1b.7 | Cache-aware review fork (inherit provider/model/cached system prompt) | makes frequent reviews affordable | M | `[ ]` |
-| P1b.8 | Pending/staged memory & skill writes (`pending/{memory,skills}/<id>.json`) | review before a lesson becomes permanent | M | `[ ]` |
+| P1b.7 | Cache-aware review fork (inherit provider/model/cached system prompt) | makes frequent reviews affordable | M | `[x]` |
+| P1b.8 | Pending/staged **memory** writes (`pending/memory/<id>.json`, `/memory pending|approve|reject`) | review before a lesson becomes permanent | M | `[x]` |
+| P1b.10 | Staged **skill** writes (needs a skill authoring tool first: today skills are plain files) | same checkpoint for skills | M | `[ ]` |
 | P1b.9 | `/learn <source>` — capture a session/doc/dir as a reusable skill | the highest-intent learning request has no path today | S | `[x]` |
 
-**Evidence (P1b.1–P1b.6, P1b.9 — done).** `vallenagent/tests/tool_maturity.test.mjs` (6 tests):
+**Evidence (P1b.1–P1b.9 — done; P1b.10 open).** `vallenagent/tests/tool_maturity.test.mjs` (6 tests):
 duplicate read returns a stub (`content` omitted, `sha256` kept) and `force: true` re-reads; three
 identical reads in a row are flagged as a loop while a different tool resets the streak; `.env`,
 `.ssh/*`, `*.pem`, `.npmrc` are hard-denied; `AGENTS.md`/`RULES.md`/`CLAUDE.md`/`GEMINI.md`/`SOUL.md`
@@ -201,7 +202,10 @@ modified + untracked files, staged-only, and a clean failure outside a git repo.
 `tests/path_lock_learn.test.mjs` (5 tests) proves the per-path lock: same path serialises in order,
 different paths do not block, a failed write does not block the next, locks are released, and the
 `/learn` prompt carries the authoring standards. `/learn` wiring is covered by
-`vallencli/tests/learn_command.test.mjs`. Suite at the time: **365/365 + 123/123**.
+`vallencli/tests/learn_command.test.mjs`. `tests/pending_writes.test.mjs` (4 tests) covers staged memory
+writes: staging records/list/read/remove, the memory tool stages instead of writing when
+`write_approval.memory` is on, `/memory pending|approve|reject` apply and discard end to end, and the
+review fork reuses the parent provider instance (cache-aware). Suite at the time: **374/374 + 131/131**.
 
 Acceptance for the whole package: a scripted session that re-reads a file twice must produce a stub on
 the second read; a patch against externally changed content must be refused with a staleness message;
@@ -217,8 +221,8 @@ Aider ship. They are not differentiators — they are the price of entry.
 | --- | --- | --- | --- | --- |
 | R29 | **Hooks**: `session_start`, `user_prompt`, `pre_tool`, `post_tool`, `turn_end`, `session_end`; handler = shell command with JSON stdin/stdout; can block or rewrite | policy, formatting, audit, notifications without patching core; shipped by Claude Code, Gemini, Hermes, Antigravity | M | `[ ]` |
 | R30 | **Repo map**: tree-sitter/TS symbol map (classes, functions, signatures) ranked by relevance and token-budgeted, injected per request | the agent stops grepping blind on large repos; Aider's biggest quality lever | L | `[ ]` |
-| R31 | **Permissions panel**: one reviewable place showing the effective rule per tool/path, replacing the `/auto` + `/sandbox` split | Codex, Claude Code, Gemini, opencode all expose this | M | `[ ]` |
-| R33 | **Headless contract**: `-p --json` with stable exit codes (0 ok, 1 agent error, 2 usage) | CI/pipeline use; Codex `exec`, Gemini headless | S | `[ ]` |
+| R31 | **Permissions panel**: one reviewable place showing the effective rule per tool/path, replacing the `/auto` + `/sandbox` split | Codex, Claude Code, Gemini, opencode all expose this | M | `[x]` |
+| R33 | **Headless contract**: `-p --json` with stable exit codes (0 ok, 1 agent error, 2 usage) | CI/pipeline use; Codex `exec`, Gemini headless | S | `[x]` |
 
 **Evidence (P1.1, P1.2, P1.4 — done).** `vallenagent/tests/p1_features.test.mjs` (5 tests): workspace
 search groups hits by file with line numbers and context, skips `node_modules`/binary files, respects
@@ -226,6 +230,12 @@ the limit and marks truncation; `/codesearch` and `/effort` work through the sha
 effort value is persisted; a captured provider payload proves `reasoning_effort` reaches the request;
 clipboard prefers the platform tool and falls back to OSC 52 (encoded sequence asserted). Suite at the
 time: **370/370 + 131/131**. `/diff` interactive viewer (P1.3) is still open.
+
+**Evidence (R31, R33 — done).** `/permissions` prints approval, filesystem mode + roots, subagent
+confinement, browser gate, credential/instruction rules and staged-write status in one block.
+`-p --json` emits `{ok, response, completionStatus, iterations, toolCalls, tokens, artifacts}` with
+exit 1 on `incomplete` or a denied tool; the shape is asserted by
+`vallencli/tests/setup_doctor_update.test.mjs`. Suite at the time: **374/374 + 133/133**.
 
 ### P2 — Differentiators (only after P0/P1)
 

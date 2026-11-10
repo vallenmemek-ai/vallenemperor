@@ -1,3 +1,5 @@
+import { loadConfig, getVallenHome } from '../../core/config'
+import { stagePendingWrite } from '../../core/pending_writes'
 import { registry, ToolSchema } from '../tools'
 import { MemoryStore } from '../../memory/memory'
 import { TodoStore } from '../../session/todo'
@@ -88,6 +90,32 @@ export function registerStateTools(memory: MemoryStore, todo: TodoStore): void {
         if (action !== 'add') return JSON.stringify({ error: `Review mode cannot perform memory action '${action}'; replacement/removal needs user approval.` })
         if (!context.reviewUserMessages?.some(message => message.includes(content.trim()))) return JSON.stringify({ error: 'Review mode memory additions must be exact user quotes from this review.' })
       }
+
+      // Staged mode: keep the learning loop but require owner approval before it becomes permanent.
+      try {
+        if (loadConfig().write_approval?.memory) {
+          if (Array.isArray(args.operations) && args.operations.length > 0) {
+            const staged = args.operations.map(op => stagePendingWrite(getVallenHome(), {
+              subsystem: 'memory',
+              kind: (op.target || target) as 'memory' | 'user',
+              action: String(op.action || 'add') as 'add' | 'replace' | 'remove',
+              content: String(op.content || op.new_text || ''),
+              old_text: String(op.old_text || ''),
+              sessionId: context?.sessionId
+            }))
+            return JSON.stringify({ staged: true, count: staged.length, ids: staged.map(item => item.id), note: 'Staged for review. Approve with /memory approve <id>.' })
+          }
+          const record = stagePendingWrite(getVallenHome(), {
+            subsystem: 'memory',
+            kind: target,
+            action: action as 'add' | 'replace' | 'remove',
+            content,
+            old_text: oldText,
+            sessionId: context?.sessionId
+          })
+          return JSON.stringify({ staged: true, id: record.id, note: 'Staged for review. Approve with /memory approve <id>, or reject with /memory reject <id>.' })
+        }
+      } catch { }
 
       if (Array.isArray(args.operations) && args.operations.length > 0) {
         const res = await mem.batch(args.operations, target)
