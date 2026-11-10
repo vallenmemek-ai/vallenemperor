@@ -106,6 +106,8 @@ export interface ToolContext {
   toolWhitelist?: string[]
   /** When set, file writes must stay inside one of these roots (subagents and sandboxed main agents). */
   sandboxRoots?: string[]
+  /** Apply a previously staged write without staging it again (/skills approve). */
+  skipSkillStaging?: boolean
   mcpToolNames?: string[]
   mcpManager?: {
     callTool(serverName: string, toolName: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<string>

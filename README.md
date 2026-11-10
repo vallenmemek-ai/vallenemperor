@@ -138,7 +138,9 @@ Keys stay in the environment (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC
   a turn cannot claim "done" without the matching proof.
 - **Sessions that survive** — persisted sessions, `/resume`, per-turn checkpoints, compaction.
 - **Skills on demand** — bundled catalog, `skill_view`, hub search/install, per-turn relevance
-  scoring; auto-loaded skills are released when the topic changes.
+  scoring; auto-loaded skills are released when the topic changes. `/skills journey` shows what the
+  agent learned and why, `/skills index` reports what the skill index costs, and
+  `write_approval.skills` stages skill writes for `/skills approve|reject`.
 - **Clarify policy** — asks only when a decision truly blocks, never for style, naming, or
   "should I continue?".
 - **Approval gates** — risky shell commands and sensitive paths gated; large diffs previewed first.

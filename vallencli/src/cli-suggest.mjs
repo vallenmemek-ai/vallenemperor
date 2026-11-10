@@ -17,7 +17,7 @@ export const COMMANDS = [
   { name: '/memory', desc: 'Show persistent memory' },
   { name: '/todos', desc: 'Show task list' },
   { name: '/tools', desc: 'List available tools' },
-  { name: '/skills', args: '[help|search|install]', desc: 'Search, install and manage skills' },
+  { name: '/skills', args: '[search|stats|journey|index]', desc: 'Search, install, audit and manage skills' },
   { name: '/review', args: '[log]', desc: 'Run review or show review history' },
   { name: '/session', args: 'clearall', desc: 'Delete saved sessions', fillOnly: true },
   { name: '/output', desc: 'Expand the latest terminal output' },

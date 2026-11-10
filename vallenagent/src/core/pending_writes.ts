@@ -22,6 +22,8 @@ export interface PendingWrite {
   action?: PendingAction
   content?: string
   old_text?: string
+  /** Staged skill batch (skill_manage operations) approved as one unit. */
+  operations?: Array<Record<string, any>>
   createdAt: string
   sessionId?: string
   reason?: string

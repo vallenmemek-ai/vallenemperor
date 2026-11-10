@@ -220,8 +220,21 @@ delegation, screenshot proof for UI work, and plan-first for changes touching mo
 `core/pending_writes.ts` stages cross-session writes under `<home>/pending/<subsystem>/<id>.json`.
 Enabled per subsystem with `write_approval: { memory: true, skills: true }`. The memory tool returns
 `{ staged: true, id }` instead of applying; `/memory pending` lists, `/memory approve <id>` applies,
-`/memory reject <id>` discards. The background review fork now reuses the parent's provider instance
-(same model/credentials/connection) instead of constructing a new one.
+`/memory reject <id>` discards. `skill_manage` follows the same contract: a write batch (create,
+patch, delete, write_file, remove_file, install, uninstall, update) is staged as one record holding
+the operations array, and `/skills pending | approve <id> | reject <id>` lists, re-runs with
+`skipSkillStaging: true`, or discards it. The background review fork reuses the parent's provider
+instance (same model/credentials/connection) instead of constructing a new one.
+
+## 5e6. Skill governance (`/skills journey`, `/skills index`)
+
+- `skills/skill_history.ts` — every skill change carries a `source` (who asked: `skill_manage`,
+  `/learn`, `review`). `buildJourney(changes, reviews, limit)` merges that history with the review log
+  into one newest-first timeline; `/skills journey [n]` renders it (audit and roll back a bad lesson).
+- `skills/skill_index_budget.ts` — the skills index is part of every request, so `/skills index`
+  reports its token cost plus the delta and the skill names added/removed since the last snapshot in
+  `<home>/skill-index.json`; `/skills index store` re-baselines it. `estimateTokens` is shared with
+  `core/context_report.ts`, so index numbers match `/context all`.
 
 ## 5e3. Write serialisation and `/learn`
 

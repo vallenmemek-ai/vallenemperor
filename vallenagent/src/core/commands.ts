@@ -129,7 +129,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Konteks', name: '/todos', desc: 'daftar todo' },
   { group: 'Konteks', name: '/memory', args: '[list|pending|approve <id>|reject <id>]', desc: 'isi memori jangka panjang + pending review' },
   { group: 'Kerja', name: '/tools', desc: 'daftar tool yang tersedia' },
-  { group: 'Kerja', name: '/skills', args: '[list|search|install|...]', desc: 'kelola skill' },
+  { group: 'Kerja', name: '/skills', args: '[list|search|install|journey|index|pending|...]', desc: 'kelola skill: katalog, riwayat belajar, biaya index, tulis bertahap' },
   { group: 'Kerja', name: '/plan', args: '[task|go|next|edit|skip|stop|status]', desc: 'mode rencana + eksekusi bertahap' },
   { group: 'Kerja', name: '/learn', args: '[sumber]', desc: 'ubah sesi/dokumen/direktori jadi skill' },
   { group: 'Kerja', name: '/grill-me', args: '[tugas]', desc: 'wawancara dulu sebelum mulai kerja' },

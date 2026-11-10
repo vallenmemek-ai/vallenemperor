@@ -188,10 +188,10 @@ tools stateful (dedup/staleness/locks) and make the learning loop trustworthy.
 | P1b.6 | Review prompt: DO-NOT-CAPTURE list + lesson-layer contract (procedure-first, pitfall = rule + why, no PR numbers, one rule per lesson, fix in place) | this is why Hermes skills read like a handbook and ours drift into logs | S | `[x]` |
 | P1b.7 | Cache-aware review fork (inherit provider/model/cached system prompt) | makes frequent reviews affordable | M | `[x]` |
 | P1b.8 | Pending/staged **memory** writes (`pending/memory/<id>.json`, `/memory pending|approve|reject`) | review before a lesson becomes permanent | M | `[x]` |
-| P1b.10 | Staged **skill** writes (needs a skill authoring tool first: today skills are plain files) | same checkpoint for skills | M | `[ ]` |
+| P1b.10 | Staged **skill** writes (same checkpoint as memory, over `skill_manage` batches) | same checkpoint for skills | M | `[x]` |
 | P1b.9 | `/learn <source>` — capture a session/doc/dir as a reusable skill | the highest-intent learning request has no path today | S | `[x]` |
 
-**Evidence (P1b.1–P1b.9 — done; P1b.10 open).** `vallenagent/tests/tool_maturity.test.mjs` (6 tests):
+**Evidence (P1b.1–P1b.10 — done).** `vallenagent/tests/tool_maturity.test.mjs` (6 tests):
 duplicate read returns a stub (`content` omitted, `sha256` kept) and `force: true` re-reads; three
 identical reads in a row are flagged as a loop while a different tool resets the streak; `.env`,
 `.ssh/*`, `*.pem`, `.npmrc` are hard-denied; `AGENTS.md`/`RULES.md`/`CLAUDE.md`/`GEMINI.md`/`SOUL.md`
@@ -206,6 +206,16 @@ different paths do not block, a failed write does not block the next, locks are 
 writes: staging records/list/read/remove, the memory tool stages instead of writing when
 `write_approval.memory` is on, `/memory pending|approve|reject` apply and discard end to end, and the
 review fork reuses the parent provider instance (cache-aware). Suite at the time: **374/374 + 131/131**.
+
+**Evidence (P1b.10, R26, R28 — done).** `vallenagent/tests/skill_governance.test.mjs` (4 tests):
+`buildJourney` merges skill changes and review-log rows newest-first (undone changes annotated,
+`sources` = `skill_manage`/`review`); the index budget stores a baseline and reports the token delta
+plus added/removed names; `skill_manage` with `write_approval.skills` on returns
+`{staged:true,id}` and the skill directory is untouched until the same operation batch is re-run with
+`skipSkillStaging:true` (read-only actions are never staged); a staged history row carries its
+`source`. `vallencli/tests/skill_governance_commands.test.mjs` (3 tests) drives `/skills journey`,
+`/skills index` (+`store` baseline), and `/skills pending | approve <id> | reject <id>` end to end —
+rejected batches never reach disk. Suite at the time: **401/401 + 146/146**.
 
 Acceptance for the whole package: a scripted session that re-reads a file twice must produce a stub on
 the second read; a patch against externally changed content must be refused with a staleness message;
@@ -356,9 +366,9 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R23 | Formatter hook after edits (respect the project's formatter) | keeps diffs clean without manual runs | S | `[x]` |
 | R24 | `/grill-me` — interview the user one question at a time before starting | fits our clarify policy; prevents wrong builds | S | `[x]` |
 | R25 | `/learn` — turn corrections into skills/rules through a reviewable proposal | closes the self-improvement loop | M | `[x]` |
-| R26 | Skill provenance (who/when/why) + `/journey` learning timeline | audit and roll back a bad lesson | M | `[ ]` |
+| R26 | Skill provenance (who/when/why) + `/journey` learning timeline | audit and roll back a bad lesson | M | `[x]` |
 | R27 | Curator — archive stale skills by usage | keeps the skill index lean | M | `[ ]` |
-| R28 | Skill-index budget/delta tracking | index growth silently eats the context window | S | `[ ]` |
+| R28 | Skill-index budget/delta tracking | index growth silently eats the context window | S | `[x]` |
 | R32 | Background agent view (dashboard over the existing subagent registry) | Claude Code, Hermes, Antigravity all expose a monitor | M | `[ ]` |
 | R34 | Extension manifest: one installable unit carrying tools + commands + skills | Gemini extensions, Hermes plugins, opencode plugins | M | `[ ]` |
 

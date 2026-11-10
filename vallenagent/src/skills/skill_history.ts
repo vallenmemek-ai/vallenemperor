@@ -4,8 +4,20 @@ import { randomUUID } from 'crypto'
 import { getVallenHome } from '../core/config'
 import { chmodSafe } from '../core/platform'
 
-type Change = { id: string; at: string; skill: string; action: string; reason: string; target: string; snapshot: string | null; pending?: boolean; undone?: string }
+type Change = { id: string; at: string; skill: string; action: string; reason: string; target: string; snapshot: string | null; source?: string; pending?: boolean; undone?: string }
 type Review = { at: string; kind: 'skill' | 'memory' | 'review'; name: string; change: string; reason: string }
+
+/** One row of the learning timeline: what changed, when, and why. */
+export type JourneyEntry = { at: string; kind: 'skill' | 'memory' | 'review'; name: string; action: string; reason: string; source: string }
+
+/** Merge skill-change history and review-log rows into one newest-first timeline. */
+export function buildJourney(changes: Change[], reviews: Review[], limit = 20): JourneyEntry[] {
+  const rows: JourneyEntry[] = [
+    ...changes.map(change => ({ at: change.at, kind: 'skill' as const, name: change.skill, action: change.undone ? `${change.action} (undone)` : change.action, reason: change.reason, source: change.source || 'agent' })),
+    ...reviews.map(review => ({ at: review.at, kind: review.kind, name: review.name, action: review.change, reason: review.reason, source: 'review' }))
+  ]
+  return rows.sort((a, b) => b.at.localeCompare(a.at)).slice(0, Math.max(1, Math.min(200, limit)))
+}
 
 function copyTree(source: string, target: string): void {
   const info = lstatSync(source)
@@ -35,7 +47,7 @@ export class SkillHistoryStore {
     writeFileSync(temp, JSON.stringify(data, null, 2), { encoding: 'utf8', mode: 0o600, flag: 'wx' }); chmodSafe(temp, 0o600)
     try { renameSync(temp, this.file) } catch (error) { try { unlinkSync(temp) } catch {}; throw error }
   }
-  stage(skill: string, target: string, action: string, reason: string): string {
+  stage(skill: string, target: string, action: string, reason: string, source = 'agent'): string {
     const id = randomUUID()
     mkdirSync(this.root, { recursive: true, mode: 0o700 }); chmodSafe(this.root, 0o700)
     const snapshot = existsSync(target) ? join(this.root, `${id}.snapshot`) : null
@@ -43,7 +55,7 @@ export class SkillHistoryStore {
       if (!lstatSync(target).isDirectory() || lstatSync(target).isSymbolicLink()) throw new Error('Skill history only snapshots real directories')
       copyTree(target, snapshot)
     }
-    const data = this.read(); data.unshift({ id, at: new Date().toISOString(), skill, action, reason, target: resolve(target), snapshot, pending: true })
+    const data = this.read(); data.unshift({ id, at: new Date().toISOString(), skill, action, reason, source, target: resolve(target), snapshot, pending: true })
     this.write(data)
     return id
   }

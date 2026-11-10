@@ -410,7 +410,40 @@ export function createLocalCommandHandler(context) {
         printResponse(`${[...byCategory].sort(([a], [b]) => a.localeCompare(b)).map(([category, names]) => `${category}: ${names.join(', ')}`).join('\n') || 'No skills loaded.'}\n\nUse /skills help for subcommands.`)
         return true
       }
-      if (sub === 'help') { printResponse('/skills search <query> · install <github-url|official/category/name> · uninstall|update <name> · installed · stats · history · undo <id> · enable|disable <name> · disabled · sync · reset <name>'); return true }
+      if (sub === 'help') { printResponse('/skills search <query> · install <github-url|official/category/name> · uninstall|update <name> · installed · stats · history · journey · index · pending · approve <id> · reject <id> · undo <id> · enable|disable <name> · disabled · sync · reset <name>'); return true }
+      // R26 — learning timeline: skill changes + review-log rows in one newest-first list.
+      if (sub === 'journey') {
+        const limit = Math.max(1, Math.min(50, Number(name) || 20))
+        const rows = core.buildJourney(new core.SkillHistoryStore().list(100), new core.ReviewLogStore().list(100), limit)
+        printResponse(rows.length ? rows.map(row => `${row.at} · ${row.kind} ${row.name} · ${row.action}\n  ${row.reason} (${row.source})`).join('\n') : 'Nothing learned yet — no skill changes or memory proposals recorded.')
+        return true
+      }
+      // R28 — skill-index cost and how much it grew since the last check.
+      if (sub === 'index') {
+        const budget = core.skillIndexBudget(skills.map(skill => ({ name: skill.name, description: skill.metadata?.description || '' })), core.skillIndexFile(core.getVallenHome()))
+        if (value.includes('store') || value.includes('reset')) core.writeSkillIndexSnapshot(core.skillIndexFile(core.getVallenHome()), { at: new Date().toISOString(), tokens: budget.tokens, skills: budget.skills, names: skills.map(skill => skill.name).sort() })
+        printResponse(`${core.formatSkillIndexBudget(budget)}\nRe-measure baseline with /skills index store.`)
+        return true
+      }
+      // P1b.10 — staged skill writes: review a skill_manage batch before it lands.
+      if (sub === 'pending') {
+        printResponse(core.formatPendingList(core.listPendingWrites(core.getVallenHome(), 'skills')))
+        return true
+      }
+      if (sub === 'approve' || sub === 'reject') {
+        if (!name) { printResponse(`Usage: /skills ${sub} <id>`); return true }
+        const write = core.readPendingWrite(core.getVallenHome(), name)
+        if (!write || write.subsystem !== 'skills') { printResponse(`No pending skill write ${name}.`); return true }
+        if (sub === 'reject') { core.removePendingWrite(core.getVallenHome(), name); printResponse(`Pending ${name} rejected and removed.`); return true }
+        const tool = core.registry.get('skill_manage')
+        if (!tool) { printResponse('skill_manage tool unavailable.'); return true }
+        const result = JSON.parse(await tool.handler({ operations: write.operations || [] }, { sessionId: agent.getSessionId(), workingDir: agent.config?.terminal?.cwd || process.cwd(), skipSkillStaging: true, stores: { skillLoader: agent.skillLoader } }))
+        if (!result.success) { printResponse(`Failed to apply ${name}: ${result.error || 'operation failed'}`); return true }
+        core.removePendingWrite(core.getVallenHome(), name)
+        agent.skillLoader?.scanAll?.()
+        printResponse(`Pending ${name} approved and applied (${(write.operations || []).length} operation(s)).`)
+        return true
+      }
       if (sub === 'stats') {
         const rows = new core.SkillStatsStore().list()
         printResponse(rows.length ? rows.map(row => `${row.name}: views=${row.view_count}, successes=${row.success_count}, changes=${row.manage_count}, corrections=${row.correction_count}`).join('\n') : 'No skill usage stats yet.')

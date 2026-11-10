@@ -5,7 +5,8 @@ import { registry, ToolSchema } from '../tools'
 import { SkillLoader } from '../../skills/skills'
 import { SkillStatsStore } from '../../skills/skill_stats'
 import { ReviewLogStore, SkillHistoryStore } from '../../skills/skill_history'
-import { getVallenHome } from '../../core/config'
+import { getVallenHome, loadConfig } from '../../core/config'
+import { stagePendingWrite } from '../../core/pending_writes'
 import { validateSkillName, validateCategory } from '../../skills_hub'
 import { fuzzyReplace } from '../../core/patch_engine'
 
@@ -185,6 +186,29 @@ export function registerSkillsTools(skillLoader?: SkillLoader): void {
           return JSON.stringify({ error: `Review mode cannot perform skill action '${String(args.action || '')}'.` })
         }
       }
+      // Staged mode (P1b.10): when write_approval.skills is on, a write batch is recorded for
+      // review instead of touching the skill directory. Approve with /skills approve <id> (which
+      // re-runs the same operations with staging disabled).
+      const writeOps = Array.isArray(args.operations)
+        ? args.operations.filter((op: any) => !['search', 'list_installed', 'stats', 'history', 'review_log', 'undo'].includes(String(op?.action || '')))
+        : []
+      const writeAction = !Array.isArray(args.operations) && ['create', 'patch', 'delete', 'write_file', 'remove_file', 'install', 'uninstall', 'update'].includes(String(args.action || ''))
+      if (!context?.reviewMode && !context?.skipSkillStaging && (writeOps.length || writeAction)) {
+        try {
+          if (loadConfig().write_approval?.skills) {
+            const record = stagePendingWrite(getVallenHome(), {
+              subsystem: 'skills',
+              action: 'replace',
+              content: Array.isArray(args.operations) ? `${writeOps.length} skill operation(s)` : `${String(args.action)} ${String(args.name || args.identifier || '')}`.trim(),
+              operations: Array.isArray(args.operations) ? args.operations : [{ action: String(args.action), name: args.name, identifier: args.identifier, category: args.category, content: args.content, old_string: args.old_string, new_string: args.new_string, file_path: args.file_path }],
+              sessionId: context?.sessionId,
+              reason: String(args.reason || 'skill_manage request')
+            })
+            return JSON.stringify({ staged: true, id: record.id, note: 'Staged for review. Approve with /skills approve <id>, or reject with /skills reject <id>.' })
+          }
+        } catch { /* staging must never block a legitimate write when config is unreadable */ }
+      }
+
       // Hermes-style atomic batch operations
       if (args.operations && Array.isArray(args.operations)) {
         const ops = args.operations
@@ -196,7 +220,7 @@ export function registerSkillsTools(skillLoader?: SkillLoader): void {
         const cleanupOnCommit: string[] = []
         const history = new SkillHistoryStore()
         const historyIds: string[] = []
-        const stageHistory = (name: string, target: string, action: string, reason: string) => historyIds.push(history.stage(name, target, action, reason))
+        const stageHistory = (name: string, target: string, action: string, reason: string) => historyIds.push(history.stage(name, target, action, reason, 'skill_manage'))
         const root = resolve(targetBaseDir)
         let failed: any = null
         for (let opIndex = 0; opIndex < ops.length; opIndex++) {
