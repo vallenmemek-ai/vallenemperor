@@ -103,6 +103,44 @@ test('/commands lists custom commands and /<name> runs one', async () => {
   }
 })
 
+test('/steer queues a mid-turn note and /<skill> runs a loaded skill', async () => {
+  const steers = []
+  const turns = []
+  const printed = []
+  const handler = createLocalCommandHandler({
+    agent: {
+      config: { providers: {}, terminal: { cwd: process.cwd() } },
+      getSessionId: () => 'skill-session',
+      getContextStats: () => ({ turns: 1 }),
+      steer: text => { steers.push(text); return true },
+      skillLoader: { list: () => [{ name: 'deploy', content: 'Step 1: build\nStep 2: ship' }] }
+    },
+    core,
+    state: {},
+    output: { isTTY: false, columns: 80, write: () => true },
+    printResponse: text => printed.push(String(text)),
+    readHiddenToken: async () => ({ value: '' }),
+    settleApproval: () => {},
+    enqueue: () => {},
+    out: () => {},
+    refreshStatus: () => {},
+    healthCheck: async () => [],
+    enterShell: async () => {},
+    runTurn: async (message, display) => { turns.push({ message, display }) },
+    displayLine: text => printed.push(String(text))
+  })
+
+  assert.equal(await handler('/steer focus on auth'), true)
+  assert.deepEqual(steers, ['focus on auth'])
+  assert.match(printed.join('\n'), /Steer queued: focus on auth/)
+
+  await handler('/deploy production')
+  assert.equal(turns.length, 1)
+  assert.match(turns[0].message, /\[skill: deploy\]/)
+  assert.match(turns[0].message, /Step 1: build/)
+  assert.match(turns[0].message, /Task: production/)
+})
+
 test('completion scripts exist for bash, zsh and fish, and routing works', () => {
   for (const shell of ['bash', 'zsh', 'fish']) {
     const script = completionScript(shell)

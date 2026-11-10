@@ -102,6 +102,12 @@ export function createLocalCommandHandler(context) {
       }
       return true
     }
+    if (cmd === '/steer') {
+      if (!value) { printResponse('Usage: /steer <note> — delivered after the next tool call, without interrupting the turn.'); return true }
+      const queued = agent.steer ? agent.steer(value) : false
+      printResponse(queued ? `Steer queued: ${value.slice(0, 100)}` : 'No active agent to steer.')
+      return true
+    }
     if (cmd === '/save') {
       const [formatArg, fileArg, redactArg] = value.split(/\s+/).filter(Boolean)
       const format = formatArg === 'json' ? 'json' : 'md'
@@ -424,6 +430,15 @@ export function createLocalCommandHandler(context) {
       if (custom) {
         const prompt = core.renderCustomCommand(custom, value)
         await runTurn(prompt, text)
+        return true
+      }
+      // `/<skill-name>` runs a loaded skill directly.
+      const wanted = cmd.slice(1).toLowerCase()
+      const skills = agent.skillLoader?.list?.() || []
+      const skill = skills.find(entry => String(entry.name || '').toLowerCase() === wanted)
+      if (skill) {
+        const body = String(skill.content || '').slice(0, 8000)
+        await runTurn(`[skill: ${skill.name}]\n\n${body}\n\nTask: ${value || 'Apply this skill to the current work.'}`, text)
         return true
       }
     }

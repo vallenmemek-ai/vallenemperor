@@ -13,6 +13,8 @@ import { collectWorkingDiff, formatDiffSummary } from './working_diff'
 import { formatCodeSearch, searchWorkspace } from './code_search'
 import { formatPendingList, listPendingWrites, readPendingWrite, removePendingWrite } from './pending_writes'
 import { browserToolsUnlocked } from './browser_gate'
+import { buildContextReport } from './context_report'
+import { registry } from '../tools/tools'
 import { getVallenHome, saveConfig } from './config'
 import { handleMcpCommand } from './commands/mcp'
 import { handleGatewayCommand } from './commands/gateway'
@@ -82,7 +84,7 @@ export interface CommandResult {
 }
 
 const NOT_HANDLED: CommandResult = { handled: false, response: '' }
-const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands'])
+const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer'])
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -107,6 +109,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Sesi & model', name: '/save', args: '[md|json] [file] [redact]', desc: 'ekspor transkrip sesi' },
   { group: 'Sesi & model', name: '/title', args: '[nama]', desc: 'judul sesi' },
   { group: 'Sesi & model', name: '/history', args: '[n]', desc: 'riwayat percakapan terakhir' },
+  { group: 'Sesi & model', name: '/steer', args: '<catatan>', desc: 'sisipkan arahan di tengah turn' },
   { group: 'Sesi & model', name: '/prompt', desc: 'tulis prompt di $EDITOR' },
   { group: 'Kerja', name: '/commands', desc: 'daftar custom command dari .vallenemperor/commands' },
   { group: 'Sesi & model', name: '/resume', args: '[id | nomor]', desc: 'lanjutkan sesi' },
@@ -116,7 +119,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Sesi & model', name: '/fork', desc: 'clone percakapan ke sesi baru' },
   { group: 'Sesi & model', name: '/btw', args: '<pertanyaan>', desc: 'pertanyaan sampingan tanpa ganggu sesi' },
   { group: 'Sesi & model', name: '/stop', desc: 'hentikan turn yang berjalan' },
-  { group: 'Konteks', name: '/context', desc: 'pemakaian konteks' },
+  { group: 'Konteks', name: '/context', args: '[all]', desc: 'pemakaian konteks + rincian context files' },
   { group: 'Konteks', name: '/compact', desc: 'ringkas riwayat percakapan' },
   { group: 'Konteks', name: '/search', args: '<kata>', desc: 'cari di riwayat sesi' },
   { group: 'Konteks', name: '/codesearch', args: '<query>', desc: 'cari kode di workspace dengan konteks' },
@@ -274,6 +277,26 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     return { handled: true, response: await handleMcpCommand(ctx.agent, args) }
   }
   if (cmd === '/context' && ctx.channel === 'terminal') {
+    if (args[0] === 'all') {
+      const stats = ctx.agent.getContextStats()
+      const skills = (ctx.agent.skillLoader?.list?.() || []).map((skill: any) => ({ name: skill.name, description: skill.metadata?.description || '' }))
+      const schemas = registry.getOpenAISchemas([], ctx.agent.toolWhitelist).map((schema: any) => JSON.stringify(schema))
+      return {
+        handled: true,
+        response: buildContextReport({
+          cwd: projectCwd(ctx.agent),
+          stats: {
+            promptTokens: stats.promptTokens,
+            contextWindow: stats.contextWindow,
+            percent: stats.percent,
+            historyTokens: stats.historyTokens,
+            systemPromptTokens: stats.systemPromptTokens
+          },
+          skills,
+          toolSchemas: schemas
+        })
+      }
+    }
     const stats = ctx.agent.getContextStats()
     const mark = stats.estimated ? '~' : ''
     const largestTool = stats.largestToolName ? `\nTool terbesar: ${stats.largestToolName} (~${stats.largestToolTokens.toLocaleString()} token)` : ''

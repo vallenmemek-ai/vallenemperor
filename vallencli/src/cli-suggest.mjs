@@ -47,6 +47,7 @@ export const COMMANDS = [
   { name: '/history', args: '[n]', desc: 'Recent messages' },
   { name: '/prompt', desc: 'Compose in $EDITOR' },
   { name: '/commands', desc: 'Custom commands' },
+  { name: '/steer', args: '<note>', desc: 'Mid-turn note' },
   { name: '/effort', args: '[low|medium|high]', desc: 'Reasoning effort' },
   { name: '/artifacts', desc: 'List session artifacts' },
   { name: '/btw', args: '<question>', desc: 'Side question, clean context' },

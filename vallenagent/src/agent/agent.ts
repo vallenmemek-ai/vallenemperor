@@ -79,6 +79,8 @@ export class AIAgent {
   /** Skill the user/model loaded explicitly (skill_view). Sticky until /new; auto-matches are not stored here. */
   private activeSkill: { name: string; content: string } | null = null
   private backgroundReviewGate = new ReviewRunGate()
+  /** A note the user injected mid-turn; delivered after the next tool call. */
+  private pendingSteer: string | null = null
   private backgroundReviewController: AbortController | null = null
   private backgroundReviewAgent: AIAgent | null = null
   private backgroundReviewTimeout: ReturnType<typeof setTimeout> | null = null
@@ -232,6 +234,20 @@ export class AIAgent {
 
   getSessionId(): string {
     return this.sessionId
+  }
+
+  /** Queue a mid-turn note (delivered after the next tool call, no interrupt). */
+  steer(text: string): boolean {
+    const note = String(text || '').trim()
+    if (!note) return false
+    this.pendingSteer = note.slice(0, 2000)
+    return true
+  }
+
+  private consumeSteer(): string | null {
+    const note = this.pendingSteer
+    this.pendingSteer = null
+    return note
   }
 
   /** Read-only transcript for `/save`, `/history` and exports. */
@@ -773,6 +789,15 @@ export class AIAgent {
           });
           if (batch.todoStateChanged)
             prematureFinalAttempts = 0;
+          // Mid-turn steering: the note lands after the tool batch, without breaking the loop.
+          const steerNote = this.consumeSteer()
+          if (steerNote) {
+            this.conversationHistory.push({
+              role: 'system',
+              content: `[steer from the user, arrived after the last tool call]\n${steerNote}`
+            })
+            safeCallback(callbacks?.onThinking, `Steer applied: ${steerNote.slice(0, 80)}`)
+          }
           // Continue loop for next iteration
           continue;
         }

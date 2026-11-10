@@ -353,6 +353,12 @@ Review surfaces: `/artifact` lists this session's artifacts and opens one by num
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
 `/fork` clones the conversation into a new session id.
 
+Mid-turn control: `/steer <note>` injects a system note immediately after the next tool batch
+(`AIAgent.steer()` → consumed in the loop), so direction changes do not require an interrupt.
+`/<skill-name>` runs a loaded skill directly (body + `Task: <args>`), and `/context all` prints the
+context breakdown (window, system/history, skills index, tool schemas, and every context file with a
+token estimate).
+
 Session UX: `/save md|json [file] [redact]` (transcript export with secret scrubbing),
 `/title [name]`, `/history [n]`, `/prompt` (compose in `$EDITOR`), `/commands` (list custom commands),
 and `/<name>` runs a `.vallenemperor/commands/<name>.md` template with `$ARGUMENTS` substituted
