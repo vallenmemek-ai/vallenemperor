@@ -10,6 +10,17 @@ work → build + test → version +1 → install as primary app → smoke test
      → if staged: owner approves with 2FA  →  verify the registry install
 ```
 
+Minimum smoke test after `npm install -g .` (all must be true):
+
+```text
+vallenemperor --version                      # prints the new version
+vallenemperor -p "Reply with exactly: ok"    # one-shot exits 0 and prints the answer
+printf '/sandbox terminal status\n/exit\n' | vallenemperor   # interactive commands respond
+```
+
+A one-shot run that prints the answer and then exits non-zero is a release blocker (it was a real
+regression in 999.999.1016 — see `docs/DECISIONS.md` D28).
+
 ## 0. Version series
 
 - Production releases use normal semver (`0.x.y`).

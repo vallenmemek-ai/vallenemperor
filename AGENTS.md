@@ -14,8 +14,14 @@ order — do not guess the architecture:
 6. **[docs/DECISIONS.md](docs/DECISIONS.md)** — why the code looks the way it does (do not undo these casually)
 7. **[docs/ROADMAP.md](docs/ROADMAP.md)** — the backlog: pick the top unchecked item, tick it when done
 8. **[docs/REFERENCES.md](docs/REFERENCES.md)** — index of every peer we compare against (Hermes, Antigravity, opencode, Claude Code, Codex, Gemini, Aider)
-9. **[docs/COMPARE-HERMES-CORE.md](docs/COMPARE-HERMES-CORE.md)** — why Hermes' file tools and self-improvement loop are more mature (gap-by-gap)
-10. **[docs/REFERENCE-HERMES.md](docs/REFERENCE-HERMES.md)**, **[docs/REFERENCE-ANTIGRAVITY.md](docs/REFERENCE-ANTIGRAVITY.md)**, **[docs/REFERENCE-OPENCODE.md](docs/REFERENCE-OPENCODE.md)** — peer inventories; read before designing a new feature
+9. **[docs/REFERENCES.md](docs/REFERENCES.md)** — consolidated peer research (Hermes, Antigravity, opencode, Claude Code, Codex, Gemini, Aider) and the adoption matrix. Read before designing a new feature.
+
+## Current status (keep this line honest)
+
+**ROADMAP is complete: 44/44 items shipped, 0 open.** Tests: **438 vallenagent + 156 vallencli = 594**,
+all green. Latest version **999.999.1017**. Terminal sandbox, LSP diagnostics, ACP editor bridge, nested
+subagents, browser recording, extension packs with opt-in executable tools, and isolated profiles are all
+implemented and covered by tests. If you change anything, update this line with the real numbers.
 
 ## The eight invariants
 

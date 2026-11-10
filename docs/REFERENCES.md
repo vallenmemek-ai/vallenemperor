@@ -1,77 +1,66 @@
-# REFERENCES.md — the reference library (read this first)
+# REFERENCES.md — the peer research, consolidated
 
-Everything we compare against, in one place. Goal: **never redesign a solved problem from memory.**
+This file is the **whole** research record. The long-form peer inventories
+(`REFERENCE-HERMES.md`, `REFERENCE-ANTIGRAVITY.md`, `REFERENCE-OPENCODE.md`,
+`COMPARE-HERMES-CORE.md`, `references/*.md`) were deleted once every item they proposed was implemented;
+their full text remains in git history (`git log --diff-filter=D -- docs/`).
 
-## 1. The index
+Rule that still applies: **never redesign a solved problem from memory.** Before adding a capability,
+check whether two or more peers already ship it, and copy the *reason*, not the code.
 
-| Peer | Document | What it covers | Depth |
+## 1. Peers read, and what they were read for
+
+| Peer | Read from | What it covered | Verdict |
 | --- | --- | --- | --- |
-| **Hermes Agent** (Nous Research) | [REFERENCE-HERMES.md](REFERENCE-HERMES.md) · [COMPARE-HERMES-CORE.md](COMPARE-HERMES-CORE.md) | ≈70 CLI commands, ≈90 slash commands, 35 toolsets; deep dive on file tools + self-improvement review | ★★★ read from local source (`/home/vallenganteng/Destop/hermes-agent-main`) |
-| **Antigravity CLI** (Google) | [REFERENCE-ANTIGRAVITY.md](REFERENCE-ANTIGRAVITY.md) | full slash-command inventory, subagents, artifacts, permissions/sandbox | ★★★ official docs |
-| **opencode** | [REFERENCE-OPENCODE.md](REFERENCE-OPENCODE.md) | config-surface inventory + cross-peer agreement table | ★★ docs (config reference) |
-| **Claude Code** (Anthropic) | [references/CLAUDE-CODE.md](references/CLAUDE-CODE.md) | hooks lifecycle, subagents, permissions, skills | ★★★ official docs |
-| **Codex CLI** (OpenAI) | [references/CODEX-CLI.md](references/CODEX-CLI.md) | sandbox/approvals model, `codex exec`, `/permissions`, reasoning effort | ★★ official docs |
-| **Gemini CLI** (Google) | [references/GEMINI-CLI.md](references/GEMINI-CLI.md) | extensions, checkpointing, MCP, non-interactive mode | ★★ repo + docs |
-| **Aider** | [references/AIDER.md](references/AIDER.md) | repository map (tree-sitter symbol map), edit formats, git-native workflow | ★★ docs |
+| **Hermes Agent** (Nous Research) | local source `/home/vallenganteng/Destop/hermes-agent-main` | ≈70 CLI commands, ≈90 slash commands, 35 toolsets; deep dive on file tools (read/write/patch/search) and the self-improvement review loop | adopted the file-tool maturity work (P1b) and the skill/review loop (R15, R19, R25–R28) |
+| **Antigravity CLI** (Google) | official docs | slash-command inventory, subagents, artifacts, permissions/sandbox | adopted agent manager + worktrees (R9, R32), artifacts, on-demand `/browser` |
+| **opencode** | config reference | config surface inventory + cross-peer agreement table | used mainly as the ordering signal |
+| **Claude Code** (Anthropic) | official docs | hooks lifecycle, subagents, permissions, skills | adopted hooks with JSON decisions (R29) |
+| **Codex CLI** (OpenAI) | official docs | sandbox/approvals model, `codex exec`, `/permissions`, reasoning effort | adopted scriptable `-p` + JSON output, permission presets (R31), `/fast` (R18) |
+| **Gemini CLI** (Google) | repo + docs | extensions, checkpointing, MCP, non-interactive mode | adopted extension packs (R34) |
+| **Aider** | docs | repository map (symbol signatures), edit formats, git-native workflow | adopted the budgeted repo map (R30) |
 
-## 2. How to use this library
+## 2. Cross-peer adoption matrix — all implemented
 
-1. Before designing a feature, find the same feature in at least two peers above.
-2. If **two or more peers ship it**, it is table stakes → it belongs in `ROADMAP.md` P0/P1.
-3. If **one peer ships it** and it does not fit a terminal-first agent, put it in P2 or write it into
-   the "deliberately not copied" list.
-4. Record the verdict in the peer document (✅ / 🟡 / ❌ / 🚫) and add the roadmap ID next to it.
-5. Never copy code. Copy **the reason** the feature exists, then implement it in our architecture
-   (`docs/PROJECT.md`).
-
-## 3. Cross-peer adoption matrix (the short list)
-
-Only capabilities that at least two peers ship. "ID" points at `ROADMAP.md`.
+Every row below is shipped and covered by a test. "ID" points at `ROADMAP.md`; `done` means the
+capability existed before the R-numbering.
 
 | Capability | Hermes | Antigravity | opencode | Claude Code | Codex | Gemini | ID |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Setup / doctor / update | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | P0.1–P0.3 |
 | Code search panel | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | P1.1 |
-| Reasoning effort | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | P1.2 |
-| Interactive diff | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | P1.3 |
+| Reasoning effort + `/fast` | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | P1.2, R18 |
+| Interactive diff review | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | P1.3 |
 | Custom slash commands | ✅ | 🟡 | ✅ | ✅ | 🟡 | ✅ | R21 |
-| Subagents / delegation | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | done (P1b next) |
+| Subagents / delegation (nested) | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | P2.2 |
 | Plan mode | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | done |
 | Checkpoints / rollback | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | done |
-| Permissions panel / policies | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | R22, R31 |
-| Hooks (lifecycle automation) | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | **R29 (new)** |
-| Repo map / code graph | 🟡 | 🟡 | ✅ | 🟡 | 🟡 | 🟡 | **R30 (new)** |
+| Permissions panel / tool policy | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | R22, R31 |
+| Lifecycle hooks (JSON decisions) | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | R29 |
+| Repo map / symbol graph | 🟡 | 🟡 | ✅ | 🟡 | 🟡 | 🟡 | R30 |
 | Long-horizon goals | ✅ | ✅ | ❌ | 🟡 | 🟡 | 🟡 | R6 |
 | Rewind / branch history | ✅ | ✅ | 🟡 | ✅ | 🟡 | ✅ | R2 |
 | LSP integration | ✅ | ❌ | ✅ | ✅ | ❌ | 🟡 | R14 |
 | Worktrees | ✅ | 🟡 | ✅ | ✅ | ✅ | 🟡 | R9 |
 | Formatter after edits | 🟡 | ❌ | ✅ | ✅ | 🟡 | 🟡 | R23 |
 | `/learn` → skill | ✅ | ✅ | 🟡 | ✅ | ❌ | 🟡 | P1b.9 |
-| Background agent dashboard | ✅ | ✅ | 🟡 | ✅ | 🟡 | ❌ | **R32 (new)** |
+| Background agent dashboard | ✅ | ✅ | 🟡 | ✅ | 🟡 | ❌ | R32 |
+| Terminal sandbox | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | P2.5 |
+| Editor protocol (ACP) | ❌ | ✅ | 🟡 | ✅ | ❌ | 🟡 | P2.4 / R17 |
+| Browser session recording | ✅ | ✅ | ❌ | 🟡 | ❌ | ❌ | P2.1 |
+| Extension packs (tools+commands+skills) | ✅ | 🟡 | ✅ | 🟡 | ❌ | ✅ | R34 |
 
-## 4. Peer-specific differentiators worth stealing (single-source, high value)
+## 3. Deliberately not copied (recorded so nobody re-proposes it)
 
-| Capability | Who | Why it matters to us | ID |
-| --- | --- | --- | --- |
-| Repository map (symbol signatures, token-budgeted) | Aider | the agent stops grepping blind on big repos; complements `search_files` | R30 |
-| Hooks with JSON I/O (shell/HTTP/MCP/prompt handlers) | Claude Code | policy, formatting, audit, notifications without touching core code | R29 |
-| `codex exec`-style scriptable non-interactive mode | Codex | CI and pipeline usage (we have `-p`; needs exit codes + JSON output) | R33 |
-| Permission presets + `/permissions` panel | Codex, Gemini | we have `/auto` + `/sandbox`; consolidate into one reviewable panel | R31 |
-| Extension manifest (bundle tools+commands+skills) | Gemini CLI | one installable unit instead of three separate mechanisms | R34 |
-| `AGENTS.md` `/init` generator | Codex, Claude Code | we have `/init`; needs to read the repo and propose rules | done / polish |
+- Desktop/web apps, pets, skins, voice/wake-word, video generation.
+- 20+ messaging platforms, hosted connectors, kanban boards.
+- Vendor-specific quota/credit UI.
+- Cloud sessions / hosted agent teams — we do local background subagents instead.
+- Watcher-based context and egress proxies: infrastructure we cannot test here.
 
-## 5. Deliberately not copied (recorded so nobody re-proposes it)
+## 4. Maintenance
 
-- Desktop/web apps, pets, skins, voice/wake-word, video generation (Hermes, Antigravity, opencode).
-- 20+ messaging platforms; hosted connectors; kanban board (Hermes).
-- Vendor-specific quota/credits UI (Antigravity, Codex).
-- Cloud sessions / agent teams as a hosted product (Claude Code) — we do local background subagents.
-- `watcher`-based context (opencode) and egress proxies (Hermes): infrastructure we cannot test.
-
-## 6. Maintenance
-
-When a peer ships something new and relevant:
-
-1. Update that peer's document (inventory row + verdict).
-2. If two peers now ship it, add a row to §3 and an item to `ROADMAP.md`.
-3. Keep the docs factual: cite the page/source and the date read. No "I think it does X".
+1. When a peer ships something relevant, add a row here with the date read and the source.
+2. If two peers ship it, it is table stakes: add an item to `ROADMAP.md` with acceptance criteria.
+3. Keep it factual — cite the page/source. No "I think it does X".
+4. Do not recreate per-peer files unless a new deep comparison is genuinely needed; keep one record.

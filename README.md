@@ -38,6 +38,12 @@ commands, verifies its own work, resumes interrupted sessions, and loads skills 
 
 Both ship as one installable CLI: **`vallenemperor`**.
 
+## Status
+
+- **ROADMAP: 44/44 items shipped, 0 open.** Full list with per-item evidence in [docs/ROADMAP.md](docs/ROADMAP.md).
+- **Tests: 438 (agent) + 156 (CLI) = 594**, all green.
+- **Latest version: 999.999.1017.**
+
 ## Preview
 
 <p align="center">
@@ -148,6 +154,22 @@ Keys stay in the environment (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC
 - **Telegram gateway** — pairing, allowlist, inline approvals, background jobs.
 - **Turn artifacts** — files created/changed, saved outputs, verification commands, reported at the
   end of every turn.
+- **Terminal sandbox** — `terminal.sandbox: auto|required` runs shell commands under bubblewrap:
+  read-only root, only the workspace writable, network off by default, own PID/IPC/UTS namespaces.
+  `/sandbox terminal` toggles it; `required` refuses rather than running unsandboxed.
+- **LSP diagnostics** — `lsp_diagnostics` talks to a real language server (TS/JS, Python, Go, Rust,
+  C/C++, Lua) over stdio JSON-RPC; `lsp_servers` shows which commands are installed.
+- **Editor bridge (ACP)** — `vallenemperor acp` serves the Agent Client Protocol so editors can drive
+  sessions, with streamed `session/update` chunks.
+- **Nested subagents** — `agent.max_subagent_depth` (default 2) bounds delegation, enforced in the
+  tool executor, so a subagent can delegate again without a runaway tree.
+- **Browser recording** — `browser_record` captures a bounded headless session to a `.webm` artifact.
+- **Extension packs** — `vallenemperor extensions install <dir>` installs skills, commands, agents and
+  (opt-in via `extensions.allow_tools`) executable tools; `/extensions tools` shows what loaded.
+- **Isolated profiles** — `--profile <name>` gives a whole separate home (config, sessions, skills,
+  approvals); `vallenemperor profile list|create|delete` manages them.
+- **Review and handoff** — `/diff review` walks hunks and can revert one with a reverse `git apply`;
+  `/handoff` exports a redacted transcript plus the resume command.
 
 ## Configuration
 

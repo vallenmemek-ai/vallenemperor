@@ -344,6 +344,24 @@ Provider presets live in `core/config.ts` (`PROVIDER_PRESETS`): `openrouter`, `o
 - **MCP**: project servers, tool names prefixed `mcp__<server>__<tool>`.
 - **State**: `todo_list`, `memory`, `deep_memory`, `clarify`, `skill_view`, `skill_manage`,
   `tool_search` / `tool_call` (deferred tools), `session_view`.
+- **Diagnostics**: `typecheck` (project tsconfig) and `lsp_diagnostics` / `lsp_servers` (a real language
+  server over stdio JSON-RPC; fails clearly when the server is not installed).
+- **Recording**: `browser_record` writes a bounded `.webm` into the turn artifacts (Playwright
+  `record_video_dir`), behind the same on-demand browser gate.
+- **Search**: `x_search` queries the X API v2 with `X_BEARER_TOKEN`; without a token it refuses instead
+  of returning empty results.
+- **Extensions**: tools shipped by an installed pack, loaded only with `extensions.allow_tools: true`;
+  names that would shadow a builtin are rejected.
+
+## 10b. Isolation boundaries
+
+Three independent layers, each with its own test:
+
+| Layer | Config | What it stops | Test |
+| --- | --- | --- | --- |
+| Filesystem writes | `security.filesystem: workspace` | writes outside the working directory | `vallenagent/tests/sandbox.test.mjs` |
+| Terminal processes | `terminal.sandbox: auto\|required` | reading/writing outside the workspace, network, process visibility | `vallenagent/tests/terminal_sandbox.test.mjs` |
+| Profiles | `--profile <name>` | one client/project seeing another's config, sessions, skills | `vallencli/tests/profile_isolation.test.mjs` |
 
 ## 11. CLI surface
 

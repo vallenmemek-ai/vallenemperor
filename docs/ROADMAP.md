@@ -8,16 +8,13 @@
 > selesai tanpa izin owner. Setiap item selesai: centang di sini, tambah catatan bukti (angka test),
 > dan ikuti alur rilis di `docs/RELEASING.md` (owner yang menekan tombol publish).
 
-Companion documents (read before designing anything new) — index: **[REFERENCES.md](REFERENCES.md)**:
+Companion document: **[REFERENCES.md](REFERENCES.md)** — the consolidated peer research and the
+cross-peer adoption matrix. Every row in it is now implemented; the long-form per-peer inventories live in
+git history.
 
-- **[REFERENCE-HERMES.md](REFERENCE-HERMES.md)** — Hermes Agent: ≈70 CLI commands, ≈90 slash commands,
-  35 toolsets, mapped to us with adopt/adapt/ignore verdicts.
-- **[REFERENCE-ANTIGRAVITY.md](REFERENCE-ANTIGRAVITY.md)** — Antigravity CLI: full slash-command
-  inventory, subagents, artifacts, permissions/sandbox.
-- **[COMPARE-HERMES-CORE.md](COMPARE-HERMES-CORE.md)** — deep dive on file tools (read/write/patch/
-  search) and the self-improvement review: why Hermes is more mature, gap by gap.
-- **[REFERENCE-OPENCODE.md](REFERENCE-OPENCODE.md)** — opencode: config-surface inventory plus a
-  cross-reference table of where all three peers agree (the strongest ordering signal).
+**STATUS: COMPLETE.** 44/44 items shipped (`[x]`), 0 open, 0 partial. Final evidence: **438/438
+vallenagent + 156/156 vallencli** tests, version **999.999.1017**. New work should start as a new section
+here (with acceptance criteria) rather than reopening a finished item.
 
 Purpose: the single source of truth for **what to build next** and **how we know it is done**. Status
 snapshots live in `docs/PROJECT.md`; rules live in `RULES.md`; this file is the backlog.
@@ -173,7 +170,7 @@ call makes no network request), formats `update available: x → y`, honours
   clipboard writer.
 - **Effort.** S · **Risk.** low.
 
-### P1b — Core tool maturity (Hermes-informed, see COMPARE-HERMES-CORE.md)
+### P1b — Core tool maturity (Hermes-informed; see `docs/REFERENCES.md` §1)
 
 The file tools and the self-improvement loop are where Hermes is clearly ahead. These items make our
 tools stateful (dedup/staleness/locks) and make the learning loop trustworthy.
@@ -422,7 +419,7 @@ review. Tests: `vallenagent/tests/x_search.test.mjs` (4). Suite at the time: **4
 
 ### P3 — Reference-informed backlog (from Hermes)
 
-Merged from `docs/REFERENCE-HERMES.md`. Each item is terminal-native and independently shippable.
+Merged from the Hermes peer inventory (now consolidated in `docs/REFERENCES.md`). Each item is terminal-native and independently shippable.
 The owner may promote any of these into P1 by saying so; otherwise they follow the order below.
 
 | # | Item | Why it matters | Effort | Status |
@@ -458,7 +455,7 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R32 | Background agent view (dashboard over the existing subagent registry) | Claude Code, Hermes, Antigravity all expose a monitor | M | `[x]` |
 | R34 | Extension manifest: one installable unit carrying tools + commands + skills | Gemini extensions, Hermes plugins, opencode plugins | M | `[x]` |
 
-Deliberately not on this list (see `REFERENCE-HERMES.md` §6): desktop app, web dashboard, pets,
+Deliberately not on this list (see `docs/REFERENCES.md` §3): desktop app, web dashboard, pets,
 skins, voice/wake word, video generation, 20+ messaging platforms, Python library, API server,
 kanban board, egress proxy.
 
