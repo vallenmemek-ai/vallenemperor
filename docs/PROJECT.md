@@ -385,6 +385,10 @@ Auditing and hygiene: `/approvals [apply]` mines the recorded approval history i
 `/extensions` + `vallenemperor extensions [--json]` list every installed skill, agent, command, hook and
 MCP server with its source.
 
+Terminal sandbox: `terminal.sandbox: off|auto|required` runs shell commands under bubblewrap —
+read-only root, writable working directory only, network off by default, own PID/IPC/UTS namespaces;
+`required` refuses instead of silently running unsandboxed. Toggle with `/sandbox terminal`.
+
 Least privilege: `tool_policy` per tool (`allow|ask|deny`) enforced in the tool executor — `deny` never
 runs, `ask` forces approval and sequential execution. `/policy` views and edits it. `/worktree new [name]`
 creates a git worktree and retargets the session to it.

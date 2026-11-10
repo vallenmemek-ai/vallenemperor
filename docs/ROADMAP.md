@@ -328,6 +328,14 @@ command (`vallenemperor --resume <id>`) into `<home>/handoffs/`; delivery only h
 rather than silently swallowed. Tests: `vallenagent/tests/handoff.test.mjs` (3, including secret
 redaction and command substitution). Suite at the time: **417/417 + 149/149**.
 
+**Evidence (P2.5 — done).** `terminal.sandbox` is `off` (default) | `auto` | `required`. When active,
+commands run under `bwrap`: whole filesystem `--ro-bind / /`, `/tmp` as tmpfs, only the working directory
+(plus `terminal.sandbox_roots`) writable, `--unshare-net` unless `terminal.sandbox_network: true`, and
+separate PID/IPC/UTS namespaces. `required` refuses with exit 126 when bubblewrap is missing instead of
+running unsandboxed. Proven on this machine (bubblewrap 0.12.0): writing inside the workspace succeeds,
+writing `/etc/...` fails and the file does not exist. `/sandbox terminal auto|required|off` toggles it.
+Tests: `vallenagent/tests/terminal_sandbox.test.mjs` (4). Suite at the time: **421/421 + 149/149**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -361,7 +369,7 @@ redaction and command substitution). Suite at the time: **417/417 + 149/149**.
   and approve a tool call; tests drive the protocol with a fake client.
 - **Effort.** L · **Risk.** high (protocol surface, long-term maintenance).
 
-#### P2.5 Terminal sandbox — ❌
+#### P2.5 Terminal sandbox — ✅
 - **Why.** The only honest way to close the sandbox gap; today the terminal can do anything.
 - **Scope.** platform-specific execution wrapper (bubblewrap on Linux, sandbox-exec on macOS,
   job objects on Windows) behind `security.terminal: 'sandbox'`, with a clear fallback.
