@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
@@ -23,6 +23,30 @@ function listMarkdown(dir: string): string[] {
   try { return readdirSync(dir).filter(name => name.endsWith('.md') || name.endsWith('.mdc')) } catch { return [] }
 }
 
+/**
+ * Skills live either as `<dir>/<name>.md` or as `<dir>/<category>/<name>/SKILL.md`; both layouts are
+ * collected so the manifest matches what the loader actually sees.
+ */
+function listSkillEntries(dir: string): Array<{ name: string; path: string }> {
+  const entries: Array<{ name: string; path: string }> = []
+  for (const file of listMarkdown(dir)) entries.push({ name: file.replace(/\.(md|mdc)$/, ''), path: join(dir, file) })
+  if (!existsSync(dir)) return entries
+  let categories: string[] = []
+  try { categories = readdirSync(dir) } catch { return entries }
+  for (const category of categories) {
+    const categoryDir = join(dir, category)
+    try { if (!statSync(categoryDir).isDirectory()) continue } catch { continue }
+    let skillDirs: string[] = []
+    try { skillDirs = readdirSync(categoryDir) } catch { continue }
+    for (const skillDirName of skillDirs) {
+      const skillDir = join(categoryDir, skillDirName)
+      const skillFile = join(skillDir, 'SKILL.md')
+      if (existsSync(skillFile)) entries.push({ name: `${category}/${skillDirName}`, path: skillFile })
+    }
+  }
+  return entries
+}
+
 function frontmatterName(path: string): string | null {
   try {
     const text = readFileSync(path, 'utf8')
@@ -33,16 +57,19 @@ function frontmatterName(path: string): string | null {
   } catch { return null }
 }
 
-export function buildExtensionManifest(inputs: { cwd: string; home: string; config?: any }): ExtensionManifest {
+export function buildExtensionManifest(inputs: { cwd: string; home: string; config?: any; extraSkillDirs?: string[] }): ExtensionManifest {
   const { cwd, home, config } = inputs
   const skills: ManifestEntry[] = []
   const agents: ManifestEntry[] = []
   const commands: ManifestEntry[] = []
 
-  for (const [dir, source] of [[join(cwd, 'skills'), 'workspace'], [join(home, 'skills'), 'global']] as const) {
-    for (const file of listMarkdown(dir)) {
-      skills.push({ name: file.replace(/\.(md|mdc)$/, ''), path: join(dir, file), source })
-    }
+  const skillDirs: Array<[string, string]> = [
+    [join(cwd, 'skills'), 'workspace'],
+    [join(home, 'skills'), 'global'],
+    ...(inputs.extraSkillDirs || []).map((dir): [string, string] => [dir, 'bundled'])
+  ]
+  for (const [dir, source] of skillDirs) {
+    for (const entry of listSkillEntries(dir)) skills.push({ ...entry, source })
   }
   for (const [dir, source] of [[join(cwd, '.agents', 'agents'), 'workspace'], [join(home, 'agents'), 'global']] as const) {
     for (const file of listMarkdown(dir)) {

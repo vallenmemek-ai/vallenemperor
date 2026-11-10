@@ -823,8 +823,7 @@ export async function runCli(options = {}) {
         closeStream(footer)
         if (result.completionStatus === 'incomplete') displayLine(color('Turn incomplete; check remaining work and errors above.', ANSI.yellow))
         if (!streamed) printResponse(result.response, { markdown: true, footer })
-        if (result?.response) state.lastReplies = [...(state.lastReplies || []), String(result.response)].slice(-10)
-        lastTurnText = String(result?.response || '')
+              lastTurnText = String(result?.response || '')
         if (result.artifacts?.summary) displayLine(result.artifacts.summary)
         if (result.artifacts?.dir) displayLine(color(`artifacts: ${result.artifacts.dir}`, 'dim'))
       } catch (error) {
@@ -1163,7 +1162,6 @@ export async function runOneShot(agent, prompt, { core, json = false, stdout = p
     return { result, denied: gate.denied }
   }
   stdout.write(`${String(result.response || '').trim()}\n`)
-  if (result?.response) state.lastReplies = [...(state.lastReplies || []), String(result.response)].slice(-10)
   if (result.artifacts?.summary) stdout.write(`${result.artifacts.summary}\n`)
   if (result.artifacts?.dir) stdout.write(`artifacts: ${result.artifacts.dir}\n`)
   return { result, denied: gate.denied }

@@ -84,7 +84,10 @@ test('context files are discovered up the tree and reported with token estimates
     })
     assert.match(report, /window {3}: 1000 \/ 10000 tokens \(10%\)/)
     assert.match(report, /skills {3}: 1 indexed/)
-    assert.match(report, /tools {4}: 2 schemas/)
+    assert.match(report, /tools {4}: 2 schemas · ~\d+ tokens/)
+    // Token estimates must be derived from the real character counts (chars/4), not from the digits of a number.
+    const schemaChars = '{"name":"read_file"}'.length + '{"name":"write_file"}'.length
+    assert.match(report, new RegExp(`tools {4}: 2 schemas · ~${Math.ceil(schemaChars / 4).toLocaleString()} tokens`))
     assert.match(report, /Context files \(\d+\)/)
     assert.match(report, /AGENTS\.md/)
     assert.match(report, /CLAUDE\.md/)

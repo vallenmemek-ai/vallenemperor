@@ -390,3 +390,20 @@ A formatter that blocks or fails a turn would be worse than no formatter.
 
 **Consequence.** Diagnostics must never print secrets; `dump` is the canonical example. Formatter output
 is truncated and surfaced as a thinking note, never as a tool error.
+
+---
+
+## D28 — Audit findings that were real bugs (fixed in 999.999.1016)
+
+Four defects found by auditing the shipped binary rather than the test suite:
+
+1. **One-shot runs crashed after answering** — `runOneShot` referenced the interactive `state` object,
+   so every `-p` run printed the answer and then exited 1 with `state is not defined`. Regression test
+   added in `vallencli/tests/oneshot.test.mjs`.
+2. **`/context all` token estimates were nonsense** — `estimateTokens(String(chars))` measured the digits
+   of a number ("index ~1 tokens"). Now `Math.ceil(chars / 4)`, asserted against real character counts.
+3. **`/extensions` under-reported skills** — the manifest only read top-level `.md` files, so a bundled
+   library of 91 skills showed as `Skills (1)`. It now walks `<category>/<name>/SKILL.md` and matches the
+   loader's count.
+4. **`/journey` did not exist** although the roadmap documents it. It is now an alias that routes to
+   `/skills journey` inside the local command handler (never sent to the model).

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { applyRuntimeOverrides, createOneShotApproval, isSlashCommandLine, parseArgs, runOneShotCommand } from '../src/cli.mjs'
+import { applyRuntimeOverrides, createOneShotApproval, isSlashCommandLine, parseArgs, runOneShot, runOneShotCommand } from '../src/cli.mjs'
 
 function sink() {
   const chunks = []
@@ -170,4 +170,25 @@ test('--json wraps other command results in an envelope', async () => {
   assert.equal(parsed.command, '/model')
   assert.equal(parsed.handled, true)
   assert.equal(parsed.response, 'plain text answer')
+})
+
+test('runOneShot completes a real turn without touching interactive state', async () => {
+  const out = sink()
+  const agent = {
+    config: { mcpServers: {} },
+    getSessionId: () => 'oneshot-session',
+    runTurn: async () => ({
+      response: 'hello from the model',
+      promptTokens: 10,
+      completionTokens: 4,
+      totalTokens: 14,
+      artifacts: { created: [], changed: [], saved: [], verification: [], dir: null }
+    })
+  }
+  const core = fakeCore()
+  const result = await runOneShot(agent, 'say hello', { core, stdout: out })
+  assert.equal(result.result.response, 'hello from the model')
+  assert.match(out.text(), /hello from the model/)
+  // Regression: a stray `state.` reference here crashed every one-shot run after the answer.
+  assert.doesNotMatch(out.text(), /state is not defined/)
 })

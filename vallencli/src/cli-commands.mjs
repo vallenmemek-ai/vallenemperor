@@ -398,6 +398,9 @@ export function createLocalCommandHandler(context) {
       printResponse(`Process CPU: ${((cpu.user + cpu.system) / 1e6 / elapsed * 100).toFixed(1)}%\nRSS: ${(rss / 1048576).toFixed(1)} MiB`)
       return true
     }
+    if (cmd === '/journey') {
+      return await localCommand('/skills journey')
+    }
     if (cmd === '/skills') {
       const sub = (args[0] || '').toLowerCase()
       const name = args[1]

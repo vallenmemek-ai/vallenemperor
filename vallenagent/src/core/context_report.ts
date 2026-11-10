@@ -76,13 +76,13 @@ export function buildContextReport(inputs: ContextReportInputs): string {
   const skills = inputs.skills || []
   if (skills.length) {
     const indexChars = skills.reduce((total, skill) => total + skill.name.length + (skill.description || '').length + 8, 0)
-    lines.push(`  skills   : ${skills.length} indexed · index ~${estimateTokens(String(indexChars))} tokens (loaded bodies cost extra)`)
+    lines.push(`  skills   : ${skills.length} indexed · index ~${Math.ceil(indexChars / 4).toLocaleString()} tokens (loaded bodies cost extra)`)
   }
 
   const schemas = inputs.toolSchemas || []
   if (schemas.length) {
     const schemaChars = schemas.reduce((total, schema) => total + schema.length, 0)
-    lines.push(`  tools    : ${schemas.length} schemas · ~${estimateTokens(String(schemaChars))} tokens`)
+    lines.push(`  tools    : ${schemas.length} schemas · ~${Math.ceil(schemaChars / 4).toLocaleString()} tokens`)
   }
 
   const files = findContextFiles(inputs.cwd)

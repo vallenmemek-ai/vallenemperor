@@ -209,6 +209,45 @@ test('/queue, /rewind and /goal drive the session controls', async () => {
   assert.equal(goal, null)
 })
 
+test('/journey is an alias for /skills journey', async t => {
+  const { mkdtempSync, rmSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const home = mkdtempSync(join(tmpdir(), 'vallen-journey-'))
+  const previous = process.env.VALLENEMPEROR_HOME
+  process.env.VALLENEMPEROR_HOME = home
+  t.after(() => {
+    if (previous === undefined) delete process.env.VALLENEMPEROR_HOME
+    else process.env.VALLENEMPEROR_HOME = previous
+    rmSync(home, { recursive: true, force: true })
+  })
+  const printed = []
+  const handler = createLocalCommandHandler({
+    agent: {
+      config: { providers: {}, terminal: { cwd: process.cwd() } },
+      getSessionId: () => 'journey-session',
+      getContextStats: () => ({ turns: 1 }),
+      skillLoader: { list: () => [] }
+    },
+    core,
+    state: {},
+    output: { isTTY: false, columns: 80, write: () => true },
+    printResponse: text => printed.push(String(text)),
+    readHiddenToken: async () => ({ value: '' }),
+    settleApproval: () => {},
+    enqueue: () => {},
+    out: () => {},
+    refreshStatus: () => {},
+    healthCheck: async () => [],
+    enterShell: async () => {},
+    runTurn: async () => {},
+    displayLine: text => printed.push(String(text))
+  })
+
+  assert.equal(await handler('/journey'), true, 'the alias is handled locally, not sent to the model')
+  assert.match(printed.join('\n'), /Nothing learned yet|skill/i)
+})
+
 test('completion scripts exist for bash, zsh and fish, and routing works', () => {
   for (const shell of ['bash', 'zsh', 'fish']) {
     const script = completionScript(shell)

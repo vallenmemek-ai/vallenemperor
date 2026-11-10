@@ -73,15 +73,24 @@ test('the extension manifest lists skills, agents, commands, hooks and MCP serve
     mkdirSync(join(cwd, '.vallenemperor', 'commands'), { recursive: true })
     writeFileSync(join(cwd, '.vallenemperor', 'commands', 'ship.md'), '# ship\n')
 
-    const manifest = buildExtensionManifest({ cwd, home, config: { hooks: { pre_tool: [{ command: 'echo hi' }] }, mcpServers: { github: {} } } })
-    assert.deepEqual(manifest.skills.map(entry => entry.name).sort(), ['deploy', 'review'])
+    // Bundled layouts: <dir>/<category>/<name>/SKILL.md and <dir>/<name>.md
+    const bundled = join(home, 'bundled-skills')
+    mkdirSync(join(bundled, 'creative', 'video'), { recursive: true })
+    writeFileSync(join(bundled, 'creative', 'video', 'SKILL.md'), '# video\n')
+    writeFileSync(join(bundled, 'top-level.md'), '# top\n')
+
+    const manifest = buildExtensionManifest({ cwd, home, config: { hooks: { pre_tool: [{ command: 'echo hi' }] }, mcpServers: { github: {} } }, extraSkillDirs: [bundled] })
+    const skillNames = manifest.skills.map(entry => entry.name).sort()
+    assert.deepEqual(skillNames.filter(name => !name.includes('/')), ['deploy', 'review', 'top-level'])
+    assert.ok(skillNames.includes('creative/video'), 'nested SKILL.md layouts are discovered')
+    assert.equal(manifest.skills.filter(entry => entry.source === 'bundled').length, 2)
     assert.equal(manifest.agents[0].name, 'helper')
     assert.equal(manifest.commands[0].name, 'ship')
     assert.equal(manifest.hooks.length, 1)
     assert.deepEqual(manifest.mcp, ['github'])
 
     const text = formatManifest(manifest)
-    assert.match(text, /Skills \(2\)/)
+    assert.match(text, /Skills \(4\)/)
     assert.match(text, /Custom agents \(1\)/)
     assert.match(text, /MCP servers \(1\)/)
 
