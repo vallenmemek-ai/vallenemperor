@@ -1040,6 +1040,7 @@ export class AIAgent {
       this.verification.markWorkspaceEdited()
     }
     applyToolResult({
+      sessionId: this.sessionId,
       verification: this.verification,
       dirty: this.verificationDirty,
       verified: this.verificationVerified,

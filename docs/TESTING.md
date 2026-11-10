@@ -72,6 +72,7 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 | Browser gate + prompt triggers | `vallenagent/tests/browser_gate.test.mjs` |
 | /browser command | `vallencli/tests/browser_command.test.mjs` |
 | Sandbox policy + write guards | `vallenagent/tests/sandbox.test.mjs` |
+| Read dedup / loop / path policy / stale patch / review prompt | `vallenagent/tests/tool_maturity.test.mjs` |
 | /sandbox command | `vallencli/tests/sandbox_command.test.mjs` |
 | /artifact panel, /btw, /fork | `vallencli/tests/artifact_panel_btw.test.mjs` |
 | Engine session fork | `vallenagent/tests/fork_session.test.mjs` |
@@ -97,6 +98,8 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
   opt-in, write_file/patch/patch_batch denials, reads still allowed.
 - **Review surfaces**: artifact list/preview, `/btw` never starting a main turn, `/fork` persisting
   both sessions and refusing to fork a subagent.
+- **Tool economy**: duplicate read stub + `force`, loop threshold, streak reset by other tools,
+  credential/instruction deny lists, stale-baseline refusal, review prompt contracts.
 - **CLI**: argument parsing, config subcommands, `/model` picker, renderer, installer, symlink bin.
 - **Gateway**: pairing (single use, attempts), allowlist, rate limit, approve/deny callbacks.
 - **Config**: provider presets valid, missing `active`/`base_url` reported clearly.

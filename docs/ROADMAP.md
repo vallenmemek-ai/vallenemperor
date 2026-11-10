@@ -172,15 +172,23 @@ tools stateful (dedup/staleness/locks) and make the learning loop trustworthy.
 
 | # | Item | Why | Effort | Status |
 | --- | --- | --- | --- | --- |
-| P1b.1 | Read dedup + loop detection: re-reading an unchanged file returns a stub; `read → read → read` is detected | stops silent context burn; Hermes keeps this state across compaction | M | `[ ]` |
-| P1b.2 | Staleness warning on every patch (not only when `expected_hash` is passed) | stale edits are our most expensive failure | S | `[ ]` |
-| P1b.3 | Sensitive-path deny list (`.ssh`, `.env`, `*.pem`, keychains) + protected instruction files always ask | blocks credential exfiltration and self-rewriting of `AGENTS.md`/`RULES.md` | S | `[ ]` |
+| P1b.1 | Read dedup + loop detection: re-reading an unchanged file returns a stub; `read → read → read` is detected | stops silent context burn; Hermes keeps this state across compaction | M | `[x]` |
+| P1b.2 | Staleness warning on every patch (not only when `expected_hash` is passed) | stale edits are our most expensive failure | S | `[x]` |
+| P1b.3 | Sensitive-path deny list (`.ssh`, `.env`, `*.pem`, keychains) + protected instruction files always ask | blocks credential exfiltration and self-rewriting of `AGENTS.md`/`RULES.md` | S | `[x]` |
 | P1b.4 | Per-path write lock for concurrent subagents | worktree isolation does not protect a shared file | S–M | `[ ]` |
 | P1b.5 | Git diff modes for `/diff` (`working` / `staged` / `all` / `session`, untracked folded in) | users expect `git diff` semantics | S | `[ ]` |
-| P1b.6 | Review prompt: DO-NOT-CAPTURE list + lesson-layer contract (procedure-first, pitfall = rule + why, no PR numbers, one rule per lesson, fix in place) | this is why Hermes skills read like a handbook and ours drift into logs | S | `[ ]` |
+| P1b.6 | Review prompt: DO-NOT-CAPTURE list + lesson-layer contract (procedure-first, pitfall = rule + why, no PR numbers, one rule per lesson, fix in place) | this is why Hermes skills read like a handbook and ours drift into logs | S | `[x]` |
 | P1b.7 | Cache-aware review fork (inherit provider/model/cached system prompt) | makes frequent reviews affordable | M | `[ ]` |
 | P1b.8 | Pending/staged memory & skill writes (`pending/{memory,skills}/<id>.json`) | review before a lesson becomes permanent | M | `[ ]` |
 | P1b.9 | `/learn <source>` — capture a session/doc/dir as a reusable skill | the highest-intent learning request has no path today | S | `[ ]` |
+
+**Evidence (P1b.1, P1b.2, P1b.3, P1b.6 — done).** `vallenagent/tests/tool_maturity.test.mjs` (6 tests):
+duplicate read returns a stub (`content` omitted, `sha256` kept) and `force: true` re-reads; three
+identical reads in a row are flagged as a loop while a different tool resets the streak; `.env`,
+`.ssh/*`, `*.pem`, `.npmrc` are hard-denied; `AGENTS.md`/`RULES.md`/`CLAUDE.md`/`GEMINI.md`/`SOUL.md`
+are denied unless `VALLENEMPEROR_ALLOW_INSTRUCTION_EDITS=1`; a patch against externally changed
+content is refused with "changed since read_file"; the review prompt contains the DO-NOT-CAPTURE and
+SKILL SHAPE contracts. Suite at the time: **357/357 + 122/122**.
 
 Acceptance for the whole package: a scripted session that re-reads a file twice must produce a stub on
 the second read; a patch against externally changed content must be refused with a staleness message;

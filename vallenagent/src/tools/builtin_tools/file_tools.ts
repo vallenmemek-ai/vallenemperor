@@ -9,6 +9,8 @@ import { captureTypeScriptDiagnostics, newTypeScriptDiagnostics } from '../../co
 import { snapshotBeforeWrite } from '../../session/checkpoint'
 import { registry, ToolContext, ToolSchema } from '../tools'
 import { checkPathAllowed } from '../../core/sandbox'
+import { checkWritePolicy } from '../../core/path_policy'
+import { LOOP_THRESHOLD, noteRead } from '../read_tracker'
 
 function generateUnifiedFileDiff(oldText: string, newText: string, filePath: string): string {
   if (oldText === '') {
@@ -134,7 +136,8 @@ export function registerFileTools(): void {
       properties: {
         path: { type: 'string', description: 'Path to the file to read (absolute, relative, or ~/path)' },
         offset: { type: 'integer', description: 'Line number to start reading from (1-indexed, default: 1)' },
-        limit: { type: 'integer', description: 'Maximum number of lines to read (default: 2000, max: 2000)' }
+        limit: { type: 'integer', description: 'Maximum number of lines to read (default: 2000, max: 2000)' },
+        force: { type: 'boolean', description: 'Re-read even when this session already read the same unchanged range (default: false)' }
       },
       required: ['path']
     }
@@ -205,6 +208,30 @@ export function registerFileTools(): void {
         const allLines = fileContent.split('\n')
         const offset = Math.max(1, Number(args.offset) || 1)
         const limit = Math.max(0, Math.min(2000, Number(args.limit) || 2000))
+        const contentHash = createHash('sha256').update(fileContent).digest('hex')
+
+        if (args.force !== true) {
+          const verdict = noteRead({
+            sessionId: context.sessionId,
+            path: fullPath,
+            hash: contentHash,
+            offset,
+            limit,
+            totalLines: allLines.length
+          })
+          if (verdict !== 'ok') {
+            return JSON.stringify({
+              path: fullPath,
+              sha256: contentHash,
+              total_lines: allLines.length,
+              duplicate: verdict === 'duplicate',
+              loop: verdict === 'loop',
+              note: verdict === 'loop'
+                ? `Repeated read of the same range ${LOOP_THRESHOLD} times in a row and the file is unchanged (sha256 ${contentHash.slice(0, 12)}). Stop re-reading: act on what you have, or pass force: true.`
+                : `This range was already read and the file is unchanged (sha256 ${contentHash.slice(0, 12)}). Content omitted to save context; pass force: true to see it again.`
+            })
+          }
+        }
 
         const startIdx = offset - 1
         const sliceLines = allLines.slice(startIdx, startIdx + limit)
@@ -243,7 +270,7 @@ export function registerFileTools(): void {
           offset,
           limit,
           // Lets the agent pass expected_hash to patch and detect a concurrent edit.
-          sha256: createHash('sha256').update(fileContent).digest('hex')
+          sha256: contentHash
         }
 
         if (truncated) {
@@ -287,6 +314,8 @@ export function registerFileTools(): void {
         rawPath = join(homedir(), rawPath.slice(2))
       }
       const fullPath = isAbsolute(rawPath) ? rawPath : resolve(basePath, rawPath)
+      const policyError = checkWritePolicy(fullPath)
+      if (policyError) return JSON.stringify({ error: policyError })
       const blocked = sandboxWriteError(fullPath, context)
       if (blocked) return JSON.stringify({ error: blocked })
       const content = String(args.content ?? '')
@@ -385,6 +414,8 @@ export function registerFileTools(): void {
         rawPath = join(homedir(), rawPath.slice(2))
       }
       const fullPath = isAbsolute(rawPath) ? rawPath : resolve(basePath, rawPath)
+      const policyError = checkWritePolicy(fullPath)
+      if (policyError) return JSON.stringify({ error: policyError })
       const blocked = sandboxWriteError(fullPath, context)
       if (blocked) return JSON.stringify({ error: blocked })
 
@@ -693,6 +724,8 @@ function applyV4APatch(text: string, baseDir: string, context: ToolContext): Rec
         let rawPath = header[2]
         if (rawPath.startsWith('~/')) rawPath = join(homedir(), rawPath.slice(2))
         const path = isAbsolute(rawPath) ? rawPath : resolve(baseDir, rawPath)
+        const policyError = checkWritePolicy(path)
+        if (policyError) throw new Error(policyError)
         const blocked = sandboxWriteError(path, context)
         if (blocked) throw new Error(blocked)
         if (edits.has(path)) throw new Error(`Duplicate file section: ${rawPath}`)
@@ -754,6 +787,8 @@ function applyPatchBatch(files: any, baseDir: string, context: ToolContext): Rec
       let rawPath = String(edit.path || '')
       if (rawPath.startsWith('~/')) rawPath = join(homedir(), rawPath.slice(2))
       const path = isAbsolute(rawPath) ? rawPath : resolve(baseDir, rawPath)
+      const policyError = checkWritePolicy(path)
+      if (policyError) throw new Error(policyError)
       const blocked = sandboxWriteError(path, context)
       if (blocked) throw new Error(blocked)
       if (seen.has(path)) throw new Error(`Duplicate path in batch: ${rawPath}`)

@@ -278,3 +278,21 @@ gives a safe branch to experiment in without losing the original thread.
 **Consequence.** `/btw` uses the same provider config as the main agent — if the model is broken, the
 side question fails too, and it must report that instead of guessing. `forkSession()` throws for
 subagents because a subagent has no user-facing session.
+
+---
+
+## D21 — Reads are deduplicated; credentials and instruction files are write-protected
+
+**Decision.** `read_file` keeps per-session state: an unchanged range read twice returns a stub
+(`duplicate: true`, `sha256` kept, body omitted, `force: true` escapes), and three identical reads in
+a row are a loop. Any other tool call resets the streak. Writes are classified by
+`core/path_policy.ts`: credential material is a hard deny with no override, instruction files
+(`AGENTS.md`, `RULES.md`, …) are denied unless `VALLENEMPEROR_ALLOW_INSTRUCTION_EDITS=1`.
+
+**Why.** Hermes demonstrated both: dedup is the difference between a 3-hour session and a session
+that drowns in repeated file bodies, and an agent that can silently rewrite its own rules is one
+prompt injection away from removing its guardrails. Staleness blocking already existed; a test now
+pins it.
+
+**Consequence.** The stub is a *success* result, not an error — the model must learn to act on what it
+already has. Never widen the deny list by default; adding a path class means adding a test.

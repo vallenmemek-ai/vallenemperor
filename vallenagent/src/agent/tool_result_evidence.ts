@@ -1,4 +1,5 @@
 import { classifyToolResult } from './tool_evidence'
+import { noteOtherTool } from '../tools/read_tracker'
 import { recordArtifacts, type TurnArtifactState } from './turn_artifacts'
 import type { VerificationLedger, VerificationGroup } from './verification'
 
@@ -10,6 +11,8 @@ import type { VerificationLedger, VerificationGroup } from './verification'
  * explicit-skill marker. Kept out of agent.ts so the tool loop stays readable.
  */
 export interface ToolResultContext {
+  /** Session id, used to reset the read-loop streak when another tool runs. */
+  sessionId?: string
   verification: VerificationLedger
   dirty: Set<VerificationGroup>
   verified: Set<VerificationGroup>
@@ -25,6 +28,7 @@ export function applyToolResult(
   args: Record<string, any>,
   result: string
 ): void {
+  if (toolName !== 'read_file' && toolName !== 'search_files') noteOtherTool(context.sessionId)
   const evidence = classifyToolResult(toolName, args, result, { isSubagent: context.isSubagent })
 
   if (evidence.edited) {

@@ -203,6 +203,18 @@ its own to browse the web.
 The system prompt (`# Delegation, Artifacts and Plan Mode`) states the triggers: background/branch
 delegation, screenshot proof for UI work, and plan-first for changes touching more than five files.
 
+## 5e2. Read tracking and path policy
+
+- `tools/read_tracker.ts` — per-session economy for `read_file`: a repeated unchanged range returns a
+  stub (`duplicate: true`, `sha256` kept, body omitted, `force: true` to override), and three identical
+  reads in a row are flagged as a loop. Any other tool call resets the streak (`applyToolResult` →
+  `noteOtherTool`). State is in-process, bounded (32 sessions × 128 files).
+- `core/path_policy.ts` — write classes: **sensitive** (`.ssh`, `.aws`, `.gnupg`, `.env`, `.env.*`,
+  `*.pem`, `*.key`, `.npmrc`, `.netrc`, …) is a hard deny with no override; **instruction**
+  (`AGENTS.md`, `RULES.md`, `CLAUDE.md`, `GEMINI.md`, `SOUL.md`, `config.json`) is denied unless
+  `VALLENEMPEROR_ALLOW_INSTRUCTION_EDITS=1`. Guards run in `write_file`, `patch`, `patch_batch`,
+  `apply_patch` before the sandbox check.
+
 ## 5f. Filesystem sandbox
 
 `core/sandbox.ts` bounds file **writes** (reads stay allowed):
@@ -339,6 +351,7 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | Side questions / forks | `/btw` (isolated side agent) + `AIAgent.forkSession()` |
 | Browser gating | `core/browser_gate.ts` + `/browser` command |
 | Sandbox behaviour | `core/sandbox.ts` + guards in `file_tools.ts` |
+| Read economy / write classes | `tools/read_tracker.ts`, `core/path_policy.ts` |
 | New bundled skill | `.vallenemperor/skills/<category>/<name>/SKILL.md` with `name` + `description` frontmatter |
 | New config key | `core/types.ts`, `core/config.ts` (default + validation), docs |
 
@@ -356,6 +369,8 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | Gateway/Telegram auth errors | `gateway/store.ts` config + `telegram.ts` pairing logic |
 | `/artifacts` says "No artifacts yet" | the turn changed no files, ran no verification, and captured no screenshot — nothing to record |
 | Screenshot tool fails | playwright missing (`pip install playwright && playwright install chromium`) or the page did not load |
+| `read_file` returns a note instead of content | the range was already read and the file is unchanged — pass `force: true`, or read a different range |
+| Write refused: "credential file" / "instruction file" | path policy: credentials are never writable; instruction files need `VALLENEMPEROR_ALLOW_INSTRUCTION_EDITS=1` |
 | `/agents` is empty after a delegation | the subagent ran in the foreground (no `background: true`) — those are not registered |
 | `workspace="branch"` fails | the working directory is not a git repository, or `git worktree add` failed (dirty index, branch exists) |
 | A worktree keeps the branch after a run | by design; `/agents clean` removes finished worktrees |
