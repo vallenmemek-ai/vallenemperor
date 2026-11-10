@@ -81,6 +81,8 @@ export class AIAgent {
   private backgroundReviewGate = new ReviewRunGate()
   /** A note the user injected mid-turn; delivered after the next tool call. */
   private pendingSteer: string | null = null
+  /** Standing goal for the continuation loop (`/goal`). */
+  private goal: { text: string; status: 'active' | 'paused' | 'done' | 'cleared'; attempts: number; maxTurns: number } | null = null
   private backgroundReviewController: AbortController | null = null
   private backgroundReviewAgent: AIAgent | null = null
   private backgroundReviewTimeout: ReturnType<typeof setTimeout> | null = null
@@ -234,6 +236,51 @@ export class AIAgent {
 
   getSessionId(): string {
     return this.sessionId
+  }
+
+  /** Standing goal API (see agent/goal.ts). */
+  setGoal(text: string, maxTurns = 20): { text: string; status: string; attempts: number; maxTurns: number } {
+    const goal = String(text || '').trim()
+    if (!goal) throw new Error('goal text is required')
+    this.goal = { text: goal.slice(0, 2000), status: 'active', attempts: 0, maxTurns: Math.max(1, Math.min(100, Number(maxTurns) || 20)) }
+    return this.goal
+  }
+
+  getGoal() { return this.goal }
+
+  updateGoal(patch: Partial<{ status: 'active' | 'paused' | 'done' | 'cleared'; attempts: number }>) {
+    if (this.goal) Object.assign(this.goal, patch)
+    return this.goal
+  }
+
+  clearGoal(): void { this.goal = null }
+
+  /** User prompts in order, for `/rewind`. */
+  listUserPrompts(): Array<{ index: number; text: string }> {
+    return this.conversationHistory
+      .filter(message => message.role === 'user' && typeof message.content === 'string' && message.content.trim())
+      .map((message, index) => ({ index: index + 1, text: String(message.content).slice(0, 200) }))
+  }
+
+  /** Cut the conversation back to just before user prompt `n` (1-based); returns the prompt text. */
+  rewindToPrompt(n: number): string | null {
+    const prompts = this.conversationHistory.filter(message => message.role === 'user' && typeof message.content === 'string' && message.content.trim())
+    const target = prompts[Number(n) - 1]
+    if (!target) return null
+    const cut = this.conversationHistory.indexOf(target)
+    if (cut < 0) return null
+    this.conversationHistory.splice(cut)
+    try { this.saveCurrentSession() } catch { }
+    return String(target.content)
+  }
+
+  /** Fork the session and then rewind the fork to before prompt `n`. */
+  forkAtPrompt(n: number): { sessionId: string; prompt: string } | null {
+    const prompt = this.listUserPrompts()[Number(n) - 1]
+    if (!prompt) return null
+    const sessionId = this.forkSession()
+    const text = this.rewindToPrompt(n)
+    return text ? { sessionId, prompt: text } : null
   }
 
   /** Queue a mid-turn note (delivered after the next tool call, no interrupt). */

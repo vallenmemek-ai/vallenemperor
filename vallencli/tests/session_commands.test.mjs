@@ -141,6 +141,74 @@ test('/steer queues a mid-turn note and /<skill> runs a loaded skill', async () 
   assert.match(turns[0].message, /Task: production/)
 })
 
+test('/queue, /rewind and /goal drive the session controls', async () => {
+  const printed = []
+  const rewinds = []
+  let goal = null
+  const state = {}
+  const agent = {
+    config: { providers: {}, terminal: { cwd: process.cwd() } },
+    getSessionId: () => 'ctrl-session',
+    getContextStats: () => ({ turns: 1 }),
+    listUserPrompts: () => [{ index: 1, text: 'first task' }, { index: 2, text: 'second task' }],
+    rewindToPrompt: n => { rewinds.push(n); return 'second task' },
+    forkAtPrompt: n => { rewinds.push(`fork:${n}`); return { sessionId: 'session-fork', prompt: 'first task' } },
+    setGoal: text => { goal = { text, status: 'active', attempts: 0, maxTurns: 20 }; return goal },
+    getGoal: () => goal,
+    updateGoal: patch => { if (goal) Object.assign(goal, patch); return goal },
+    clearGoal: () => { goal = null }
+  }
+  const handler = createLocalCommandHandler({
+    agent,
+    core,
+    state,
+    output: { isTTY: false, columns: 80, write: () => true },
+    printResponse: text => printed.push(String(text)),
+    readHiddenToken: async () => ({ value: '' }),
+    settleApproval: () => {},
+    enqueue: () => {},
+    out: () => {},
+    refreshStatus: () => {},
+    healthCheck: async () => [],
+    enterShell: async () => {},
+    runTurn: async () => {},
+    displayLine: text => printed.push(String(text))
+  })
+
+  await handler('/queue add run the tests')
+  await handler('/queue add lint the code')
+  assert.deepEqual(state.queuedPrompts, ['run the tests', 'lint the code'])
+  printed.length = 0
+  await handler('/queue list')
+  assert.match(printed.join('\n'), /1\. run the tests/)
+  await handler('/queue rm 1')
+  assert.deepEqual(state.queuedPrompts, ['lint the code'])
+  await handler('/queue clear')
+  assert.deepEqual(state.queuedPrompts, [])
+
+  printed.length = 0
+  await handler('/rewind')
+  assert.match(printed.join('\n'), /Recent prompts/)
+  await handler('/rewind 2')
+  assert.match(printed.join('\n'), /Rewound to before prompt 2/)
+  await handler('/rewind fork 1')
+  assert.match(printed.join('\n'), /Forked into session-fork at prompt 1/)
+  assert.deepEqual(rewinds, [2, 'fork:1'])
+
+  printed.length = 0
+  await handler('/goal ship the release')
+  assert.equal(goal.text, 'ship the release')
+  assert.match(printed.join('\n'), /Goal set \(max 20 attempts\)/)
+  await handler('/goal pause')
+  assert.equal(goal.status, 'paused')
+  await handler('/goal resume')
+  assert.equal(goal.status, 'active')
+  await handler('/goal status')
+  assert.match(printed.join('\n'), /Goal \(active\)/)
+  await handler('/goal clear')
+  assert.equal(goal, null)
+})
+
 test('completion scripts exist for bash, zsh and fish, and routing works', () => {
   for (const shell of ['bash', 'zsh', 'fish']) {
     const script = completionScript(shell)

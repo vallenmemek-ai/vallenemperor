@@ -353,6 +353,11 @@ Review surfaces: `/artifact` lists this session's artifacts and opens one by num
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
 `/fork` clones the conversation into a new session id.
 
+Session control: `/queue add|list|rm|clear` queues prompts that drain after the current turn;
+`/rewind [n|fork n]` cuts the conversation back to before prompt *n* (or forks first);
+`/goal <objective>` sets a standing goal whose continuation is judged after every turn by
+`agent/goal.ts` (DONE/CONTINUE, fails safe to DONE, capped by `maxTurns`).
+
 Mid-turn control: `/steer <note>` injects a system note immediately after the next tool batch
 (`AIAgent.steer()` → consumed in the loop), so direction changes do not require an interrupt.
 `/<skill-name>` runs a loaded skill directly (body + `Task: <args>`), and `/context all` prints the

@@ -720,6 +720,41 @@ export async function runCli(options = {}) {
   refreshStatus()
   attachReader()
 
+  let lastTurnText = ''
+
+  /** After a turn: drain the prompt queue, then honour an active /goal. */
+  function scheduleFollowUp(lastReply) {
+    if (state.closing) return
+    const queue = state.queuedPrompts || []
+    if (queue.length) {
+      const next = queue.shift()
+      displayLine(color(`Running queued prompt (${queue.length} left): ${String(next).slice(0, 80)}`, 'dim'))
+      setTimeout(() => { void runTurn(next) }, 0)
+      return
+    }
+    const goal = agent.getGoal?.()
+    if (!goal || goal.status !== 'active' || goal.attempts >= goal.maxTurns) return
+    void (async () => {
+      try {
+        const verdict = await core.judgeGoal({
+          provider: agent.provider,
+          model: agent.provider?.model || 'default',
+          goal: goal.text,
+          lastReply
+        })
+        if (verdict === 'done') {
+          agent.updateGoal?.({ status: 'done' })
+          displayLine(color(`Goal reached after ${goal.attempts} continuation(s).`, 'dim'))
+          return
+        }
+        agent.updateGoal?.({ attempts: goal.attempts + 1 })
+        const updated = agent.getGoal?.()
+        displayLine(color(`Goal continues (attempt ${updated?.attempts}/${updated?.maxTurns}).`, 'dim'))
+        setTimeout(() => { void runTurn(core.buildContinuationPrompt(updated), '[goal] continuing…') }, 0)
+      } catch { }
+    })()
+  }
+
   async function runTurn(message, displayMessage = message) {
     state.turnStartedAt = Date.now()
     state.thinkingFaceIndex = Math.floor(Math.random() * THINKING_FACES.length)
@@ -784,6 +819,7 @@ export async function runCli(options = {}) {
         if (result.completionStatus === 'incomplete') displayLine(color('Turn incomplete; check remaining work and errors above.', ANSI.yellow))
         if (!streamed) printResponse(result.response, { markdown: true, footer })
         if (result?.response) state.lastReplies = [...(state.lastReplies || []), String(result.response)].slice(-10)
+        lastTurnText = String(result?.response || '')
         if (result.artifacts?.summary) displayLine(result.artifacts.summary)
         if (result.artifacts?.dir) displayLine(color(`artifacts: ${result.artifacts.dir}`, 'dim'))
       } catch (error) {
@@ -801,6 +837,7 @@ export async function runCli(options = {}) {
         state.activeTurn = null
         unlockInputEcho()
         refreshStatus()
+        scheduleFollowUp(lastTurnText)
       }
     })()
   }

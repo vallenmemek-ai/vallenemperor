@@ -84,7 +84,7 @@ export interface CommandResult {
 }
 
 const NOT_HANDLED: CommandResult = { handled: false, response: '' }
-const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer'])
+const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer', '/queue', '/rewind', '/goal'])
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -110,6 +110,9 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Sesi & model', name: '/title', args: '[nama]', desc: 'judul sesi' },
   { group: 'Sesi & model', name: '/history', args: '[n]', desc: 'riwayat percakapan terakhir' },
   { group: 'Sesi & model', name: '/steer', args: '<catatan>', desc: 'sisipkan arahan di tengah turn' },
+  { group: 'Sesi & model', name: '/queue', args: '[add|list|rm|clear] [teks]', desc: 'antrean prompt' },
+  { group: 'Sesi & model', name: '/rewind', args: '[n | fork n]', desc: 'kembali ke sebelum prompt ke-n' },
+  { group: 'Sesi & model', name: '/goal', args: '[teks|status|pause|resume|clear]', desc: 'tujuan tetap + loop lanjutan' },
   { group: 'Sesi & model', name: '/prompt', desc: 'tulis prompt di $EDITOR' },
   { group: 'Kerja', name: '/commands', desc: 'daftar custom command dari .vallenemperor/commands' },
   { group: 'Sesi & model', name: '/resume', args: '[id | nomor]', desc: 'lanjutkan sesi' },

@@ -102,6 +102,58 @@ export function createLocalCommandHandler(context) {
       }
       return true
     }
+    if (cmd === '/queue') {
+      const queue = state.queuedPrompts || (state.queuedPrompts = [])
+      const [sub, ...rest] = value.split(/\s+/).filter(Boolean)
+      if (!sub || sub === 'list') {
+        printResponse(queue.length ? queue.map((item, index) => `${index + 1}. ${item}`).join('\n') : 'Queue is empty. Add one with /queue add <prompt>.')
+        return true
+      }
+      if (sub === 'clear') { queue.length = 0; printResponse('Queue cleared.'); return true }
+      if (sub === 'rm') {
+        const index = Number(rest[0]) - 1
+        if (!Number.isInteger(index) || index < 0 || index >= queue.length) { printResponse('Usage: /queue rm <number> (see /queue list)'); return true }
+        const [removed] = queue.splice(index, 1)
+        printResponse(`Removed from queue: ${removed.slice(0, 80)}`)
+        return true
+      }
+      const promptText = sub === 'add' ? rest.join(' ').trim() : [sub, ...rest].join(' ')
+      if (!promptText) { printResponse('Usage: /queue add <prompt> | /queue list | /queue rm <n> | /queue clear'); return true }
+      queue.push(promptText)
+      printResponse(`Queued (${queue.length}): ${promptText.slice(0, 80)}`)
+      return true
+    }
+    if (cmd === '/rewind') {
+      const [first, second] = value.split(/\s+/).filter(Boolean)
+      const prompts = agent.listUserPrompts ? agent.listUserPrompts() : []
+      if (!prompts.length) { printResponse('No user prompts to rewind to.'); return true }
+      if (!first) {
+        printResponse(['Recent prompts (newest last):', ...prompts.slice(-10).map(item => `${item.index}. ${item.text}`), 'Use /rewind <n> to cut back to before prompt n, or /rewind fork <n> to branch first.'].join('\n'))
+        return true
+      }
+      if (first === 'fork') {
+        const result = agent.forkAtPrompt ? agent.forkAtPrompt(Number(second)) : null
+        printResponse(result ? `Forked into ${result.sessionId} at prompt ${second}. Prompt:\n${result.prompt}` : `No prompt ${second || ''}.`)
+        return true
+      }
+      const text = agent.rewindToPrompt ? agent.rewindToPrompt(Number(first)) : null
+      printResponse(text ? `Rewound to before prompt ${first}. Re-send or edit it:\n${text}` : `No prompt ${first}.`)
+      return true
+    }
+    if (cmd === '/goal') {
+      const [sub, ...rest] = value.split(/\s+/).filter(Boolean)
+      if (!sub || sub === 'status') { printResponse(core.formatGoal(agent.getGoal ? agent.getGoal() : null)); return true }
+      if (sub === 'clear') { agent.clearGoal?.(); printResponse('Goal cleared.'); return true }
+      if (sub === 'pause' || sub === 'resume') {
+        agent.updateGoal?.({ status: sub === 'pause' ? 'paused' : 'active' })
+        printResponse(`Goal ${sub === 'pause' ? 'paused' : 'resumed'}.`)
+        return true
+      }
+      const objective = [sub, ...rest].join(' ').trim()
+      const goal = agent.setGoal ? agent.setGoal(objective) : null
+      printResponse(goal ? `Goal set (max ${goal.maxTurns} attempts):\n${goal.text}` : 'Could not set a goal.')
+      return true
+    }
     if (cmd === '/steer') {
       if (!value) { printResponse('Usage: /steer <note> — delivered after the next tool call, without interrupting the turn.'); return true }
       const queued = agent.steer ? agent.steer(value) : false

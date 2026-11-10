@@ -259,6 +259,14 @@ skills index cost, tool-schema cost and every context file with a token estimate
 includes `.cursor/rules/*.mdc`). Tests: `vallenagent/tests/steer_context.test.mjs` (3) and
 `vallencli/tests/session_commands.test.mjs` (5). Suite at the time: **388/388 + 138/138**.
 
+**Evidence (R2, R6, R7 — done).** `/rewind` lists user prompts and cuts the conversation back to
+before prompt *n* (`AIAgent.rewindToPrompt`), `/rewind fork n` forks first so the original survives;
+`/goal` keeps a standing objective, and after each turn an auxiliary judge (`agent/goal.ts`) answers
+DONE/CONTINUE — a broken judge fails safe to DONE, and the continuation prompt caps at `maxTurns`
+(default 20). `/queue add|list|rm|clear` feeds a prompt queue that drains after the current turn.
+Tests: `vallenagent/tests/goal_rewind.test.mjs` (3) and `vallencli/tests/session_commands.test.mjs`
+(6). Suite at the time: **391/391 + 139/139**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -310,12 +318,12 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | # | Item | Why it matters | Effort | Status |
 | --- | --- | --- | --- | --- |
 | R1 | `/steer <text>` — inject a note after the next tool call, no interrupt | mid-turn control is the top ergonomic gap | M | `[x]` |
-| R2 | `/rewind [fork N]` — transcript browser: edit a past prompt or branch before it | fixes wrong turns without losing work | M | `[ ]` |
+| R2 | `/rewind [fork N]` — transcript browser: edit a past prompt or branch before it | fixes wrong turns without losing work | M | `[x]` |
 | R3 | `/save md\|json [redact]` — export the transcript | sharing, bug reports, redaction | S | `[x]` |
 | R4 | `/title`, `/history`, `/prompt` (`$EDITOR` compose) | tiny QoL wins | S | `[x]` |
 | R5 | `/<skill-name>` — invoke a skill directly as a command | skills become first-class commands | S | `[x]` |
-| R6 | `/goal` + `/subgoal` with an auxiliary judge loop | long-horizon autonomy with a stop condition | M | `[ ]` |
-| R7 | `/queue` management (list/edit/rm/move/clear) | multi-prompt workflow while a turn runs | S | `[ ]` |
+| R6 | `/goal` + `/subgoal` with an auxiliary judge loop | long-horizon autonomy with a stop condition | M | `[x]` |
+| R7 | `/queue` management (list/edit/rm/move/clear) | multi-prompt workflow while a turn runs | S | `[x]` |
 | R8 | `/context all` per-file context breakdown | answers "why is my AGENTS.md ignored?" | S | `[x]` |
 | R9 | `/worktree new\|list` for the main session | parallel human work without stashing | M | `[ ]` |
 | R10 | `vallenemperor sessions` (browse/export/prune) + `/autoprune` | session hygiene | S | `[ ]` |
