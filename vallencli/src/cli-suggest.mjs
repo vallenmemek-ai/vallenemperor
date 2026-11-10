@@ -56,7 +56,7 @@ export const COMMANDS = [
   { name: '/artifacts', desc: 'List session artifacts' },
   { name: '/btw', args: '<question>', desc: 'Side question, clean context' },
   { name: '/fork', desc: 'Clone conversation to a new session' },
-  { name: '/sandbox', args: '[status|workspace|off]', desc: 'Filesystem write boundary' },
+  { name: '/sandbox', args: '[status|workspace|off|terminal]', desc: 'Write boundary + terminal sandbox' },
   { name: '/permissions', desc: 'Effective permission summary' },
   { name: '/policy', args: '[tool] [allow|ask|deny]', desc: 'Per-tool policy' },
   { name: '/approvals', args: '[apply]', desc: 'Mine approvals into policy' },

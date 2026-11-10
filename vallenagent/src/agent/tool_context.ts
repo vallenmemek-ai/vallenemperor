@@ -56,6 +56,11 @@ export function buildToolContext(deps: ToolContextDeps): ToolContext {
     checkpointRoot: join(getVallenHome(), 'checkpoints'),
     toolCallId: deps.toolCallId,
     sandboxRoots: sandbox.roots.length ? sandbox.roots : undefined,
+    terminalSandbox: {
+      mode: (deps.config.terminal?.sandbox as any) || 'off',
+      network: deps.config.terminal?.sandbox_network === true,
+      roots: deps.config.terminal?.sandbox_roots
+    },
     workingDir: deps.config.terminal?.cwd || process.cwd(),
     fileReadCoverage: deps.fileReadCoverage,
     providerConfig: { ...getActiveProvider(deps.config), base_url: deps.provider.baseURL, model: deps.provider.model },

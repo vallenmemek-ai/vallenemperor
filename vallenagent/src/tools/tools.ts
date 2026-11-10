@@ -106,6 +106,8 @@ export interface ToolContext {
   toolWhitelist?: string[]
   /** When set, file writes must stay inside one of these roots (subagents and sandboxed main agents). */
   sandboxRoots?: string[]
+  /** Terminal sandbox settings resolved from config.terminal. */
+  terminalSandbox?: { mode: 'off' | 'auto' | 'required'; network: boolean; roots?: string[] }
   /** Apply a previously staged write without staging it again (/skills approve). */
   skipSkillStaging?: boolean
   mcpToolNames?: string[]

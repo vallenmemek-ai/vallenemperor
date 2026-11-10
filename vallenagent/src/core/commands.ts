@@ -12,6 +12,7 @@ import { formatSandboxStatus, sandboxPolicyFor } from './sandbox'
 import { collectWorkingDiff, formatDiffSummary } from './working_diff'
 import { currentHunk, formatHunkView, moveReview, revertHunk, startDiffReview } from './diff_viewer'
 import { createHandoff, deliverHandoff, formatHandoff } from './handoff'
+import { formatSandboxProbe } from './terminal_sandbox'
 import { formatCodeSearch, searchWorkspace } from './code_search'
 import { formatPendingList, listPendingWrites, readPendingWrite, removePendingWrite } from './pending_writes'
 import { browserToolsUnlocked } from './browser_gate'
@@ -149,7 +150,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Berkas', name: '/checkpoints', desc: 'daftar checkpoint berkas' },
   { group: 'Berkas', name: '/artifacts', desc: 'daftar artifact sesi (walkthrough, screenshot)' },
   { group: 'Berkas', name: '/artifact', args: '[nomor|last]', desc: 'panel review artifact sesi' },
-  { group: 'Berkas', name: '/sandbox', args: '[status|workspace|off]', desc: 'batas tulis filesystem agent' },
+  { group: 'Berkas', name: '/sandbox', args: '[status|workspace|off|terminal auto|required|off]', desc: 'batas tulis filesystem + sandbox terminal' },
   { group: 'Berkas', name: '/permissions', desc: 'ringkasan izin: approval, sandbox, browser, kredensial' },
   { group: 'Berkas', name: '/policy', args: '[tool] [allow|ask|deny|clear]', desc: 'aturan per-tool' },
   { group: 'Berkas', name: '/approvals', args: '[apply]', desc: 'tambang riwayat approval jadi policy' },
@@ -542,8 +543,32 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
       const policy = sandboxPolicyFor({ isSubagent: false, config: ctx.agent.config as any })
       return { handled: true, response: `${formatSandboxStatus(policy)}\nMode: ${current} · set with /sandbox workspace or /sandbox off` }
     }
+    if (mode === 'terminal') {
+      const action = String(args[1] || 'status').toLowerCase()
+      const terminalConfig = ((ctx.agent.config as any).terminal ||= {})
+      if (action === 'status') {
+        return {
+          handled: true,
+          response: [
+            `Terminal sandbox: ${terminalConfig.sandbox || 'off'}`,
+            `  ${formatSandboxProbe()}`,
+            `  network inside sandbox: ${terminalConfig.sandbox_network === true ? 'allowed' : 'blocked'}`,
+            'Set with /sandbox terminal auto|required|off'
+          ].join('\n')
+        }
+      }
+      if (!['auto', 'required', 'off'].includes(action)) return { handled: true, response: 'Usage: /sandbox terminal [auto|required|off]' }
+      terminalConfig.sandbox = action
+      saveConfig(ctx.agent.config)
+      return {
+        handled: true,
+        response: action === 'off'
+          ? 'Terminal sandbox OFF: shell commands run with your full user privileges.'
+          : `Terminal sandbox ${action.toUpperCase()}: shell commands run inside bubblewrap — filesystem read-only except the working directory, network ${terminalConfig.sandbox_network === true ? 'allowed' : 'blocked'}.${action === 'required' ? ' Commands are refused if bubblewrap is missing.' : ''}`
+      }
+    }
     if (!['workspace', 'on', 'off', 'unrestricted'].includes(mode)) {
-      return { handled: true, response: 'Usage: /sandbox [status|workspace|off]' }
+      return { handled: true, response: 'Usage: /sandbox [status|workspace|off|terminal auto|required|off]' }
     }
     const next = mode === 'workspace' || mode === 'on' ? 'workspace' : 'unrestricted'
     const agentConfig = ctx.agent.config as any

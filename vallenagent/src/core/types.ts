@@ -60,6 +60,12 @@ export interface AgentConfig {
   }
   terminal?: {
     cwd?: string
+    /** 'off' (default) | 'auto' (bubblewrap when present) | 'required' (refuse without it). */
+    sandbox?: 'off' | 'auto' | 'required'
+    /** Allow network inside the sandbox. Default false. */
+    sandbox_network?: boolean
+    /** Extra writable roots inside the sandbox (the working dir is always writable). */
+    sandbox_roots?: string[]
   }
   gateway?: {
     background_review?: boolean

@@ -6,6 +6,7 @@ import { registry, ToolSchema } from '../tools'
 import { manageProcess, startBackgroundProcess } from '../../core/process_manager'
 import { truncateOutput } from './tool_output'
 import { CWD_MARKER, SUPPORTS_PROCESS_GROUPS, killTree, pipelineStatusReliable, resolvePython, resolveShell, wrapCommand } from '../../core/platform'
+import { decideSandbox } from '../../core/terminal_sandbox'
 
 export function registerTerminalTools(): void {
   // 5. terminal
@@ -78,8 +79,19 @@ export function registerTerminalTools(): void {
         return JSON.stringify({ exit_code: 127, error: `Pipeline status cannot be verified with ${shellSpec.label}; command was not run.` })
       }
 
+      const sandboxDecision = decideSandbox({
+        command: rawCommand,
+        workdir,
+        config: { terminal: context.terminalSandbox ? { sandbox: context.terminalSandbox.mode, sandbox_network: context.terminalSandbox.network, sandbox_roots: context.terminalSandbox.roots } : undefined }
+      })
+      if (sandboxDecision.mode === 'required' && !sandboxDecision.sandbox) {
+        return JSON.stringify({ exit_code: 126, error: `Terminal sandbox required but unavailable: ${sandboxDecision.reason}` })
+      }
+      const spawnFile = sandboxDecision.sandbox ? sandboxDecision.sandbox.file : shellSpec.file
+      const spawnArgs = sandboxDecision.sandbox ? sandboxDecision.sandbox.args : shellSpec.argv(probeCommand)
+
       return new Promise<string>((resolveResult) => {
-        const proc = spawn(shellSpec.file, shellSpec.argv(probeCommand), {
+        const proc = spawn(spawnFile, spawnArgs, {
           cwd: workdir,
           detached: SUPPORTS_PROCESS_GROUPS,
           windowsHide: true,
