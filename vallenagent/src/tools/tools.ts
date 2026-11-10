@@ -106,6 +106,10 @@ export interface ToolContext {
   toolWhitelist?: string[]
   /** When set, file writes must stay inside one of these roots (subagents and sandboxed main agents). */
   sandboxRoots?: string[]
+  /** Delegation depth: 0 for the main agent, 1 for its subagents, ... */
+  agentDepth?: number
+  /** Maximum delegation depth allowed by config (default 2). */
+  maxAgentDepth?: number
   /** Terminal sandbox settings resolved from config.terminal. */
   terminalSandbox?: { mode: 'off' | 'auto' | 'required'; network: boolean; roots?: string[] }
   /** Apply a previously staged write without staging it again (/skills approve). */
@@ -221,7 +225,13 @@ class ToolRegistry {
   async execute(name: string, args: Record<string, any>, context: ToolContext = {}, whitelist?: string[], signal?: AbortSignal): Promise<string> {
     const allowedTools = whitelist ?? this.whitelist
     if (allowedTools && !allowedTools.includes(name)) return JSON.stringify({ error: `Tool not allowed: ${name}` })
-    if (context.isSubagent && name === 'delegate_task') return JSON.stringify({ error: 'Subagents cannot call delegate_task (tool not allowed for subagents)' })
+    if (name === 'delegate_task') {
+      const depth = Number(context.agentDepth ?? (context.isSubagent ? 1 : 0))
+      const maxDepth = Number(context.maxAgentDepth ?? 2)
+      if (depth >= maxDepth) {
+        return JSON.stringify({ error: `Delegation depth limit reached (${depth}/${maxDepth}). Finish this task yourself.` })
+      }
+    }
     const tool = this.tools.get(name)
     
     if (!tool) {

@@ -8,7 +8,7 @@ import { homedir } from 'os'
 import { registry, ToolSchema, ToolContext } from '../tools'
 import { deferredToolHealth } from '../tool_health'
 
-export function registerIntegrationTools(isSubagent: boolean, delegateAgentFactory?: (task: { taskId: string; goal: string; context?: string; max_iterations?: number; max_output_tokens?: number; model?: string }, onProgress?: (event: { status: 'thinking' | 'tool_start' | 'tool_end'; message?: string }) => void) => Promise<string>): void {
+export function registerIntegrationTools(isSubagent: boolean, delegateAgentFactory?: (task: { taskId: string; goal: string; context?: string; max_iterations?: number; max_output_tokens?: number; model?: string }, onProgress?: (event: { status: 'thinking' | 'tool_start' | 'tool_end'; message?: string }) => void) => Promise<string>, delegation?: { depth?: number; maxDepth?: number }): void {
   // 14. manage_connections
   const manageConnectionsSchema: ToolSchema = {
     name: 'manage_connections',
@@ -39,8 +39,10 @@ export function registerIntegrationTools(isSubagent: boolean, delegateAgentFacto
     }
   })
 
-  // 15. delegate_task (skip for subagents)
-  if (!isSubagent) {
+  // 15. delegate_task (subagents may delegate again until the depth cap)
+  const delegationDepth = delegation?.depth ?? (isSubagent ? 1 : 0)
+  const delegationMax = delegation?.maxDepth ?? 2
+  if (!isSubagent || delegationDepth < delegationMax) {
     const delegateTaskSchema: ToolSchema = {
       name: 'delegate_task',
       description: 'Spawn subagent in isolated context to complete focused subtasks. Returns summary.',
@@ -75,8 +77,10 @@ export function registerIntegrationTools(isSubagent: boolean, delegateAgentFacto
       schema: delegateTaskSchema,
       toolset: 'delegation',
       handler: async (args, context) => {
-        if (context?.isSubagent) {
-          return JSON.stringify({ error: 'Subagents cannot call delegate_task (delegation depth limit reached).' })
+        const depth = Number(context?.agentDepth ?? (context?.isSubagent ? 1 : 0))
+        const maxDepth = Number(context?.maxAgentDepth ?? 2)
+        if (depth >= maxDepth) {
+          return JSON.stringify({ error: `Delegation depth limit reached (${depth}/${maxDepth}). Finish this task yourself.` })
         }
         const tasks = Array.isArray(args.tasks) ? args.tasks : []
         const summaries: Array<Record<string, any>> = []

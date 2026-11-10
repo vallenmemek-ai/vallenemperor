@@ -25,6 +25,8 @@ export interface ToolContextDeps {
   reviewUserMessages?: string[]
   reviewSkillsRead?: Set<string>
   toolWhitelist?: string[]
+  agentDepth?: number
+  maxAgentDepth?: number
   mcpToolNames?: string[]
   mcpManager?: ToolContext['mcpManager']
   abortSignal?: AbortSignal
@@ -69,6 +71,8 @@ export function buildToolContext(deps: ToolContextDeps): ToolContext {
     reviewUserMessages: deps.reviewUserMessages,
     reviewSkillsRead: deps.reviewSkillsRead,
     toolWhitelist: deps.toolWhitelist,
+    agentDepth: deps.agentDepth,
+    maxAgentDepth: deps.maxAgentDepth,
     mcpToolNames: deps.mcpToolNames,
     mcpManager: deps.mcpManager,
     onTerminalOutput: deps.onTerminalOutput,

@@ -74,6 +74,9 @@ export class AIAgent {
   private maxIterations: number
   private sessionId: string
   private isSubagent: boolean
+  /** 0 = main agent, 1 = subagent, 2 = subagent of a subagent (capped by config). */
+  readonly depth: number
+  readonly maxDepth: number
   private backgroundReview: boolean
   private reviewMode: boolean
   private reviewUserMessages: string[]
@@ -136,9 +139,11 @@ export class AIAgent {
       onStatus: servers => options.onMcpStatus?.(servers)
     })
     this.isSubagent = Boolean(options.isSubagent)
+    this.depth = Number.isFinite(Number(options.depth)) ? Number(options.depth) : (this.isSubagent ? 1 : 0)
     this.config = options.config
       ? (this.isSubagent ? structuredClone(options.config) : options.config)
       : loadConfig()
+    this.maxDepth = Math.max(1, Math.min(5, Number((this.config as any).agent?.max_subagent_depth) || 2))
     this.maxIterations = options.maxIterations || this.config.max_iterations || 500
     this.sessionId = options.sessionId || `session-${Date.now()}`
     this.backgroundReview = options.backgroundReview ?? (this.config.gateway?.background_review ?? false)
@@ -196,11 +201,13 @@ export class AIAgent {
           const provider = subConfig.providers[active]
           if (provider && typeof provider === 'object') provider.model = task.model
         }
-        const sub = new AIAgent({ config: subConfig, maxIterations: task.max_iterations || 10, isSubagent: true, backgroundReview: false })
+        const sub = new AIAgent({ config: subConfig, maxIterations: task.max_iterations || 10, isSubagent: true, backgroundReview: false, depth: this.depth + 1 })
         const res = await sub.chat(task.goal + (task.context ? `\nContext: ${task.context}` : ''))
         return res.response
       },
-      this.isSubagent
+      this.isSubagent,
+      false,
+      { depth: this.depth, maxDepth: this.maxDepth }
     )
 
     const hasMcpServers = Object.keys(this.config.mcpServers || {}).length > 0
@@ -1105,6 +1112,8 @@ export class AIAgent {
       reviewUserMessages: this.reviewUserMessages,
       reviewSkillsRead: this.reviewSkillsRead,
       toolWhitelist: this.toolWhitelist,
+      agentDepth: this.depth,
+      maxAgentDepth: this.maxDepth,
       mcpToolNames: this.mcpToolNames,
       mcpManager: this.mcpManager || undefined,
       abortSignal: this.abortController?.signal,

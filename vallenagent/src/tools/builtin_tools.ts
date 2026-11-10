@@ -29,7 +29,8 @@ export function registerBuiltinTools(
   todoStore?: TodoStore,
   delegateAgentFactory?: (task: { taskId: string; goal: string; context?: string; max_iterations?: number; max_output_tokens?: number; model?: string; cwd?: string; agentInstructions?: string; tools?: string[] }, onProgress?: (event: { status: 'thinking' | 'tool_start' | 'tool_end'; message?: string }) => void, onHandle?: (handle: { interrupt: () => void }) => void) => Promise<string>,
   isSubagent: boolean = false,
-  force: boolean = false
+  force: boolean = false,
+  delegation: { depth?: number; maxDepth?: number } = {}
 ): void {
   if (builtinToolsRegistered && !force) return
   const memory = memoryStore || new MemoryStore()
@@ -57,7 +58,7 @@ export function registerBuiltinTools(
 
   registerBrowserTools()
 
-  registerIntegrationTools(isSubagent, delegateAgentFactory)
+  registerIntegrationTools(isSubagent, delegateAgentFactory, delegation)
 
   registerSkillsTools(skillLoader)
 

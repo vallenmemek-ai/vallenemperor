@@ -350,6 +350,12 @@ JSON-RPC: `initialize` (protocol version + capabilities), `session/new`, `sessio
 -32601, unknown sessions -32602, and sessions are closed when the client disconnects. Tests:
 `vallencli/tests/acp.test.mjs` (4, including a real stdio pipe). Suite at the time: **425/425 + 153/153**.
 
+**Evidence (P2.2 — done).** Agents carry a `depth` (0 = main, 1 = subagent) and `maxDepth`
+(`agent.max_subagent_depth`, default 2, clamped 1–5). Subagents now get `delegate_task` until the cap, so
+depth 2 works; the cap is enforced in the tool executor (`Delegation depth limit reached (2/2)`) as well
+as in registration, so a stale whitelist cannot bypass it. Tests:
+`vallenagent/tests/nested_agents.test.mjs` (3). Suite at the time: **428/428 + 153/153**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -360,7 +366,7 @@ JSON-RPC: `initialize` (protocol version + capabilities), `session/new`, `sessio
   with a hint when ffmpeg is missing.
 - **Effort.** M · **Risk.** high (codec/platform variance, storage size).
 
-#### P2.2 Nested agents (depth > 1) — ❌
+#### P2.2 Nested agents (depth > 1) — ✅
 - **Why.** Antigravity allows subagents that spawn their own subagents; ours is capped at one level.
 - **Scope.** `integration_tools.ts` (allow `delegate_task` when `isSubagent` and depth < 2),
   registry depth field, `/agents` indentation.

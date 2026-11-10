@@ -8,6 +8,8 @@ export interface AgentOptions {
   sessionId?: string
   sessionDir?: string
   isSubagent?: boolean
+  /** Delegation depth for nested agents (0 = main). */
+  depth?: number
   backgroundReview?: boolean
   reviewMode?: boolean
   reviewUserMessages?: string[]

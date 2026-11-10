@@ -385,6 +385,9 @@ Auditing and hygiene: `/approvals [apply]` mines the recorded approval history i
 `/extensions` + `vallenemperor extensions [--json]` list every installed skill, agent, command, hook and
 MCP server with its source.
 
+Nested delegation: `agent.max_subagent_depth` (default 2) bounds how deep subagents may spawn their own
+subagents; the cap is checked in the tool executor, so it cannot be bypassed by a whitelist.
+
 Editor bridge: `vallenemperor acp` runs an Agent Client Protocol server over stdio JSON-RPC
 (initialize, session/new, session/prompt with streamed updates, session/cancel, session/close).
 
