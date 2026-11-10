@@ -317,6 +317,10 @@ Review surfaces: `/artifact` lists this session's artifacts and opens one by num
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
 `/fork` clones the conversation into a new session id.
 
+`/diff` takes a turn number (checkpoint diff) or a git mode: `/diff working` (unstaged + untracked),
+`/diff staged`, `/diff all` (since HEAD). Git modes use `core/working_diff.ts`, which folds untracked
+files in via `git diff --no-index`, caps at 50 untracked files and 200k chars, and never throws.
+
 `/artifacts` lives in the shared command handler (`vallenagent/src/core/commands.ts`), so the
 terminal and the Telegram gateway behave the same. `/plan` (including `go/next/edit/skip/stop/status`)
 is terminal-local because it drives the REPL's turn loop; the pure state machine it uses lives in

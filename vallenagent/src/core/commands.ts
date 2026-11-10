@@ -9,6 +9,7 @@ import { formatSubagentDetail, formatSubagentLine, isTerminalStatus, subagentReg
 import { removeSubagentWorktree } from '../agent/worktree'
 import { discoverCustomAgents, formatAgentList } from '../agent/custom_agents'
 import { formatSandboxStatus, sandboxPolicyFor } from './sandbox'
+import { collectWorkingDiff, formatDiffSummary } from './working_diff'
 import { getVallenHome, saveConfig } from './config'
 import { handleMcpCommand } from './commands/mcp'
 import { handleGatewayCommand } from './commands/gateway'
@@ -125,7 +126,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Berkas', name: '/artifacts', desc: 'daftar artifact sesi (walkthrough, screenshot)' },
   { group: 'Berkas', name: '/artifact', args: '[nomor|last]', desc: 'panel review artifact sesi' },
   { group: 'Berkas', name: '/sandbox', args: '[status|workspace|off]', desc: 'batas tulis filesystem agent' },
-  { group: 'Berkas', name: '/diff', args: '[turn]', desc: 'lihat perubahan checkpoint' },
+  { group: 'Berkas', name: '/diff', args: '[turn | working | staged | all]', desc: 'lihat perubahan checkpoint atau git diff' },
   { group: 'Berkas', name: '/undo', args: '[1-20] [--force]', desc: 'pulihkan checkpoint' },
   { group: 'Berkas', name: '/cd', args: '<dir>', desc: 'pindah direktori kerja' },
   { group: 'Berkas', name: '/output', desc: 'buka output terminal terakhir' },
@@ -388,6 +389,13 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
       : 'Belum ada checkpoint. Shell/execute_code changes are not tracked.' }
   }
   if (cmd === '/diff') {
+    const gitMode = args.find(arg => arg === 'working' || arg === 'staged' || arg === 'all')
+    if (gitMode) {
+      const result = collectWorkingDiff({ cwd: ctx.agent.config?.terminal?.cwd || process.cwd(), mode: gitMode as 'working' | 'staged' | 'all' })
+      if (!result.ok) return { handled: true, response: `git diff failed: ${result.error}` }
+      const summary = formatDiffSummary(result)
+      return { handled: true, response: result.files.length ? `${summary}\n\n${result.text}` : summary }
+    }
     const turnNumber = args[0] && /^\d+$/.test(args[0]) ? Number(args[0]) : undefined
     return { handled: true, response: getCheckpointDiff(checkpointContext(ctx.agent), turnNumber, ctx.channel === 'terminal') }
   }
