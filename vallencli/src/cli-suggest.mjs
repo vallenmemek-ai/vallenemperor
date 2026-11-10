@@ -62,6 +62,7 @@ export const COMMANDS = [
   { name: '/approvals', args: '[apply]', desc: 'Mine approvals into policy' },
   { name: '/extensions', desc: 'Extension manifest' },
   { name: '/curator', args: '[days] [apply]', desc: 'Archive stale skills' },
+  { name: '/fast', args: '[on|off|status]', desc: 'Fast mode' },
   { name: '/worktree', args: '[new|list]', desc: 'Git worktree for this session' },
   { name: '/health', desc: 'Run diagnostics' },
   { name: '/perf', desc: 'Process CPU / memory sample' },

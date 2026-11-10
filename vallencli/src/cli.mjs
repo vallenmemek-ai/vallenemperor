@@ -999,7 +999,7 @@ export function parseArgs(argv) {
   if (head === 'insights') return { ...result, mode: 'insights' }
   if (head === 'logs') return { ...result, mode: 'logs' }
   if (head === 'dump') return { ...result, mode: 'dump' }
-  if (head === 'extensions') return { ...result, mode: 'extensions', json: argv.includes('--json') }
+  if (head === 'extensions') return { ...result, mode: 'extensions', json: argv.includes('--json'), args: argv.slice(1) }
   for (let index = 0; index < argv.length; index++) {
     const arg = String(argv[index])
     if (arg === '--help' || arg === '-h') return { ...result, mode: 'help' }
@@ -1306,6 +1306,19 @@ export async function main(argv = process.argv.slice(2)) {
       return 0
     }
     if (parsed.mode === 'extensions') {
+      const [sub, target] = parsed.args || []
+      if (sub === 'install') {
+        if (!target) { process.stderr.write('Usage: vallenemperor extensions install <dir>\n'); return 2 }
+        try {
+          const pack = core.readExtensionPack(resolve(process.cwd(), target))
+          const result = core.installExtensionPack(pack, core.getVallenHome())
+          process.stdout.write(`${core.formatInstallResult(result)}\n`)
+          return 0
+        } catch (error) {
+          process.stderr.write(`Install failed: ${error?.message || error}\n`)
+          return 1
+        }
+      }
       const manifest = core.buildExtensionManifest({ cwd: process.cwd(), home: core.getVallenHome(), config })
       process.stdout.write(parsed.json ? `${JSON.stringify(manifest, null, 2)}\n` : `${core.formatManifest(manifest)}\n`)
       return 0

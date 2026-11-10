@@ -201,3 +201,27 @@ export function formatSubagentDetail(run: SubagentRun): string {
   }
   return lines.join('\n')
 }
+
+/**
+ * Background agent dashboard (R32) — one screen over the registry: what is running, for how long,
+ * where it works, and what it said last. Text-only so it works over SSH and in logs.
+ */
+export function formatAgentDashboard(runs: SubagentRun[], now: number = Date.now()): string {
+  if (!runs.length) return 'No subagent runs yet. Use delegate_task with background: true.'
+  const active = runs.filter(run => !isTerminalStatus(run.status))
+  const elapsed = (run: SubagentRun) => {
+    const start = Date.parse(run.startedAt) || now
+    const end = run.finishedAt ? Date.parse(run.finishedAt) || now : now
+    const seconds = Math.max(0, Math.round((end - start) / 1000))
+    return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m${String(seconds % 60).padStart(2, '0')}s`
+  }
+  const lines = [`Agent dashboard · ${active.length} active / ${runs.length} tracked`]
+  for (const run of runs.slice(0, 12)) {
+    const last = run.progress[run.progress.length - 1]
+    const label = run.agent ? `${run.id} (${run.agent})` : run.id
+    lines.push(`  ${label.padEnd(28)} ${run.status.padEnd(10)} ${elapsed(run).padStart(7)}  ${run.workspace.padEnd(8)} ${run.worktree ? 'worktree' : 'inline'}`)
+    lines.push(`    ${String(run.goal).slice(0, 90)}`)
+    if (last) lines.push(`    last: ${String(last.message || last.status || '').slice(0, 90)}`)
+  }
+  return lines.join('\n')
+}

@@ -300,6 +300,15 @@ MCP servers with their source and path — this is the read-only half of R34; pa
 installable unit is still open. Tests: `vallenagent/tests/approvals_extensions.test.mjs` (4).
 Suite at the time: **405/405 + 146/146**.
 
+**Evidence (R27, R32 — done; R18, R34 partial).** Skill usage now records `last_used_at`;
+`findStaleSkillsByUsage` archives a skill only when it was used and then idle for N days, or never used
+but older than N days, or has no usage record and an old file (so a fresh install archives nothing).
+`/agents runs` prints a dashboard: status, elapsed time, workspace, worktree and the last progress line.
+`/fast on|off` sets `reasoning_effort=low` and turns background review off. `vallenemperor extensions
+install <dir>` copies a pack's skills/commands/agents into the home (nothing is executed at install time);
+executable tool bundles are still open. Tests: `vallenagent/tests/dashboard_usage_pack.test.mjs` (4).
+Suite at the time: **409/409 + 146/146**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -367,7 +376,7 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R15 | Curator — auto-archive stale skills | keeps the skill index lean | M | `[x]` |
 | R16 | Profiles (`--profile`) | isolated config/sessions/skills | M | `[ ]` |
 | R17 | ACP server for editors | editor integration | L | `[ ]` |
-| R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[ ]` |
+| R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[ ]` (partial: `/fast` done; `x_search` needs an X API key) |
 | R19 | Approval mining (propose allowlist from history) | fewer prompts over time | M | `[x]` |
 | R20 | `/handoff <platform>` | move a CLI session to Telegram | M | `[ ]` |
 | R21 | User-defined slash commands (`.vallenemperor/commands/*.md` → `/name`) | all three peers ship it; cheapest workflow win | S | `[x]` |
@@ -376,10 +385,10 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R24 | `/grill-me` — interview the user one question at a time before starting | fits our clarify policy; prevents wrong builds | S | `[x]` |
 | R25 | `/learn` — turn corrections into skills/rules through a reviewable proposal | closes the self-improvement loop | M | `[x]` |
 | R26 | Skill provenance (who/when/why) + `/journey` learning timeline | audit and roll back a bad lesson | M | `[x]` |
-| R27 | Curator — archive stale skills by usage | keeps the skill index lean | M | `[ ]` |
+| R27 | Curator — archive stale skills by usage | keeps the skill index lean | M | `[x]` |
 | R28 | Skill-index budget/delta tracking | index growth silently eats the context window | S | `[x]` |
-| R32 | Background agent view (dashboard over the existing subagent registry) | Claude Code, Hermes, Antigravity all expose a monitor | M | `[ ]` |
-| R34 | Extension manifest: one installable unit carrying tools + commands + skills | Gemini extensions, Hermes plugins, opencode plugins | M | `[ ]` (partial: read-only manifest landed; installable bundle remains) |
+| R32 | Background agent view (dashboard over the existing subagent registry) | Claude Code, Hermes, Antigravity all expose a monitor | M | `[x]` |
+| R34 | Extension manifest: one installable unit carrying tools + commands + skills | Gemini extensions, Hermes plugins, opencode plugins | M | `[ ]` (partial: manifest + `extensions install` for skills/commands/agents; shipping executable tools remains) |
 
 Deliberately not on this list (see `REFERENCE-HERMES.md` §6): desktop app, web dashboard, pets,
 skins, voice/wake word, video generation, 20+ messaging platforms, Python library, API server,

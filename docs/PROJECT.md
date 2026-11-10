@@ -366,6 +366,11 @@ Review surfaces: `/artifact` lists this session's artifacts and opens one by num
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
 `/fork` clones the conversation into a new session id.
 
+Monitoring: `/agents runs` shows the subagent dashboard (status, elapsed, workspace, last progress).
+Speed: `/fast on|off` lowers reasoning effort and disables background review. Extensions:
+`vallenemperor extensions [--json]` lists what is installed, `extensions install <dir>` installs a pack of
+skills/commands/agents.
+
 Auditing and hygiene: `/approvals [apply]` mines the recorded approval history into unanimous
 `tool_policy` rules; `/curator [days] [apply]` archives stale skills (dry run by default);
 `/extensions` + `vallenemperor extensions [--json]` list every installed skill, agent, command, hook and

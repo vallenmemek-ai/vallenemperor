@@ -5,7 +5,7 @@ import { basename, join } from 'path'
 import { loadProjectContext } from './project_context'
 import { getCheckpointDiff, listCheckpoints, undoCheckpoints } from '../session/checkpoint'
 import { formatArtifactList, listArtifacts, readArtifactPreview } from '../agent/artifact_store'
-import { formatSubagentDetail, formatSubagentLine, isTerminalStatus, subagentRegistry } from '../agent/subagent_registry'
+import { formatAgentDashboard, formatSubagentDetail, formatSubagentLine, isTerminalStatus, subagentRegistry } from '../agent/subagent_registry'
 import { removeSubagentWorktree } from '../agent/worktree'
 import { discoverCustomAgents, formatAgentList } from '../agent/custom_agents'
 import { formatSandboxStatus, sandboxPolicyFor } from './sandbox'
@@ -16,7 +16,8 @@ import { browserToolsUnlocked } from './browser_gate'
 import { buildContextReport } from './context_report'
 import { formatApprovals, mineApprovals, readApprovals } from './approval_mining'
 import { buildExtensionManifest, formatManifest } from './extension_manifest'
-import { archiveSkills, findStaleSkills, formatCuratorReport } from '../skills/curator'
+import { archiveSkills, findStaleSkills, findStaleSkillsByUsage, formatCuratorReport } from '../skills/curator'
+import { SkillStatsStore } from '../skills/skill_stats'
 import { registry } from '../tools/tools'
 import { getVallenHome, saveConfig } from './config'
 import { handleMcpCommand } from './commands/mcp'
@@ -87,7 +88,7 @@ export interface CommandResult {
 }
 
 const NOT_HANDLED: CommandResult = { handled: false, response: '' }
-const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer', '/queue', '/rewind', '/goal', '/grill-me', '/policy', '/worktree', '/approvals', '/extensions', '/curator'])
+const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer', '/queue', '/rewind', '/goal', '/grill-me', '/policy', '/worktree', '/approvals', '/extensions', '/curator', '/fast'])
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -152,6 +153,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Berkas', name: '/approvals', args: '[apply]', desc: 'tambang riwayat approval jadi policy' },
   { group: 'Berkas', name: '/extensions', desc: 'manifest skill, agent, command, hook, MCP' },
   { group: 'Berkas', name: '/curator', args: '[hari] [apply]', desc: 'arsipkan skill yang lama tidak dipakai' },
+  { group: 'Sesi & model', name: '/fast', args: '[on|off|status]', desc: 'mode cepat: effort rendah, review mati' },
   { group: 'Berkas', name: '/worktree', args: '[new [nama]|list]', desc: 'worktree git untuk sesi utama' },
   { group: 'Berkas', name: '/diff', args: '[turn | working | staged | all]', desc: 'lihat perubahan checkpoint atau git diff' },
   { group: 'Berkas', name: '/undo', args: '[1-20] [--force]', desc: 'pulihkan checkpoint' },
@@ -355,6 +357,9 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     const [sub, id] = args
     if (sub === 'available' || sub === 'list') {
       const workspace = ctx.agent.config?.terminal?.cwd || process.cwd()
+      if (args[0] === 'runs' || args[0] === 'dashboard') {
+        return { handled: true, response: formatAgentDashboard(subagentRegistry.list()) }
+      }
       return { handled: true, response: formatAgentList(discoverCustomAgents({ workspace, home: getVallenHome() })) }
     }
     if (sub === 'show') {
@@ -409,11 +414,33 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     return { handled: true, response: `Reasoning effort set to ${level} (saved). Applies to the next provider request.` }
   }
 
+  if (cmd === '/fast') {
+    const config = ctx.agent.config as any
+    const action = args[0] || 'status'
+    if (action === 'status') {
+      const on = config.reasoning_effort === 'low'
+      return { handled: true, response: `Fast mode: ${on ? 'on' : 'off'}\n  reasoning_effort: ${config.reasoning_effort || '(unset)'}\n  background review: ${config.gateway?.background_review === false ? 'off' : 'on'}\nUsage: /fast on | /fast off` }
+    }
+    if (action !== 'on' && action !== 'off') return { handled: true, response: 'Usage: /fast on | /fast off | /fast status' }
+    if (action === 'on') {
+      config.reasoning_effort = 'low'
+      config.gateway = { ...(config.gateway || {}), background_review: false }
+      saveConfig(config)
+      return { handled: true, response: 'Fast mode on: reasoning_effort=low, background review off.' }
+    }
+    config.reasoning_effort = undefined
+    config.gateway = { ...(config.gateway || {}), background_review: true }
+    saveConfig(config)
+    return { handled: true, response: 'Fast mode off: default reasoning effort, background review on.' }
+  }
+
   if (cmd === '/curator') {
     const home = getVallenHome()
     const days = Number(args.find(arg => /^\d+$/.test(arg))) || 90
     const dirs = [join(projectCwd(ctx.agent), 'skills'), join(home, 'skills')]
-    const stale = findStaleSkills(dirs, { staleDays: days })
+    let stats: any[] = []
+    try { stats = new SkillStatsStore().list() } catch { }
+    const stale = stats.length ? findStaleSkillsByUsage(dirs, stats, { staleDays: days }) : findStaleSkills(dirs, { staleDays: days })
     if (args.includes('apply')) {
       const moved = archiveSkills(stale, join(home, 'skills', 'archive'))
       return { handled: true, response: formatCuratorReport(stale, { staleDays: days, applied: moved }) }

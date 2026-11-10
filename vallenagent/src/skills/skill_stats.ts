@@ -4,7 +4,7 @@ import { getVallenHome } from '../core/config'
 import { chmodSafe } from '../core/platform'
 
 export type SkillOutcome = 'unknown' | 'verified' | 'failed'
-type SkillStats = { view_count: number; manage_count: number; completed_count: number; verified_count: number; failed_verification_count: number; correction_count: number }
+type SkillStats = { view_count: number; manage_count: number; completed_count: number; verified_count: number; failed_verification_count: number; correction_count: number; last_used_at?: string }
 type StatsFile = { skills: Record<string, SkillStats>; correction_keys: string[] }
 const emptyStats = (): SkillStats => ({ view_count: 0, manage_count: 0, completed_count: 0, verified_count: 0, failed_verification_count: 0, correction_count: 0 })
 
@@ -15,7 +15,8 @@ function normalizeStats(value: any = {}): SkillStats {
     completed_count: Number(value.completed_count) || Number(value.success_count) || 0,
     verified_count: Number(value.verified_count) || 0,
     failed_verification_count: Number(value.failed_verification_count) || 0,
-    correction_count: Number(value.correction_count) || 0
+    correction_count: Number(value.correction_count) || 0,
+    ...(value.last_used_at ? { last_used_at: String(value.last_used_at) } : {})
   }
 }
 
@@ -48,7 +49,9 @@ export class SkillStatsStore {
 
   recordView(name: string, _sessionId?: string): void {
     const data = this.read()
-    ensureSkill(data, name).view_count++
+    const stats = ensureSkill(data, name)
+    stats.view_count++
+    stats.last_used_at = new Date().toISOString()
     this.write(data)
   }
 
@@ -62,6 +65,7 @@ export class SkillStatsStore {
     const data = this.read()
     const stats = ensureSkill(data, name)
     stats.completed_count++
+    stats.last_used_at = new Date().toISOString()
     if (outcome === 'verified') stats.verified_count++
     if (outcome === 'failed') stats.failed_verification_count++
     this.write(data)
