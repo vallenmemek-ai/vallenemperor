@@ -1,0 +1,9 @@
+# GitHub Linguist hints.
+#
+# The bundled skill catalog under .vallenemperor/skills/ is third-party reference
+# material (SKILL.md + helper scripts for pdf/docx/xlsx/powerpoint/…). It ships with
+# the package but is not project source, so it must not dominate the language bar.
+.vallenemperor/skills/** linguist-vendored
+
+# Sample artifacts written while manually testing the CLI.
+.vallenemperor/hi/** linguist-vendored
