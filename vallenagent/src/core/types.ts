@@ -18,6 +18,13 @@ export interface AgentConfig {
   security?: {
     filesystem?: 'workspace' | 'unrestricted'
   }
+  /** Inject a compact symbol map of the workspace into the system prompt (Aider-style). */
+  repo_map?: {
+    enabled?: boolean
+    budget_chars?: number
+  }
+  /** Lifecycle hooks: shell commands with JSON stdin/stdout; pre_tool and user_prompt can block. */
+  hooks?: Partial<Record<'session_start' | 'user_prompt' | 'pre_tool' | 'post_tool' | 'turn_end' | 'session_end', Array<{ command: string; matcher?: string; timeout_ms?: number }>>>
   /** Stage cross-session writes for review instead of committing them immediately. */
   write_approval?: {
     memory?: boolean

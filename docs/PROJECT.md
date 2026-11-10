@@ -233,6 +233,18 @@ Enabled per subsystem with `write_approval: { memory: true, skills: true }`. The
   `skill_manage` under explicit standards (description ≤ 60 chars, procedure-first, pitfalls as rules,
   no incident narration), (4) verifies the skill loads.
 
+## 5e5. Hooks and the repository map
+
+- `core/hooks.ts` — lifecycle hooks (`session_start`, `user_prompt`, `pre_tool`, `post_tool`,
+  `turn_end`, `session_end`). Each hook is a shell command that gets JSON on stdin and may print
+  `{"decision":"block","reason":"..."}`. `pre_tool` blocks before the tool runs (wired in `agent.ts`);
+  `post_tool` is notification-only. Matchers are regexes on the tool name/prompt; timeouts and
+  non-zero exits are reported, never fatal.
+- `core/repo_map.ts` — dependency-free symbol map: per-language regex extractors (TS/JS, Python, Go,
+  Rust, JVM/C#/Swift), ranked by query relevance + file recency, capped by a character budget
+  (default 12k ≈ 3k tokens). Available as the `repo_map` tool, and injected into the system prompt
+  when `repo_map.enabled` is true (cached 60 s per workspace).
+
 ## 5f. Filesystem sandbox
 
 `core/sandbox.ts` bounds file **writes** (reads stay allowed):

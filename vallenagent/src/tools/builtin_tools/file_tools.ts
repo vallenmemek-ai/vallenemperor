@@ -11,6 +11,7 @@ import { registry, ToolContext, ToolSchema } from '../tools'
 import { checkPathAllowed } from '../../core/sandbox'
 import { checkWritePolicy } from '../../core/path_policy'
 import { LOOP_THRESHOLD, noteRead } from '../read_tracker'
+import { buildRepoMap, formatRepoMap } from '../../core/repo_map'
 
 function generateUnifiedFileDiff(oldText: string, newText: string, filePath: string): string {
   if (oldText === '') {
@@ -671,6 +672,32 @@ export function registerPatchTools(): void {
       expected_hash: { type: 'string', description: 'Optional sha256 from read_file; the whole batch is aborted if that file changed.' }
     }, required: ['path', 'old_string', 'new_string'] } } }, required: ['files'] }
   }
+  const repoMapSchema: ToolSchema = {
+    name: 'repo_map',
+    description: 'Compact symbol map of the workspace (classes, functions, signatures) ranked by relevance. Use it to orient in a large codebase before reading files.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Optional focus, e.g. a module or symbol name' },
+        budget_chars: { type: 'integer', description: 'Character budget for the map (default 12000)' }
+      }
+    }
+  }
+  registry.register({
+    name: 'repo_map',
+    schema: repoMapSchema,
+    toolset: 'file',
+    parallelSafe: true,
+    handler: async (args, context) => {
+      const result = buildRepoMap({
+        cwd: context.workingDir || process.cwd(),
+        query: String(args.query || ''),
+        budgetChars: Number(args.budget_chars) || 12_000
+      })
+      return JSON.stringify({ map: formatRepoMap(result), files: result.files, symbols: result.symbols, truncated: result.truncated })
+    }
+  })
+
   registry.register({ name: 'patch_batch', schema: patchBatchSchema, toolset: 'file', handler: async (args, context) =>
     JSON.stringify(applyPatchBatch(args.files, context.workingDir || process.cwd(), context))
   })

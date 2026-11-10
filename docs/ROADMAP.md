@@ -219,8 +219,8 @@ Aider ship. They are not differentiators — they are the price of entry.
 
 | # | Item | Why | Effort | Status |
 | --- | --- | --- | --- | --- |
-| R29 | **Hooks**: `session_start`, `user_prompt`, `pre_tool`, `post_tool`, `turn_end`, `session_end`; handler = shell command with JSON stdin/stdout; can block or rewrite | policy, formatting, audit, notifications without patching core; shipped by Claude Code, Gemini, Hermes, Antigravity | M | `[ ]` |
-| R30 | **Repo map**: tree-sitter/TS symbol map (classes, functions, signatures) ranked by relevance and token-budgeted, injected per request | the agent stops grepping blind on large repos; Aider's biggest quality lever | L | `[ ]` |
+| R29 | **Hooks**: `session_start`, `user_prompt`, `pre_tool`, `post_tool`, `turn_end`, `session_end`; handler = shell command with JSON stdin/stdout; can block or rewrite | policy, formatting, audit, notifications without patching core; shipped by Claude Code, Gemini, Hermes, Antigravity | M | `[x]` |
+| R30 | **Repo map**: regex symbol map (classes, functions, signatures) ranked by relevance and token-budgeted, injected per request + `repo_map` tool | the agent stops grepping blind on large repos; Aider's biggest quality lever | L | `[x]` |
 | R31 | **Permissions panel**: one reviewable place showing the effective rule per tool/path, replacing the `/auto` + `/sandbox` split | Codex, Claude Code, Gemini, opencode all expose this | M | `[x]` |
 | R33 | **Headless contract**: `-p --json` with stable exit codes (0 ok, 1 agent error, 2 usage) | CI/pipeline use; Codex `exec`, Gemini headless | S | `[x]` |
 
@@ -236,6 +236,13 @@ confinement, browser gate, credential/instruction rules and staged-write status 
 `-p --json` emits `{ok, response, completionStatus, iterations, toolCalls, tokens, artifacts}` with
 exit 1 on `incomplete` or a denied tool; the shape is asserted by
 `vallencli/tests/setup_doctor_update.test.mjs`. Suite at the time: **374/374 + 133/133**.
+
+**Evidence (R29, R30 — done).** `vallenagent/tests/hooks.test.mjs` (5 tests): hooks receive a JSON
+payload, a `{"decision":"block"}` stops the tool (integration test proves the file is never written),
+matchers filter by tool name, non-zero exits are reported not thrown, timeouts never block.
+`vallenagent/tests/repo_map.test.mjs` (4 tests): per-language symbol extraction (TS/JS/Python),
+ignored dirs skipped, budget truncation, relevance ranking, the `repo_map` tool payload, and the
+system-prompt injection when `repo_map.enabled` is on. Suite at the time: **383/383 + 133/133**.
 
 ### P2 — Differentiators (only after P0/P1)
 

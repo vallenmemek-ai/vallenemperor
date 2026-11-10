@@ -79,6 +79,8 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 | setup / doctor / update | `vallencli/tests/setup_doctor_update.test.mjs` |
 | codesearch / effort / clipboard | `vallenagent/tests/p1_features.test.mjs` |
 | Pending writes + provider reuse | `vallenagent/tests/pending_writes.test.mjs` |
+| Hooks (block/timeout/matcher) | `vallenagent/tests/hooks.test.mjs` |
+| Repo map + prompt injection | `vallenagent/tests/repo_map.test.mjs` |
 | /sandbox command | `vallencli/tests/sandbox_command.test.mjs` |
 | /artifact panel, /btw, /fork | `vallencli/tests/artifact_panel_btw.test.mjs` |
 | Engine session fork | `vallenagent/tests/fork_session.test.mjs` |

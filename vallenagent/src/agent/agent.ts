@@ -31,6 +31,7 @@ import { callProviderWithRetry, continueTruncatedResponse } from './turn_provide
 import { finalizeSuccessfulTurn } from './turn_finalize'
 import { writeTurnWalkthrough } from './artifact_store'
 import { withPathLock } from '../core/path_lock'
+import { blockedBy, runHooks } from '../core/hooks'
 import { SessionManager } from '../session/session'
 import { loadConfig, getActiveProvider, getVallenHome, setProviderToken, saveConfig } from '../core/config'
 import { registerBuiltinTools } from '../tools/builtin_tools'
@@ -1029,14 +1030,33 @@ export class AIAgent {
       createSubagent: options => new AIAgent(options)
     })
 
-    // Serialise writes to the same path so concurrent subagents cannot interleave and lose a diff.
-    const lockPath = (toolName === 'write_file' || toolName === 'patch') && typeof toolArgs?.path === 'string'
-      ? String(toolArgs.path)
-      : ''
-    const executeTool = () => registry.execute(toolName, toolArgs, context, this.toolWhitelist, this.abortController?.signal)
-    let result = lockPath
-      ? await withPathLock(lockPath, executeTool)
-      : await executeTool()
+    // Lifecycle hook: a pre_tool hook may block the call before anything runs.
+    const hookBase = { sessionId: this.sessionId, tool: toolName, args: toolArgs, cwd: context.workingDir }
+    const preHook = blockedBy(runHooks({
+      event: 'pre_tool',
+      hooks: (this.config as any).hooks,
+      payload: hookBase,
+      cwd: context.workingDir
+    }))
+    let result: string
+    if (preHook) {
+      result = JSON.stringify({ error: `Blocked by pre_tool hook: ${preHook.reason || preHook.command}`, hook: preHook.command })
+    } else {
+      // Serialise writes to the same path so concurrent subagents cannot interleave and lose a diff.
+      const lockPath = (toolName === 'write_file' || toolName === 'patch') && typeof toolArgs?.path === 'string'
+        ? String(toolArgs.path)
+        : ''
+      const executeTool = () => registry.execute(toolName, toolArgs, context, this.toolWhitelist, this.abortController?.signal)
+      result = lockPath
+        ? await withPathLock(lockPath, executeTool)
+        : await executeTool()
+      runHooks({
+        event: 'post_tool',
+        hooks: (this.config as any).hooks,
+        payload: { ...hookBase, result: String(result).slice(0, 2000) },
+        cwd: context.workingDir
+      })
+    }
     if (context.workingDir) {
       if (!this.config.terminal) this.config.terminal = {}
       this.config.terminal.cwd = context.workingDir

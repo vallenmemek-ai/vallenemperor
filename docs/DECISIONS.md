@@ -343,3 +343,20 @@ connection identical, so the review request hits the same prefix cache instead o
 **Consequence.** Staged writes must still be visible to the review prompt (it reads memory, not the
 pending queue) — the agent is told it was staged. Skill staging needs a skill authoring tool first
 (skills are plain files today), tracked as P1b.10.
+
+---
+
+## D25 — Hooks are shell commands with a JSON contract; the repo map is regex-based
+
+**Decision.** Hooks run as shell commands with a JSON payload on stdin and an optional
+`{"decision":"block"}` on stdout; only `pre_tool` and `user_prompt` can block. The repository map uses
+per-language regex extractors instead of tree-sitter, cached for 60 s and budgeted in characters.
+
+**Why.** A JSON shell contract gives policy, audit, formatting and notifications without a plugin
+runtime (Claude Code, Gemini and Hermes all converge on it). Regex extraction keeps the feature
+dependency-free and cross-platform — no native builds, which is what breaks Termux/Windows installs;
+it is less precise than tree-sitter, and that is an accepted trade-off for now.
+
+**Consequence.** A blocking hook must be fast (<10 s default) because it sits in the tool path. The
+repo map is *data* in the prompt, never instructions. If precision matters later, swap the extractor
+behind `buildRepoMap` without touching callers.
