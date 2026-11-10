@@ -10,6 +10,7 @@ import { removeSubagentWorktree } from '../agent/worktree'
 import { discoverCustomAgents, formatAgentList } from '../agent/custom_agents'
 import { formatSandboxStatus, sandboxPolicyFor } from './sandbox'
 import { collectWorkingDiff, formatDiffSummary } from './working_diff'
+import { currentHunk, formatHunkView, moveReview, revertHunk, startDiffReview } from './diff_viewer'
 import { formatCodeSearch, searchWorkspace } from './code_search'
 import { formatPendingList, listPendingWrites, readPendingWrite, removePendingWrite } from './pending_writes'
 import { browserToolsUnlocked } from './browser_gate'
@@ -155,7 +156,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Berkas', name: '/curator', args: '[hari] [apply]', desc: 'arsipkan skill yang lama tidak dipakai' },
   { group: 'Sesi & model', name: '/fast', args: '[on|off|status]', desc: 'mode cepat: effort rendah, review mati' },
   { group: 'Berkas', name: '/worktree', args: '[new [nama]|list]', desc: 'worktree git untuk sesi utama' },
-  { group: 'Berkas', name: '/diff', args: '[turn | working | staged | all]', desc: 'lihat perubahan checkpoint atau git diff' },
+  { group: 'Berkas', name: '/diff', args: '[turn | working | staged | all | review | next | prev | keep | skip | done]', desc: 'lihat diff atau review per-hunk' },
   { group: 'Berkas', name: '/undo', args: '[1-20] [--force]', desc: 'pulihkan checkpoint' },
   { group: 'Berkas', name: '/cd', args: '<dir>', desc: 'pindah direktori kerja' },
   { group: 'Berkas', name: '/output', desc: 'buka output terminal terakhir' },
@@ -566,6 +567,51 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
       : 'Belum ada checkpoint. Shell/execute_code changes are not tracked.' }
   }
   if (cmd === '/diff') {
+    const agentAny = ctx.agent as any
+    const reviewAction = args[0]
+    const reviewCwd = ctx.agent.config?.terminal?.cwd || process.cwd()
+    if (reviewAction === 'review' || reviewAction === 'next' || reviewAction === 'prev' ||
+        reviewAction === 'keep' || reviewAction === 'skip' || reviewAction === 'done' || reviewAction === 'hunk') {
+      if (reviewAction === 'review') {
+        const diff = collectWorkingDiff({ cwd: reviewCwd, mode: 'working' })
+        if (!diff.ok) return { handled: true, response: `git diff failed: ${diff.error}` }
+        const state = startDiffReview(reviewCwd, diff.text)
+        if (!state) return { handled: true, response: 'No hunks to review in the working tree.' }
+        agentAny.diffReview = state
+        return { handled: true, response: formatHunkView(currentHunk(state)!, state.hunks.length) }
+      }
+      const state = agentAny.diffReview
+      if (!state) return { handled: true, response: 'No diff review running. Start one with /diff review.' }
+      if (reviewAction === 'hunk') {
+        const target = Number(args[1])
+        if (!Number.isInteger(target) || target < 1 || target > state.hunks.length) {
+          return { handled: true, response: `Usage: /diff hunk <1-${state.hunks.length}>` }
+        }
+        agentAny.diffReview = { ...state, index: target - 1 }
+        return { handled: true, response: formatHunkView(currentHunk(agentAny.diffReview)!, state.hunks.length) }
+      }
+      if (reviewAction === 'done') {
+        const summary = `Diff review finished · kept ${state.kept.length} · skipped ${state.skipped.length} of ${state.hunks.length}`
+        agentAny.diffReview = null
+        return { handled: true, response: summary }
+      }
+      const hunk = currentHunk(state)!
+      if (reviewAction === 'skip') {
+        const result = revertHunk({ repo: state.repo, hunk })
+        if (!result.ok) return { handled: true, response: `Could not revert hunk ${hunk.index}: ${result.output || 'git apply failed'}` }
+        const next = { ...state, skipped: [...state.skipped, hunk.index], index: Math.min(state.index + 1, state.hunks.length - 1) }
+        agentAny.diffReview = next
+        return { handled: true, response: `Reverted hunk ${hunk.index}.\n\n${formatHunkView(currentHunk(next)!, state.hunks.length)}` }
+      }
+      if (reviewAction === 'keep') {
+        const next = { ...state, kept: [...state.kept, hunk.index], index: Math.min(state.index + 1, state.hunks.length - 1) }
+        agentAny.diffReview = next
+        return { handled: true, response: `Kept hunk ${hunk.index}.\n\n${formatHunkView(currentHunk(next)!, state.hunks.length)}` }
+      }
+      const moved = moveReview(state, reviewAction === 'next' ? 1 : -1)
+      agentAny.diffReview = moved
+      return { handled: true, response: formatHunkView(currentHunk(moved)!, state.hunks.length) }
+    }
     const gitMode = args.find(arg => arg === 'working' || arg === 'staged' || arg === 'all')
     if (gitMode) {
       const result = collectWorkingDiff({ cwd: ctx.agent.config?.terminal?.cwd || process.cwd(), mode: gitMode as 'working' | 'staged' | 'all' })

@@ -366,6 +366,9 @@ Review surfaces: `/artifact` lists this session's artifacts and opens one by num
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
 `/fork` clones the conversation into a new session id.
 
+Diff review: `/diff review` walks the working-tree diff hunk by hunk; `/diff skip` reverts a single
+hunk with a reverse `git apply`, `/diff keep` records it, `/diff done` summarises.
+
 Isolation: `--profile <name>` runs against `<base>/profiles/<name>` (its own config, sessions, skills,
 approvals); `vallenemperor profile list|create|delete` manages them.
 

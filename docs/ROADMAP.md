@@ -157,7 +157,7 @@ call makes no network request), formats `update available: x → y`, honours
   persists.
 - **Effort.** S · **Risk.** low-medium (provider variance).
 
-#### P1.3 Interactive `/diff` viewer — 🟡
+#### P1.3 Interactive `/diff` viewer — ✅
 - **Why.** `/diff` currently prints text; checkpoints already exist, so this is presentation work.
 - **Scope.** `vallencli/src/cli-diff-viewer.mjs` (new), wire from `/diff`.
 - **Behaviour.** Per-turn file list → per-file unified diff with syntax colouring → `n`/`p` to move
@@ -315,6 +315,12 @@ list|create|delete` manages them. The base home is captured once (`VALLENEMPEROR
 calls never build paths inside a profile, and `..` segments are neutralised. Tests:
 `vallencli/tests/profile.test.mjs` (3, including an end-to-end `--profile ci --version`). Suite at the
 time: **409/409 + 149/149**.
+
+**Evidence (P1.3 — done).** `/diff review` splits the working-tree diff into hunks and walks them one at
+a time (`/diff next|prev|hunk <n>`); `/diff keep` records a hunk, `/diff skip` reverts exactly that hunk
+with a reverse `git apply` (proved on a real repo: reverting hunk 1 leaves hunk 2's change intact), and
+`/diff done` reports kept/skipped. Tests: `vallenagent/tests/diff_viewer.test.mjs` (4). Suite at the
+time: **413/413 + 149/149**.
 
 ### P2 — Differentiators (only after P0/P1)
 
