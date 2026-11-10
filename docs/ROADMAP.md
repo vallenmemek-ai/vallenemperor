@@ -8,9 +8,14 @@
 > selesai tanpa izin owner. Setiap item selesai: centang di sini, tambah catatan bukti (angka test),
 > dan ikuti alur rilis di `docs/RELEASING.md` (owner yang menekan tombol publish).
 
-Companion document: **[docs/REFERENCE-HERMES.md](REFERENCE-HERMES.md)** — the full inventory of
-what Hermes Agent ships (≈70 CLI commands, ≈90 slash commands, 35 toolsets), mapped to us with an
-adopt/adapt/ignore verdict. Use it when an item below needs more context.
+Companion documents (read before designing anything new):
+
+- **[REFERENCE-HERMES.md](REFERENCE-HERMES.md)** — Hermes Agent: ≈70 CLI commands, ≈90 slash commands,
+  35 toolsets, mapped to us with adopt/adapt/ignore verdicts.
+- **[REFERENCE-ANTIGRAVITY.md](REFERENCE-ANTIGRAVITY.md)** — Antigravity CLI: full slash-command
+  inventory, subagents, artifacts, permissions/sandbox.
+- **[REFERENCE-OPENCODE.md](REFERENCE-OPENCODE.md)** — opencode: config-surface inventory plus a
+  cross-reference table of where all three peers agree (the strongest ordering signal).
 
 Purpose: the single source of truth for **what to build next** and **how we know it is done**. Status
 snapshots live in `docs/PROJECT.md`; rules live in `RULES.md`; this file is the backlog.
@@ -228,6 +233,11 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[ ]` |
 | R19 | Approval mining (propose allowlist from history) | fewer prompts over time | M | `[ ]` |
 | R20 | `/handoff <platform>` | move a CLI session to Telegram | M | `[ ]` |
+| R21 | User-defined slash commands (`.vallenemperor/commands/*.md` → `/name`) | all three peers ship it; cheapest workflow win | S | `[ ]` |
+| R22 | Rule-based tool policies (allow/ask/deny per tool or path) | replaces today's global modes with per-tool rules | M | `[ ]` |
+| R23 | Formatter hook after edits (respect the project's formatter) | keeps diffs clean without manual runs | S | `[ ]` |
+| R24 | `/grill-me` — interview the user one question at a time before starting | fits our clarify policy; prevents wrong builds | S | `[ ]` |
+| R25 | `/learn` — turn corrections into skills/rules through a reviewable proposal | closes the self-improvement loop | M | `[ ]` |
 
 Deliberately not on this list (see `REFERENCE-HERMES.md` §6): desktop app, web dashboard, pets,
 skins, voice/wake word, video generation, 20+ messaging platforms, Python library, API server,
@@ -240,7 +250,7 @@ kanban board, egress proxy.
 | **A** | P0.1 setup · P0.2 doctor · P0.3 update notifier · R3 `/save` · R4 `/title`,`/history`,`/prompt` · R12 completion | next release |
 | **B** | P1.1 codesearch · P1.2 effort · P1.3 diff viewer · P1.4 copy · R1 `/steer` · R5 `/<skill>` · R8 `/context all` · R10 sessions | after A |
 | **C** | P2.1 recording · P2.2 nested · P2.3 profiles · P2.4 ACP · P2.5 terminal sandbox · R2 `/rewind` · R6 `/goal` · R9 `/worktree` | after B |
-| **D** | R11 diagnostics · R13 update · R14 LSP · R15 curator · R17 ACP · R19 approval mining · R20 handoff | later |
+| **D** | R11 diagnostics · R13 update · R14 LSP · R15 curator · R17 ACP · R19 approval mining · R20 handoff · R21 custom commands · R22 tool policies · R23 formatter · R24 grill-me · R25 learn | later |
 
 Each package: build → typecheck → tests → version bump → `npm install -g .` → smoke test → **owner
 approval** → commit/push → publish → approve staging → verify from the registry
@@ -270,6 +280,16 @@ approval** → commit/push → publish → approve staging → verify from the r
    determinism?
 
 ---
+
+## 6b. Cross-reference check (why this order)
+
+When Antigravity, Hermes, and opencode all ship the same capability, that capability is table stakes,
+not a differentiator. The three references agree on: code search panel, reasoning effort, interactive
+diff, setup/doctor/update, long-horizon goals, rewind/branch, custom slash commands, tool policies,
+LSP, worktrees, and subagent depth > 1. Those are ordered first (P0/P1/R1–R9, R21–R23).
+
+Things only one peer ships (browser recordings, pets, voice, desktop app, hosted connectors) stay in
+P2 or are explicitly ignored — they are not what makes the tool trustworthy.
 
 ## 7. How to pick up work (for the next AI session)
 
