@@ -17,6 +17,8 @@ import { runSetupCommand } from './cli-setup.mjs'
 import { formatDoctor, runDoctorCommand } from './cli-doctor.mjs'
 import { currentVersion, maybeNotifyUpdate, runUpdateCommand } from './cli-update-check.mjs'
 import { runCompletionCommand } from './cli-completion.mjs'
+import { dumpReport, insightsReport, listLogs, promptSizeReport } from './cli-diagnostics.mjs'
+import { runSessionsCommand } from './cli-sessions.mjs'
 import { backspacePicker, backPicker, createPickerState, enterPicker, fetchGatewayModels, formatModelCatalog, groupModelsByOwner, movePicker, pickerLines, typeInPicker } from './cli-model-picker.mjs'
 export { HELP, collectHealthChecks, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity } from './cli-ui.mjs'
 
@@ -991,6 +993,11 @@ export function parseArgs(argv) {
   if (head === 'doctor') return { ...result, mode: 'doctor', json: argv.includes('--json') }
   if (head === 'update') return { ...result, mode: 'update', json: argv.includes('--check') }
   if (head === 'completion') return { ...result, mode: 'completion', shell: String(argv[1] || '') }
+  if (head === 'sessions') return { ...result, mode: 'sessions', args: argv.slice(1) }
+  if (head === 'prompt-size') return { ...result, mode: 'prompt-size' }
+  if (head === 'insights') return { ...result, mode: 'insights' }
+  if (head === 'logs') return { ...result, mode: 'logs' }
+  if (head === 'dump') return { ...result, mode: 'dump' }
   for (let index = 0; index < argv.length; index++) {
     const arg = String(argv[index])
     if (arg === '--help' || arg === '-h') return { ...result, mode: 'help' }
@@ -1270,6 +1277,36 @@ export async function main(argv = process.argv.slice(2)) {
     if (parsed.mode === 'doctor') return await runDoctorCommand({ core, json: parsed.json })
     if (parsed.mode === 'update') return await runUpdateCommand({ root: ROOT, checkOnly: parsed.json })
     if (parsed.mode === 'completion') return runCompletionCommand({ shell: parsed.shell })
+    if (parsed.mode === 'sessions') return runSessionsCommand({ args: parsed.args || [] })
+    if (parsed.mode === 'prompt-size') {
+      const probe = createAgent({})
+      try {
+        const schemas = core.registry.getOpenAISchemas([], probe.toolWhitelist).map(schema => JSON.stringify(schema))
+        const skills = (probe.skillLoader?.list?.() || []).map(skill => ({ name: skill.name, description: skill.metadata?.description || '' }))
+        process.stdout.write(`${promptSizeReport({ systemPrompt: probe.getSystemPrompt(), toolSchemas: schemas, skills })}\n`)
+      } finally { try { await probe.shutdown?.() } catch { } }
+      return 0
+    }
+    if (parsed.mode === 'insights') {
+      const manager = new core.SessionManager()
+      const sessions = manager.listSessions().slice(0, 20).map(session => {
+        const data = manager.loadSession(session.id)
+        return { ...session, turns: data ? data.messages.length : 0, updatedAt: session.updated_at }
+      })
+      process.stdout.write(`${insightsReport({ sessions })}\n`)
+      return 0
+    }
+    if (parsed.mode === 'logs') {
+      const logs = listLogs(core.getVallenHome())
+      process.stdout.write(logs.length
+        ? `${logs.length} log file(s) in ${core.getVallenHome()}/logs\n${logs.map(log => `  ${String(log.size).padStart(9)}  ${log.path}`).join('\n')}\n`
+        : `No log files in ${core.getVallenHome()}/logs yet.\n`)
+      return 0
+    }
+    if (parsed.mode === 'dump') {
+      process.stdout.write(`${dumpReport({ config, version, home: core.getVallenHome() })}\n`)
+      return 0
+    }
     if (parsed.mode === 'config') return await runConfigCommand(core, parsed)
 
     if (parsed.mode === 'prompt') {

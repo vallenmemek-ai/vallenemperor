@@ -267,6 +267,14 @@ DONE/CONTINUE — a broken judge fails safe to DONE, and the continuation prompt
 Tests: `vallenagent/tests/goal_rewind.test.mjs` (3) and `vallencli/tests/session_commands.test.mjs`
 (6). Suite at the time: **391/391 + 139/139**.
 
+**Evidence (R10, R11, R23, R24 — done).** `vallenemperor sessions list|show|export|prune` browses and
+exports saved sessions (redacted). `prompt-size` reports system/schema/skill token costs, `insights`
+summarises activity, `logs` lists log files, `dump` prints a paste-safe config summary with keys
+redacted. `formatter.command` + `formatter.extensions` runs the project formatter after each edit
+(best-effort, never fatal). `/grill-me` interviews one question at a time with a recommended answer.
+Tests: `vallenagent/tests/formatter_grill.test.mjs` (2), `vallencli/tests/diagnostics_sessions.test.mjs`
+(4). Suite at the time: **393/393 + 143/143**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -326,8 +334,8 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R7 | `/queue` management (list/edit/rm/move/clear) | multi-prompt workflow while a turn runs | S | `[x]` |
 | R8 | `/context all` per-file context breakdown | answers "why is my AGENTS.md ignored?" | S | `[x]` |
 | R9 | `/worktree new\|list` for the main session | parallel human work without stashing | M | `[ ]` |
-| R10 | `vallenemperor sessions` (browse/export/prune) + `/autoprune` | session hygiene | S | `[ ]` |
-| R11 | `prompt-size`, `insights`, `logs`, `dump` diagnostics | support and cost visibility | S–M | `[ ]` |
+| R10 | `vallenemperor sessions` (browse/export/prune) | session hygiene | S | `[x]` |
+| R11 | `prompt-size`, `insights`, `logs`, `dump` diagnostics | support and cost visibility | S–M | `[x]` |
 | R12 | `vallenemperor completion` (bash/zsh/fish) | terminal ergonomics | S | `[x]` |
 | R13 | `vallenemperor update` (+ `/update`) | self-update without npm knowledge | S | `[x]` |
 | R14 | LSP tool (semantic diagnostics beyond tsc) | non-TypeScript projects | L | `[ ]` |
@@ -339,8 +347,8 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R20 | `/handoff <platform>` | move a CLI session to Telegram | M | `[ ]` |
 | R21 | User-defined slash commands (`.vallenemperor/commands/*.md` → `/name`) | all three peers ship it; cheapest workflow win | S | `[x]` |
 | R22 | Rule-based tool policies (allow/ask/deny per tool or path) | replaces today's global modes with per-tool rules | M | `[ ]` |
-| R23 | Formatter hook after edits (respect the project's formatter) | keeps diffs clean without manual runs | S | `[ ]` |
-| R24 | `/grill-me` — interview the user one question at a time before starting | fits our clarify policy; prevents wrong builds | S | `[ ]` |
+| R23 | Formatter hook after edits (respect the project's formatter) | keeps diffs clean without manual runs | S | `[x]` |
+| R24 | `/grill-me` — interview the user one question at a time before starting | fits our clarify policy; prevents wrong builds | S | `[x]` |
 | R25 | `/learn` — turn corrections into skills/rules through a reviewable proposal | closes the self-improvement loop | M | `[x]` |
 | R26 | Skill provenance (who/when/why) + `/journey` learning timeline | audit and roll back a bad lesson | M | `[ ]` |
 | R27 | Curator — archive stale skills by usage | keeps the skill index lean | M | `[ ]` |

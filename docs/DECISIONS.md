@@ -376,3 +376,17 @@ add workflows without touching code.
 **Consequence.** Redaction is best-effort by shape (well-known token prefixes), not a guarantee —
 `/save` prints whether redaction was applied. Custom commands must never shadow built-ins: built-in
 handlers run first.
+
+---
+
+## D27 — Diagnostics are offline; the formatter is best-effort
+
+**Decision.** `prompt-size`, `insights`, `logs` and `dump` read local files and the tool registry only —
+no model calls, no network. `dump` redacts api keys to `***set***`. The post-edit formatter runs the
+project's own command (`{file}` substituted) and only reports failures.
+
+**Why.** Support diagnostics must work when the provider is down — that is exactly when users run them.
+A formatter that blocks or fails a turn would be worse than no formatter.
+
+**Consequence.** Diagnostics must never print secrets; `dump` is the canonical example. Formatter output
+is truncated and surfaced as a thinking note, never as a tool error.

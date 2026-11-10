@@ -27,6 +27,7 @@ export const COMMANDS = [
   { name: '/agents', args: '[available|show|stop|clean]', desc: 'Subagent panel + custom agents' },
   { name: '/browser', args: '<task>', desc: 'Unlock browser tools and run a browser task' },
   { name: '/learn', args: '[source]', desc: 'Author a skill from a source' },
+  { name: '/grill-me', args: '[task]', desc: 'Interview before building' },
   { name: '/plan', args: '[task|go|next|edit|skip|stop|status]', desc: 'Plan mode: write a plan, then run it step by step', fillOnly: true },
   { name: '/plans', desc: 'List saved plans' },
   { name: '/gamedev', args: '[off]', desc: 'Toggle game-development mode' },

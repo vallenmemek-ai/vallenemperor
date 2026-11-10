@@ -84,7 +84,7 @@ export interface CommandResult {
 }
 
 const NOT_HANDLED: CommandResult = { handled: false, response: '' }
-const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer', '/queue', '/rewind', '/goal'])
+const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer', '/queue', '/rewind', '/goal', '/grill-me'])
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -132,6 +132,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Kerja', name: '/skills', args: '[list|search|install|...]', desc: 'kelola skill' },
   { group: 'Kerja', name: '/plan', args: '[task|go|next|edit|skip|stop|status]', desc: 'mode rencana + eksekusi bertahap' },
   { group: 'Kerja', name: '/learn', args: '[sumber]', desc: 'ubah sesi/dokumen/direktori jadi skill' },
+  { group: 'Kerja', name: '/grill-me', args: '[tugas]', desc: 'wawancara dulu sebelum mulai kerja' },
   { group: 'Kerja', name: '/agents', args: '[available|show <id>|stop <id>|clean]', desc: 'panel subagent + daftar custom agent' },
   { group: 'Kerja', name: '/browser', args: '<task|off>', desc: 'buka tool browser untuk sesi ini lalu jalankan task' },
   { group: 'Kerja', name: '/plans', desc: 'daftar rencana' },

@@ -18,6 +18,11 @@ export interface AgentConfig {
   security?: {
     filesystem?: 'workspace' | 'unrestricted'
   }
+  /** Run the project's formatter on files the agent edits. `{file}` is substituted. */
+  formatter?: {
+    command?: string
+    extensions?: string[]
+  }
   /** Inject a compact symbol map of the workspace into the system prompt (Aider-style). */
   repo_map?: {
     enabled?: boolean

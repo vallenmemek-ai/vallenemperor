@@ -32,6 +32,8 @@ import { finalizeSuccessfulTurn } from './turn_finalize'
 import { writeTurnWalkthrough } from './artifact_store'
 import { withPathLock } from '../core/path_lock'
 import { blockedBy, runHooks } from '../core/hooks'
+import { formatFile } from '../core/formatter'
+import { resolve } from 'node:path'
 import { SessionManager } from '../session/session'
 import { loadConfig, getActiveProvider, getVallenHome, setProviderToken, saveConfig } from '../core/config'
 import { registerBuiltinTools } from '../tools/builtin_tools'
@@ -1135,6 +1137,14 @@ export class AIAgent {
         payload: { ...hookBase, result: String(result).slice(0, 2000) },
         cwd: context.workingDir
       })
+      // Post-edit formatter (best-effort; never changes the tool result).
+      const editedPath = (toolName === 'write_file' || toolName === 'patch') && typeof toolArgs?.path === 'string'
+        ? resolve(context.workingDir || process.cwd(), String(toolArgs.path))
+        : ''
+      if (editedPath && !String(result).includes('"error"')) {
+        const formatted = formatFile({ file: editedPath, cwd: context.workingDir, config: (this.config as any).formatter })
+        if (formatted.ran && !formatted.ok) safeCallback(callbacks?.onThinking, `Formatter failed: ${String(formatted.output || '').slice(0, 120)}`)
+      }
     }
     if (context.workingDir) {
       if (!this.config.terminal) this.config.terminal = {}

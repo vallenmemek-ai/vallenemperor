@@ -231,6 +231,10 @@ export function createLocalCommandHandler(context) {
       printResponse(core.formatCopyResult(result, text.length))
       return true
     }
+    if (cmd === '/grill-me' || cmd === '/grill') {
+      await runTurn(core.buildGrillPrompt(value), text)
+      return true
+    }
     if (cmd === '/learn') {
       const prompt = core.buildLearnPrompt(value)
       await runTurn(prompt, text)

@@ -353,6 +353,11 @@ Review surfaces: `/artifact` lists this session's artifacts and opens one by num
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
 `/fork` clones the conversation into a new session id.
 
+Diagnostics: `vallenemperor prompt-size` (system/schema/skill token breakdown), `insights` (activity),
+`logs` (log files), `dump` (paste-safe config with keys redacted), and `sessions list|show|export|prune`.
+`formatter.command` + `formatter.extensions` runs the project formatter after each edit (best-effort).
+`/grill-me [task]` interviews one question at a time with a recommended answer before building.
+
 Session control: `/queue add|list|rm|clear` queues prompts that drain after the current turn;
 `/rewind [n|fork n]` cuts the conversation back to before prompt *n* (or forks first);
 `/goal <objective>` sets a standing goal whose continuation is judged after every turn by
