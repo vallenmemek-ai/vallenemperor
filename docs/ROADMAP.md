@@ -8,6 +8,10 @@
 > selesai tanpa izin owner. Setiap item selesai: centang di sini, tambah catatan bukti (angka test),
 > dan ikuti alur rilis di `docs/RELEASING.md` (owner yang menekan tombol publish).
 
+Companion document: **[docs/REFERENCE-HERMES.md](REFERENCE-HERMES.md)** — the full inventory of
+what Hermes Agent ships (≈70 CLI commands, ≈90 slash commands, 35 toolsets), mapped to us with an
+adopt/adapt/ignore verdict. Use it when an item below needs more context.
+
 Purpose: the single source of truth for **what to build next** and **how we know it is done**. Status
 snapshots live in `docs/PROJECT.md`; rules live in `RULES.md`; this file is the backlog.
 
@@ -197,13 +201,46 @@ Format per item: **why**, **scope**, **acceptance**, **effort** (S ≤ 1 session
 
 ---
 
+### P3 — Reference-informed backlog (from Hermes)
+
+Merged from `docs/REFERENCE-HERMES.md`. Each item is terminal-native and independently shippable.
+The owner may promote any of these into P1 by saying so; otherwise they follow the order below.
+
+| # | Item | Why it matters | Effort | Status |
+| --- | --- | --- | --- | --- |
+| R1 | `/steer <text>` — inject a note after the next tool call, no interrupt | mid-turn control is the top ergonomic gap | M | `[ ]` |
+| R2 | `/rewind [fork N]` — transcript browser: edit a past prompt or branch before it | fixes wrong turns without losing work | M | `[ ]` |
+| R3 | `/save md\|json [redact]` — export the transcript | sharing, bug reports, redaction | S | `[ ]` |
+| R4 | `/title`, `/history`, `/prompt` (`$EDITOR` compose) | tiny QoL wins | S | `[ ]` |
+| R5 | `/<skill-name>` — invoke a skill directly as a command | skills become first-class commands | S | `[ ]` |
+| R6 | `/goal` + `/subgoal` with an auxiliary judge loop | long-horizon autonomy with a stop condition | M | `[ ]` |
+| R7 | `/queue` management (list/edit/rm/move/clear) | multi-prompt workflow while a turn runs | S | `[ ]` |
+| R8 | `/context all` per-file context breakdown | answers "why is my AGENTS.md ignored?" | S | `[ ]` |
+| R9 | `/worktree new\|list` for the main session | parallel human work without stashing | M | `[ ]` |
+| R10 | `vallenemperor sessions` (browse/export/prune) + `/autoprune` | session hygiene | S | `[ ]` |
+| R11 | `prompt-size`, `insights`, `logs`, `dump` diagnostics | support and cost visibility | S–M | `[ ]` |
+| R12 | `vallenemperor completion` (bash/zsh/fish) | terminal ergonomics | S | `[ ]` |
+| R13 | `vallenemperor update` (+ `/update`) | self-update without npm knowledge | S | `[ ]` |
+| R14 | LSP tool (semantic diagnostics beyond tsc) | non-TypeScript projects | L | `[ ]` |
+| R15 | Curator — auto-archive stale skills | keeps the skill index lean | M | `[ ]` |
+| R16 | Profiles (`--profile`) | isolated config/sessions/skills | M | `[ ]` |
+| R17 | ACP server for editors | editor integration | L | `[ ]` |
+| R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[ ]` |
+| R19 | Approval mining (propose allowlist from history) | fewer prompts over time | M | `[ ]` |
+| R20 | `/handoff <platform>` | move a CLI session to Telegram | M | `[ ]` |
+
+Deliberately not on this list (see `REFERENCE-HERMES.md` §6): desktop app, web dashboard, pets,
+skins, voice/wake word, video generation, 20+ messaging platforms, Python library, API server,
+kanban board, egress proxy.
+
 ## 4. Release plan
 
 | Package | Contents | Target |
 | --- | --- | --- |
-| **A** | P0.1 setup · P0.2 doctor · P0.3 update notifier | next release |
-| **B** | P1.1 codesearch · P1.2 effort · P1.3 diff viewer · P1.4 copy | after A |
-| **C** | P2.1 recording · P2.2 nested · P2.3 profiles · P2.4 ACP · P2.5 terminal sandbox | after B |
+| **A** | P0.1 setup · P0.2 doctor · P0.3 update notifier · R3 `/save` · R4 `/title`,`/history`,`/prompt` · R12 completion | next release |
+| **B** | P1.1 codesearch · P1.2 effort · P1.3 diff viewer · P1.4 copy · R1 `/steer` · R5 `/<skill>` · R8 `/context all` · R10 sessions | after A |
+| **C** | P2.1 recording · P2.2 nested · P2.3 profiles · P2.4 ACP · P2.5 terminal sandbox · R2 `/rewind` · R6 `/goal` · R9 `/worktree` | after B |
+| **D** | R11 diagnostics · R13 update · R14 LSP · R15 curator · R17 ACP · R19 approval mining · R20 handoff | later |
 
 Each package: build → typecheck → tests → version bump → `npm install -g .` → smoke test → **owner
 approval** → commit/push → publish → approve staging → verify from the registry
