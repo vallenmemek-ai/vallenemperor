@@ -139,7 +139,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Kerja', name: '/plan', args: '[task|go|next|edit|skip|stop|status]', desc: 'mode rencana + eksekusi bertahap' },
   { group: 'Kerja', name: '/learn', args: '[sumber]', desc: 'ubah sesi/dokumen/direktori jadi skill' },
   { group: 'Kerja', name: '/grill-me', args: '[tugas]', desc: 'wawancara dulu sebelum mulai kerja' },
-  { group: 'Kerja', name: '/agents', args: '[available|show <id>|stop <id>|clean]', desc: 'panel subagent + daftar custom agent' },
+  { group: 'Kerja', name: '/agents', args: '[runs|available|show <id>|stop <id>|clean]', desc: 'dashboard subagent atau daftar custom agent' },
   { group: 'Kerja', name: '/browser', args: '<task|off>', desc: 'buka tool browser untuk sesi ini lalu jalankan task' },
   { group: 'Kerja', name: '/plans', desc: 'daftar rencana' },
   { group: 'Kerja', name: '/auto', desc: 'mode otomatis' },
