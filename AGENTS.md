@@ -12,6 +12,7 @@ order — do not guess the architecture:
 4. **[docs/TESTING.md](docs/TESTING.md)** — how to test and what must stay covered
 5. **[docs/RELEASING.md](docs/RELEASING.md)** — release pipeline and owner approval
 6. **[docs/DECISIONS.md](docs/DECISIONS.md)** — why the code looks the way it does (do not undo these casually)
+7. **[docs/ROADMAP.md](docs/ROADMAP.md)** — the backlog: pick the top unchecked item, tick it when done
 
 ## The eight invariants
 
