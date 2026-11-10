@@ -240,6 +240,12 @@ export class AIAgent {
     return this.sessionId
   }
 
+  /** Any tool marked `ask` forces sequential execution so the approval bridge cannot be bypassed. */
+  private hasAskPolicy(): boolean {
+    const policy = (this.config as any).tool_policy
+    return Boolean(policy && Object.values(policy).includes('ask'))
+  }
+
   /** Standing goal API (see agent/goal.ts). */
   setGoal(text: string, maxTurns = 20): { text: string; status: string; attempts: number; maxTurns: number } {
     const goal = String(text || '').trim()
@@ -825,7 +831,7 @@ export class AIAgent {
           const batch = await runToolBatch(toolCalls, {
             execute: call => this.executeToolCall(call, callbacks),
             isParallelSafe: name => Boolean(registry.get(name)?.parallelSafe),
-            canParallelize: !callbacks?.onBeforeTool && !this.isInterrupted,
+            canParallelize: !callbacks?.onBeforeTool && !this.isInterrupted && !this.hasAskPolicy(),
             conversationHistory: this.conversationHistory,
             recordToolError: noteToolError,
             saveCurrentSession: () => {
@@ -1110,6 +1116,16 @@ export class AIAgent {
       onBeforeTool: callbacks?.onBeforeTool,
       createSubagent: options => new AIAgent(options)
     })
+
+    // Per-tool policy: deny never runs, ask goes through the approval bridge.
+    const policy = (this.config as any).tool_policy?.[toolName]
+    if (policy === 'deny') {
+      return JSON.stringify({ error: `Tool "${toolName}" is denied by tool_policy.`, policy: 'deny' })
+    }
+    if (policy === 'ask' && callbacks?.onBeforeTool) {
+      const approved = await callbacks.onBeforeTool({ id: toolCall.id, name: toolName, args: toolArgs })
+      if (!approved) return JSON.stringify({ error: `Tool "${toolName}" was not approved (tool_policy: ask).`, policy: 'ask' })
+    }
 
     // Lifecycle hook: a pre_tool hook may block the call before anything runs.
     const hookBase = { sessionId: this.sessionId, tool: toolName, args: toolArgs, cwd: context.workingDir }

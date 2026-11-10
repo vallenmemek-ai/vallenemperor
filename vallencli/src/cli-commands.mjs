@@ -102,6 +102,29 @@ export function createLocalCommandHandler(context) {
       }
       return true
     }
+    if (cmd === '/worktree') {
+      const [sub, name] = value.split(/\s+/).filter(Boolean)
+      const repo = agent.config?.terminal?.cwd || process.cwd()
+      if (sub === 'list' || !sub) {
+        const list = core.listWorktrees(repo)
+        printResponse(list.length ? list.join('\n') : 'No worktrees for this repository.')
+        return true
+      }
+      if (sub === 'new') {
+        const id = `main-${(name || Date.now().toString(36)).replace(/[^A-Za-z0-9._-]/g, '-')}`
+        try {
+          const info = core.createSubagentWorktree({ repo, home: core.getVallenHome(), id })
+          agent.config.terminal = { ...(agent.config.terminal || {}), cwd: info.path }
+          try { agent.memoryStore?.setWorkingDir?.(info.path) } catch { }
+          printResponse(`Worktree ready: ${info.path}\nBranch: ${info.branch}\nAgent cwd retargeted here.`)
+        } catch (error) {
+          printResponse(`Worktree failed: ${error?.message || error}`)
+        }
+        return true
+      }
+      printResponse('Usage: /worktree new [name] | /worktree list')
+      return true
+    }
     if (cmd === '/queue') {
       const queue = state.queuedPrompts || (state.queuedPrompts = [])
       const [sub, ...rest] = value.split(/\s+/).filter(Boolean)

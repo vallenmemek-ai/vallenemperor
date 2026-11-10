@@ -58,6 +58,8 @@ export const COMMANDS = [
   { name: '/fork', desc: 'Clone conversation to a new session' },
   { name: '/sandbox', args: '[status|workspace|off]', desc: 'Filesystem write boundary' },
   { name: '/permissions', desc: 'Effective permission summary' },
+  { name: '/policy', args: '[tool] [allow|ask|deny]', desc: 'Per-tool policy' },
+  { name: '/worktree', args: '[new|list]', desc: 'Git worktree for this session' },
   { name: '/health', desc: 'Run diagnostics' },
   { name: '/perf', desc: 'Process CPU / memory sample' },
   { name: '/clear', desc: 'Clear the screen' },

@@ -18,6 +18,8 @@ export interface AgentConfig {
   security?: {
     filesystem?: 'workspace' | 'unrestricted'
   }
+  /** Per-tool policy: deny blocks the tool, ask forces the approval bridge, allow is the default. */
+  tool_policy?: Record<string, 'allow' | 'ask' | 'deny'>
   /** Run the project's formatter on files the agent edits. `{file}` is substituted. */
   formatter?: {
     command?: string

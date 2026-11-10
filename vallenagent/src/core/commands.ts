@@ -84,7 +84,7 @@ export interface CommandResult {
 }
 
 const NOT_HANDLED: CommandResult = { handled: false, response: '' }
-const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer', '/queue', '/rewind', '/goal', '/grill-me'])
+const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands', '/steer', '/queue', '/rewind', '/goal', '/grill-me', '/policy', '/worktree'])
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -145,6 +145,8 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Berkas', name: '/artifact', args: '[nomor|last]', desc: 'panel review artifact sesi' },
   { group: 'Berkas', name: '/sandbox', args: '[status|workspace|off]', desc: 'batas tulis filesystem agent' },
   { group: 'Berkas', name: '/permissions', desc: 'ringkasan izin: approval, sandbox, browser, kredensial' },
+  { group: 'Berkas', name: '/policy', args: '[tool] [allow|ask|deny|clear]', desc: 'aturan per-tool' },
+  { group: 'Berkas', name: '/worktree', args: '[new [nama]|list]', desc: 'worktree git untuk sesi utama' },
   { group: 'Berkas', name: '/diff', args: '[turn | working | staged | all]', desc: 'lihat perubahan checkpoint atau git diff' },
   { group: 'Berkas', name: '/undo', args: '[1-20] [--force]', desc: 'pulihkan checkpoint' },
   { group: 'Berkas', name: '/cd', args: '<dir>', desc: 'pindah direktori kerja' },
@@ -399,6 +401,33 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     agentConfig.reasoning_effort = level
     saveConfig(agentConfig)
     return { handled: true, response: `Reasoning effort set to ${level} (saved). Applies to the next provider request.` }
+  }
+
+  if (cmd === '/policy') {
+    const config = ctx.agent.config as any
+    const [tool, action] = args
+    if (!tool) {
+      const policy = config.tool_policy || {}
+      const entries = Object.entries(policy)
+      return {
+        handled: true,
+        response: entries.length
+          ? ['Tool policy', ...entries.map(([name, value]) => `  ${name.padEnd(20)} ${value}`)].join('\n')
+          : 'No tool policy set. Usage: /policy <tool> allow|ask|deny, or /policy <tool> clear'
+      }
+    }
+    if (!action) {
+      return { handled: true, response: `${tool}: ${config.tool_policy?.[tool] || 'allow (default)'}` }
+    }
+    if (!['allow', 'ask', 'deny', 'clear'].includes(action)) {
+      return { handled: true, response: 'Usage: /policy <tool> allow|ask|deny|clear' }
+    }
+    const policy = { ...(config.tool_policy || {}) }
+    if (action === 'clear') delete policy[tool]
+    else policy[tool] = action
+    config.tool_policy = policy
+    saveConfig(config)
+    return { handled: true, response: action === 'clear' ? `${tool}: policy cleared (allow).` : `${tool}: ${action}.` }
   }
 
   if (cmd === '/permissions') {
