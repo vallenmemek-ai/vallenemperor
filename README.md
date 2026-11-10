@@ -198,6 +198,22 @@ Each folder owns an `index.ts` barrel; the root `src/index.ts` only re-exports f
 module is added in exactly one place. The turn loop is split per stage — every stage is a module
 with explicit dependencies, pinned by tests instead of by one thousand-line function.
 
+## For AI agents
+
+If you are an AI starting fresh in this repository (new session, cleared context, different tool),
+read in this order:
+
+1. **[AGENTS.md](AGENTS.md)** — entry point, invariants, definition of done
+2. **[RULES.md](RULES.md)** — binding rules: owner gate, versioning, evidence, secrets, git
+3. **[docs/PROJECT.md](docs/PROJECT.md)** — architecture and where code belongs
+4. **[docs/TESTING.md](docs/TESTING.md)** — how to test
+5. **[docs/RELEASING.md](docs/RELEASING.md)** — release pipeline (the owner holds the publish button)
+6. **[docs/DECISIONS.md](docs/DECISIONS.md)** — decisions not to reverse by accident
+
+In short: never publish without the owner's explicit approval, bump the patch version for every
+change and install it (`npm install -g .`), prove changes with real test output, never read or commit
+`.env`, and never claim a result you did not observe.
+
 ## Development
 
 ```bash

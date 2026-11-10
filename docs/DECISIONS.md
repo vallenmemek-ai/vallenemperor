@@ -1,0 +1,183 @@
+# DECISIONS.md — architecture decision records
+
+Short records of choices that shape the code. **Read before changing the area.** Each entry: what was
+decided, why, and what breaks if you undo it. If you believe a decision is wrong, raise it with the
+owner — do not silently reverse it.
+
+---
+
+## D1 — The turn loop is split into stage modules
+
+**Decision.** `agent/agent.ts` keeps only the loop skeleton. Stages live in `turn_setup_phase.ts`,
+`turn_provider_call.ts`, `turn_verification_gate.ts`, `turn_tool_batch.ts`, `tool_context.ts`,
+`tool_result_evidence.ts`, `turn_finalize.ts`, each with an explicit dependency object.
+
+**Why.** A single 1,300-line function could not be reviewed or tested per behavior; a bad replace
+once cut 350 lines and only the test suite caught it.
+
+**Consequence.** New stage-level logic goes into a stage module. `turn_event_order.test.mjs` pins the
+observable order (`thinking → telemetry per response → tool_start → tool_end → chunk → final telemetry`).
+
+---
+
+## D2 — Verification is grouped and blocking
+
+**Decision.** Edits dirty evidence groups: `.ts` → typecheck, test files → test run, build config →
+build. A successful matching command proves the group. A dirty group triggers one nudge, then blocks
+the final answer with `completionStatus: 'incomplete'`. Read-only commands never count.
+
+**Why.** The old gate only covered TypeScript and only scolded *after* the model claimed "done".
+
+**Consequence.** `verification.ts` classifies commands; `turn_verification_gate.ts` decides. Adding a
+new file class means updating `tool_evidence.ts` and the gate tests.
+
+---
+
+## D3 — Auto-checklist is bookkeeping, not user intent
+
+**Decision.** The runtime-created `request-*` checklist item is bookkeeping. Once the model answers
+in text with no pending tool call, the answer is accepted (after one nudge) and the item is marked
+completed. A checklist the **model** created still blocks.
+
+**Why.** Meta questions ("ini pertanyaan jujur kah bang, biar enak gw update") were classified as
+tasks, then closed with a false "Task incomplete" footer.
+
+**Consequence.** Interrogative Indonesian markers (`kah`, `apa`, `kenapa`, `gimana`, `saran`,
+`pendapat`, `menurut lu`) are not execution requests. See `agent_task_intent.ts`.
+
+---
+
+## D4 — Clarify is a gate, not a form
+
+**Decision.** `clarify` only accepts blocking decisions. Permission-to-continue questions and
+preference polls are rejected with `proceed: true` + advice. Limits: 5 questions, 4 choices.
+
+**Why.** The runtime cannot collect structured answers; asking for style or "should I continue?"
+wasted a whole turn.
+
+**Consequence.** `clarify_policy.ts` owns the rules and is unit-tested. The system prompt has a
+`# When to Ask (clarify)` section that must stay consistent with it.
+
+---
+
+## D5 — Skills: per-turn auto-load, explicit stickiness
+
+**Decision.** Relevance scoring uses **distinct** words (a repeated word counts once). Auto-matched
+skills apply only to the current turn; only `skill_view` (explicit) is stored in `activeSkill` and
+stays until `/new`.
+
+**Why.** A skill loaded once (e.g. "email") was injected on every later turn, and repeated words
+passed the "two matching words" threshold.
+
+**Consequence.** `skills.ts` dedupes before slicing; `agent.ts` never stores auto-matches. Tests:
+`skills_relevance.test.mjs`, `turn_loop.behaviour.test.mjs` (skill release).
+
+---
+
+## D6 — The root package is CommonJS-typed on purpose
+
+**Decision.** The root `package.json` must **not** set `"type": "module"`.
+
+**Why.** `vallenagent/dist/*.js` is compiled as CommonJS. Adding `"type": "module"` made every import
+fail with `exports is not defined in ES module scope` (`config show` broke immediately).
+
+**Consequence.** CLI sources use `.mjs`. Converting to full ESM requires changing the TypeScript
+module target first — a separate, larger change.
+
+---
+
+## D7 — One publishable package, workspace for development
+
+**Decision.** `vallenagent` and `vallencli` stay private workspaces. The root package is the only
+thing published, shipping `vallencli/src`, `vallenagent/dist`, `banner.txt`, and
+`.vallenemperor/skills` via a `files` whitelist.
+
+**Why.** The CLI resolves the core by relative path (`ROOT/vallenagent/dist/index.js`). Shipping the
+same layout keeps every runtime path valid without a rewrite.
+
+**Consequence.** Runtime dependencies must be declared on the **root** package. `prepack`/`prepare`
+must build `dist`. `files` overrides `.gitignore`, so gitignored `dist/` still ships.
+
+---
+
+## D8 — Bin invocation compares real paths
+
+**Decision.** The CLI entry guard uses `realpathSync` on both `process.argv[1]` and
+`import.meta.url`.
+
+**Why.** npm installs `node_modules/.bin/vallenemperor` as a symlink. Comparing a resolved symlink
+path with a real file path never matched, so the global binary exited 0 and printed nothing.
+
+**Consequence.** `cli.test.mjs` spawns `node <symlink> --version`; keep that test.
+
+---
+
+## D9 — Staged publishing is accepted, approval is manual
+
+**Decision.** Releases may land in npm staging (the token may be stage-only). The release script
+detects this and prints the approval instructions instead of claiming success.
+
+**Why.** The npm account enforces 2FA; direct publishes with a staging token create the
+`0.0.0-stage` placeholder.
+
+**Consequence.** `scripts/release.sh` checks `npm view` after publishing. Approval happens on
+npmjs.com → Staged Packages (or `npm stage approve` with npm ≥ 11.15 / Node ≥ 22.14).
+
+---
+
+## D10 — `/model` is a live two-level picker
+
+**Decision.** `/model` without an argument fetches `GET {base_url}/models`, groups by `owned_by`
+(`ag` → antigravity, `kc` → kiro), and offers provider → model selection. 15 s timeout, 5-minute
+session cache, non-TTY catalog fallback. `/model <name>` still switches directly.
+
+**Why.** Users could not see which providers/accounts were connected, and had to guess model ids.
+
+**Consequence.** `cli-model-picker.mjs` is pure logic + fetch (unit-tested); `cli.mjs` owns terminal
+rendering. Keys are claimed immediately while loading, so early keystrokes cannot leak into the REPL.
+
+---
+
+## D11 — Large edits always show their diff
+
+**Decision.** Edits changing more than 20 lines show a diff in the approval box even in `dangerous`
+mode, and cannot use an "always allow" session grant.
+
+**Why.** Silent large writes are the most expensive mistake a terminal agent can make.
+
+**Consequence.** `bigEditPreview()` in `cli.mjs`; non-interactive runs never block on it.
+
+---
+
+## D12 — Partial reads are allowed only for a unique target
+
+**Decision.** `patch` accepts a partial read (hash still matching) only when `old_string` occurs
+exactly once (or `replace_all` is set). `write_file` accepts a partial read for a full overwrite
+because the hash proves the content is unchanged. `unread`/`stale` are always refused.
+
+**Why.** Editing one line in a 2,000-line file should not require pulling the whole file into context.
+
+**Consequence.** `file_tools.ts` keeps both guards; tests in `patch_engine.test.mjs` cover unique,
+ambiguous, stale, and unread cases.
+
+---
+
+## D13 — External services are injected, not mocked at the module level
+
+**Decision.** The Telegram adapter takes an `http` option and the model picker takes `fetchModels`.
+
+**Why.** Gateway behavior (pairing, allowlist, rate limits, approvals) must be testable without a
+network and without monkey-patching globals.
+
+**Consequence.** Keep new adapters injectable. Tests construct them with stubs and assert on calls.
+
+---
+
+## D14 — The test suite is cross-platform
+
+**Decision.** Tests must pass on Linux, macOS, and Windows. `scripts/run-tests.mjs` enumerates test
+files; no POSIX-only assumptions are allowed without a platform guard.
+
+**Why.** CI runs a 3-OS matrix plus a Termux-shaped (arm64, no native build) job.
+
+**Consequence.** Use `node:path`, `node:os.tmpdir()`, and Node APIs instead of shell commands.
