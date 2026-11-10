@@ -19,6 +19,7 @@ import { browserToolsUnlocked } from './browser_gate'
 import { buildContextReport } from './context_report'
 import { formatApprovals, mineApprovals, readApprovals } from './approval_mining'
 import { buildExtensionManifest, formatManifest } from './extension_manifest'
+import { formatExtensionTools, loadExtensionTools } from './extension_tools'
 import { archiveSkills, findStaleSkills, findStaleSkillsByUsage, formatCuratorReport } from '../skills/curator'
 import { SkillStatsStore } from '../skills/skill_stats'
 import { registry } from '../tools/tools'
@@ -154,7 +155,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Berkas', name: '/permissions', desc: 'ringkasan izin: approval, sandbox, browser, kredensial' },
   { group: 'Berkas', name: '/policy', args: '[tool] [allow|ask|deny|clear]', desc: 'aturan per-tool' },
   { group: 'Berkas', name: '/approvals', args: '[apply]', desc: 'tambang riwayat approval jadi policy' },
-  { group: 'Berkas', name: '/extensions', desc: 'manifest skill, agent, command, hook, MCP' },
+  { group: 'Berkas', name: '/extensions', args: '[tools]', desc: 'manifest skill, agent, command, hook, MCP + tool pack' },
   { group: 'Berkas', name: '/curator', args: '[hari] [apply]', desc: 'arsipkan skill yang lama tidak dipakai' },
   { group: 'Sesi & model', name: '/fast', args: '[on|off|status]', desc: 'mode cepat: effort rendah, review mati' },
   { group: 'Sesi & model', name: '/handoff', args: '[platform]', desc: 'ekspor sesi + perintah resume ke surface lain' },
@@ -485,6 +486,11 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
   }
 
   if (cmd === '/extensions') {
+    if (args[0] === 'tools') {
+      const builtinNames = registry.list().map(tool => tool.name)
+      const result = await loadExtensionTools({ home: getVallenHome(), allow: (ctx.agent.config as any).extensions?.allow_tools === true, builtinNames })
+      return { handled: true, response: formatExtensionTools(result) }
+    }
     const manifest = buildExtensionManifest({ cwd: projectCwd(ctx.agent), home: getVallenHome(), config: ctx.agent.config })
     return { handled: true, response: formatManifest(manifest) }
   }

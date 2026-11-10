@@ -17,6 +17,8 @@ export interface ExtensionPack {
   skills: string[]
   commands: string[]
   agents: string[]
+  /** Executable tool modules (only loaded when extensions.allow_tools is true). */
+  tools: string[]
 }
 
 export interface ExtensionInstallResult {
@@ -45,7 +47,8 @@ export function readExtensionPack(dir: string): ExtensionPack {
       dir,
       skills: (raw.skills || []).map((file: string) => join(dir, file)),
       commands: (raw.commands || []).map((file: string) => join(dir, file)),
-      agents: (raw.agents || []).map((file: string) => join(dir, file))
+      agents: (raw.agents || []).map((file: string) => join(dir, file)),
+      tools: (raw.tools || []).map((file: string) => join(dir, file))
     }
   }
   return {
@@ -54,7 +57,8 @@ export function readExtensionPack(dir: string): ExtensionPack {
     dir,
     skills: filesIn(join(dir, 'skills')),
     commands: filesIn(join(dir, 'commands')),
-    agents: filesIn(join(dir, 'agents'))
+    agents: filesIn(join(dir, 'agents')),
+    tools: filesIn(join(dir, 'tools'), ['.mjs', '.js'])
   }
 }
 
@@ -64,7 +68,8 @@ export function installExtensionPack(pack: ExtensionPack, home: string): Extensi
   const targets: Array<[string[], string]> = [
     [pack.skills, join(home, 'skills')],
     [pack.commands, join(home, 'commands')],
-    [pack.agents, join(home, 'agents')]
+    [pack.agents, join(home, 'agents')],
+    [pack.tools, join(home, 'extensions', pack.name, 'tools')]
   ]
   for (const [files, targetDir] of targets) {
     for (const file of files) {

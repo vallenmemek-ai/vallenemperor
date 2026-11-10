@@ -385,6 +385,9 @@ Auditing and hygiene: `/approvals [apply]` mines the recorded approval history i
 `/extensions` + `vallenemperor extensions [--json]` list every installed skill, agent, command, hook and
 MCP server with its source.
 
+Extension tools: packs may ship `tools/*.mjs`; they load only with `extensions.allow_tools: true`, and
+names that would shadow a builtin are rejected. `/extensions tools` shows what loaded.
+
 Nested delegation: `agent.max_subagent_depth` (default 2) bounds how deep subagents may spawn their own
 subagents; the cap is checked in the tool executor, so it cannot be bypassed by a whitelist.
 

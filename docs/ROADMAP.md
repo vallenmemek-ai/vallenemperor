@@ -362,6 +362,15 @@ into the turn artifacts (`kind: recording`). It sits behind the same browser gat
 non-http(s) URLs, and reports the exact install hint when Playwright is missing. Tests:
 `vallenagent/tests/browser_record.test.mjs` (3). Suite at the time: **431/431 + 153/153**.
 
+**Evidence (P2.3, R34 — done).** A profile is a whole home: config, sessions, skills and approvals are
+isolated per `--profile` (proved by writing different configs into two profiles and asserting the base
+home stays untouched). Extension packs now carry executable tools too: `tools/*.mjs` are installed under
+`<home>/extensions/<pack>/tools`, loaded **only** when `extensions.allow_tools: true`, and every module is
+validated — bad names, builtin shadowing, duplicate names, missing handlers and syntax errors are rejected
+with a reason instead of crashing the agent. `/extensions tools` reports the opt-in state. Tests:
+`vallencli/tests/profile_isolation.test.mjs` (1) and `vallenagent/tests/extension_tools.test.mjs` (3).
+Suite at the time: **434/434 + 154/154**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ✅
@@ -380,7 +389,7 @@ non-http(s) URLs, and reports the exact install hint when Playwright is missing.
   on total active runs).
 - **Effort.** M · **Risk.** high (runaway cost, deadlocks).
 
-#### P2.3 Profiles (isolated instances) — ❌
+#### P2.3 Profiles (isolated instances) — ✅
 - **Why.** Hermes profiles let one machine run separate configs/sessions/skills per project or client.
 - **Scope.** `core/config.ts` (`--profile <name>` → `<home>/profiles/<name>/`), CLI flag, docs.
 - **Acceptance.** Two profiles never share sessions, skills, memory, or config; `--profile` respected
@@ -441,7 +450,7 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R27 | Curator — archive stale skills by usage | keeps the skill index lean | M | `[x]` |
 | R28 | Skill-index budget/delta tracking | index growth silently eats the context window | S | `[x]` |
 | R32 | Background agent view (dashboard over the existing subagent registry) | Claude Code, Hermes, Antigravity all expose a monitor | M | `[x]` |
-| R34 | Extension manifest: one installable unit carrying tools + commands + skills | Gemini extensions, Hermes plugins, opencode plugins | M | `[ ]` (partial: manifest + `extensions install` for skills/commands/agents; shipping executable tools remains) |
+| R34 | Extension manifest: one installable unit carrying tools + commands + skills | Gemini extensions, Hermes plugins, opencode plugins | M | `[x]` |
 
 Deliberately not on this list (see `REFERENCE-HERMES.md` §6): desktop app, web dashboard, pets,
 skins, voice/wake word, video generation, 20+ messaging platforms, Python library, API server,

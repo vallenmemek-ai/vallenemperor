@@ -33,6 +33,7 @@ import { writeTurnWalkthrough } from './artifact_store'
 import { withPathLock } from '../core/path_lock'
 import { blockedBy, runHooks } from '../core/hooks'
 import { formatFile } from '../core/formatter'
+import { loadExtensionTools } from '../core/extension_tools'
 import { resolve } from 'node:path'
 import { SessionManager } from '../session/session'
 import { loadConfig, getActiveProvider, getVallenHome, setProviderToken, saveConfig } from '../core/config'
@@ -209,6 +210,25 @@ export class AIAgent {
       false,
       { depth: this.depth, maxDepth: this.maxDepth }
     )
+
+    // Executable extension tools are opt-in: config.extensions.allow_tools must be true.
+    if ((this.config as any).extensions?.allow_tools === true && !this.isSubagent) {
+      const builtinNames = registry.list().map(tool => tool.name)
+      void loadExtensionTools({ home: getVallenHome(), allow: true, builtinNames }).then(result => {
+        for (const tool of result.tools) {
+          registry.register({
+            name: tool.definition.name,
+            toolset: 'extension',
+            schema: {
+              name: tool.definition.name,
+              description: tool.definition.description,
+              parameters: (tool.definition.parameters || { type: 'object', properties: {} }) as any
+            },
+            handler: (args: any, context: any) => Promise.resolve(tool.definition.handler(args, context))
+          })
+        }
+      }).catch(() => { })
+    }
 
     const hasMcpServers = Object.keys(this.config.mcpServers || {}).length > 0
     const skipAutoMcp = !options.config && process.env.NODE_TEST_CONTEXT
