@@ -56,6 +56,7 @@ export const DEFAULT_CONFIG: AgentConfig = {
       enabled: true
     }
   },
+  security: { filesystem: 'unrestricted' },
   max_iterations: 500,
   max_tokens_per_turn: 400_000,
   mcpServers: {},

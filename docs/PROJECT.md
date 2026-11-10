@@ -203,6 +203,25 @@ its own to browse the web.
 The system prompt (`# Delegation, Artifacts and Plan Mode`) states the triggers: background/branch
 delegation, screenshot proof for UI work, and plan-first for changes touching more than five files.
 
+## 5f. Filesystem sandbox
+
+`core/sandbox.ts` bounds file **writes** (reads stay allowed):
+
+| Context | Roots | Notes |
+| --- | --- | --- |
+| subagent | its working directory (worktree for `workspace: "branch"`) | always on — this is what makes branch isolation real |
+| main agent, `security.filesystem: "unrestricted"` (default) | none | current behaviour, nothing breaks |
+| main agent, `security.filesystem: "workspace"` | the working directory | Antigravity-style bounded mode |
+
+- Paths are canonicalized (`realpath` of the deepest existing ancestor) before comparison, so `..`
+  escapes and symlinked parents are resolved first.
+- Guards live in `write_file`, `patch`, `patch_batch`, and `apply_patch`; a denial returns an
+  actionable message naming the allowed root and the `security.filesystem` knob.
+- `/sandbox` shows the policy; `/sandbox workspace` / `/sandbox off` change it and persist to
+  `config.json`.
+- The **terminal tool is not sandboxed** — without an OS container a shell can do anything. That is
+  documented rather than pretended; the terminal approval gate remains the control there.
+
 ## 6. Clarify policy
 
 `agent/clarify_policy.ts` decides whether asking is allowed at all:
@@ -313,6 +332,7 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | Subagent behaviour | `agent/subagent_registry.ts` (state) + `agent/worktree.ts` (isolation) |
 | Agent routing | `agent/custom_agents.ts` (definitions + planner) |
 | Browser gating | `core/browser_gate.ts` + `/browser` command |
+| Sandbox behaviour | `core/sandbox.ts` + guards in `file_tools.ts` |
 | New bundled skill | `.vallenemperor/skills/<category>/<name>/SKILL.md` with `name` + `description` frontmatter |
 | New config key | `core/types.ts`, `core/config.ts` (default + validation), docs |
 
@@ -336,3 +356,5 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | Browser tool says "on demand and currently locked" | run `/browser <task>`; use `web_search`/`web_extract` for read-only research |
 | A custom agent never gets picked | its `description` must contain the words the task uses; two distinct matches are required |
 | A routed agent cannot use a tool | its `tools:` list becomes the subagent whitelist — add the tool name there |
+| "Path is outside the sandbox" | a subagent tried to write outside its worktree, or `/sandbox workspace` is on; write inside the root or run `/sandbox off` |
+| Writes to `/tmp` fail after enabling the sandbox | expected — add the path to the workspace or turn the sandbox off |

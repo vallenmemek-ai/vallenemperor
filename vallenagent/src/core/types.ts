@@ -14,6 +14,10 @@ export interface AgentConfig {
   mcpServers?: Record<string, McpServerConfig>
   /** Tool-approval mode: dangerous (gate risky ops, default), all, off. */
   approval?: 'dangerous' | 'all' | 'off'
+  /** Filesystem sandbox. 'workspace' confines main-agent writes to the working directory (subagents are always confined). */
+  security?: {
+    filesystem?: 'workspace' | 'unrestricted'
+  }
   providers: {
     active: string
     [key: string]: string | ProviderConfig

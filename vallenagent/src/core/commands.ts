@@ -8,7 +8,8 @@ import { formatArtifactList, listArtifacts } from '../agent/artifact_store'
 import { formatSubagentDetail, formatSubagentLine, isTerminalStatus, subagentRegistry } from '../agent/subagent_registry'
 import { removeSubagentWorktree } from '../agent/worktree'
 import { discoverCustomAgents, formatAgentList } from '../agent/custom_agents'
-import { getVallenHome } from './config'
+import { formatSandboxStatus, sandboxPolicyFor } from './sandbox'
+import { getVallenHome, saveConfig } from './config'
 import { handleMcpCommand } from './commands/mcp'
 import { handleGatewayCommand } from './commands/gateway'
 export { formatMcpStatus, formatMcpReconnect } from './commands/mcp'
@@ -120,6 +121,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Kerja', name: '/schedule', args: '[list|history|add|remove]', desc: 'jadwal agent (lokal atau Telegram)' },
   { group: 'Berkas', name: '/checkpoints', desc: 'daftar checkpoint berkas' },
   { group: 'Berkas', name: '/artifacts', desc: 'daftar artifact sesi (walkthrough, screenshot)' },
+  { group: 'Berkas', name: '/sandbox', args: '[status|workspace|off]', desc: 'batas tulis filesystem agent' },
   { group: 'Berkas', name: '/diff', args: '[turn]', desc: 'lihat perubahan checkpoint' },
   { group: 'Berkas', name: '/undo', args: '[1-20] [--force]', desc: 'pulihkan checkpoint' },
   { group: 'Berkas', name: '/cd', args: '<dir>', desc: 'pindah direktori kerja' },
@@ -330,6 +332,28 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
     const active = runs.filter(run => !isTerminalStatus(run.status)).length
     const header = `Subagents · ${active} active · ${runs.length} total`
     return { handled: true, response: [header, ...runs.map(run => formatSubagentLine(run)), 'Commands: /agents show <id> · /agents stop <id> · /agents clean'].join('\n') }
+  }
+
+  if (cmd === '/sandbox') {
+    const mode = String(args[0] || '').toLowerCase()
+    const current = (ctx.agent.config as any).security?.filesystem === 'workspace' ? 'workspace' : 'unrestricted'
+    if (!mode || mode === 'status') {
+      const policy = sandboxPolicyFor({ isSubagent: false, config: ctx.agent.config as any })
+      return { handled: true, response: `${formatSandboxStatus(policy)}\nMode: ${current} · set with /sandbox workspace or /sandbox off` }
+    }
+    if (!['workspace', 'on', 'off', 'unrestricted'].includes(mode)) {
+      return { handled: true, response: 'Usage: /sandbox [status|workspace|off]' }
+    }
+    const next = mode === 'workspace' || mode === 'on' ? 'workspace' : 'unrestricted'
+    const agentConfig = ctx.agent.config as any
+    agentConfig.security = { ...(agentConfig.security || {}), filesystem: next }
+    saveConfig(agentConfig)
+    return {
+      handled: true,
+      response: next === 'workspace'
+        ? 'Filesystem sandbox ON: main-agent writes must stay inside the working directory. Subagents were already confined.'
+        : 'Filesystem sandbox OFF: the main agent can write anywhere again. Subagents stay confined to their working directory.'
+    }
   }
 
   if (cmd === '/artifacts') {

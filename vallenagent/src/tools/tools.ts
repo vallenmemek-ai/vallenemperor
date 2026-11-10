@@ -104,6 +104,8 @@ export interface ToolContext {
   reviewUserMessages?: string[]
   reviewSkillsRead?: Set<string>
   toolWhitelist?: string[]
+  /** When set, file writes must stay inside one of these roots (subagents and sandboxed main agents). */
+  sandboxRoots?: string[]
   mcpToolNames?: string[]
   mcpManager?: {
     callTool(serverName: string, toolName: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<string>

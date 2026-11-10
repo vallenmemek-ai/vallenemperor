@@ -3,6 +3,7 @@ import { createProvider } from '../providers/providers'
 import type { AgentConfig } from '../core/types'
 import { getActiveProvider, getVallenHome } from '../core/config'
 import type { FileReadCoverage, ToolContext } from '../tools/tools'
+import { sandboxPolicyFor } from '../core/sandbox'
 
 /**
  * Turn stage — tool context assembly.
@@ -44,11 +45,17 @@ export interface ToolContextDeps {
 }
 
 export function buildToolContext(deps: ToolContextDeps): ToolContext {
+  const sandbox = sandboxPolicyFor({
+    isSubagent: deps.isSubagent,
+    config: deps.config as any,
+    workingDir: deps.config.terminal?.cwd
+  })
   return {
     sessionId: deps.isSubagent ? undefined : deps.sessionId,
     turnNumber: deps.isSubagent ? undefined : deps.completedUserTurns + 1,
     checkpointRoot: join(getVallenHome(), 'checkpoints'),
     toolCallId: deps.toolCallId,
+    sandboxRoots: sandbox.roots.length ? sandbox.roots : undefined,
     workingDir: deps.config.terminal?.cwd || process.cwd(),
     fileReadCoverage: deps.fileReadCoverage,
     providerConfig: { ...getActiveProvider(deps.config), base_url: deps.provider.baseURL, model: deps.provider.model },

@@ -198,6 +198,20 @@ Each folder owns an `index.ts` barrel; the root `src/index.ts` only re-exports f
 module is added in exactly one place. The turn loop is split per stage — every stage is a module
 with explicit dependencies, pinned by tests instead of by one thousand-line function.
 
+## Filesystem sandbox
+
+Subagents are always confined to their working directory — a `workspace: "branch"` subagent can only
+write inside its own worktree. For the main agent the boundary is opt-in:
+
+```bash
+/sandbox status
+/sandbox workspace   # writes must stay inside the working directory
+/sandbox off         # back to unrestricted (default)
+```
+
+`write_file`, `patch`, `patch_batch`, and `apply_patch` enforce it; reads are not blocked. The
+terminal tool is not sandboxed — shell approval remains the control there.
+
 ## Custom agents and routing
 
 Define reusable roles; the planner routes work to them by description:

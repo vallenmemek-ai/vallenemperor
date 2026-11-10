@@ -245,3 +245,20 @@ judgement alone produces silent under-use (never delegating) and unsafe over-use
 
 **Consequence.** `browser_exec` / `browser_screenshot` return a clear locked message that tells the
 model to ask the user instead of retrying. Adding a new browser tool means adding the same gate.
+
+---
+
+## D19 — File writes are bounded; the terminal is not
+
+**Decision.** Subagents always get `sandboxRoots` = their working directory. The main agent is bounded
+only when `security.filesystem: "workspace"` is set (default: unrestricted). Guards apply to
+`write_file`, `patch`, `patch_batch`, `apply_patch`. Reads are not blocked. The terminal tool is
+explicitly **not** sandboxed.
+
+**Why.** A `workspace: "branch"` subagent that can be pointed at an absolute path is not isolated at
+all — the worktree would be decoration. Bounding the main agent by default would break existing
+workflows (writing outside the project, `/tmp` scratch files), so it is opt-in.
+
+**Consequence.** New write tools must call `checkPathAllowed` with `context.sandboxRoots`. Claiming
+full sandboxing would be dishonest while the terminal is unconfined; the approval gate is the control
+for shell commands.

@@ -64,6 +64,7 @@ vallenagent/src/
   agent/worktree.ts         git worktree isolation for workspace="branch"
   agent/custom_agents.ts    .agents/agents/*.md discovery + planner routing
   core/browser_gate.ts      browser tools are locked until /browser <task>
+  core/sandbox.ts           file-write boundary (subagents always confined)
 
 vallencli/src/
   cli.mjs              REPL, argument parsing, one-shot mode, config commands, model picker glue

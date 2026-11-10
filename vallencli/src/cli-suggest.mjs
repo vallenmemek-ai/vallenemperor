@@ -39,6 +39,7 @@ export const COMMANDS = [
   { name: '/compact', desc: 'Compact conversation history' },
   { name: '/auto', args: '[on|safe|off]', desc: 'Set tool approval mode' },
   { name: '/artifacts', desc: 'List session artifacts' },
+  { name: '/sandbox', args: '[status|workspace|off]', desc: 'Filesystem write boundary' },
   { name: '/health', desc: 'Run diagnostics' },
   { name: '/perf', desc: 'Process CPU / memory sample' },
   { name: '/clear', desc: 'Clear the screen' },

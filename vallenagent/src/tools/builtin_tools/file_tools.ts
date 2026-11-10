@@ -8,6 +8,7 @@ import { fuzzyReplace, generateDiff } from '../../core/patch_engine'
 import { captureTypeScriptDiagnostics, newTypeScriptDiagnostics } from '../../core/typescript_diagnostics'
 import { snapshotBeforeWrite } from '../../session/checkpoint'
 import { registry, ToolContext, ToolSchema } from '../tools'
+import { checkPathAllowed } from '../../core/sandbox'
 
 function generateUnifiedFileDiff(oldText: string, newText: string, filePath: string): string {
   if (oldText === '') {
@@ -116,6 +117,13 @@ function globToRegex(glob: string): RegExp {
   return new RegExp(`^${escaped}$`, 'i')
 }
 
+
+/** Returns an error message when a write would escape the context's sandbox roots. */
+function sandboxWriteError(target: string, context: ToolContext): string | null {
+  const check = checkPathAllowed(target, context.sandboxRoots)
+  return check.allowed ? null : (check.reason || 'Path is outside the sandbox.')
+}
+
 export function registerFileTools(): void {
   // 1. read_file
   const readFileSchema: ToolSchema = {
@@ -144,7 +152,6 @@ export function registerFileTools(): void {
         rawPath = join(homedir(), rawPath.slice(2))
       }
       const fullPath = isAbsolute(rawPath) ? rawPath : resolve(basePath, rawPath)
-
       if (!existsSync(fullPath)) {
         return JSON.stringify({ error: `File not found: ${rawPath}` })
       }
@@ -280,6 +287,8 @@ export function registerFileTools(): void {
         rawPath = join(homedir(), rawPath.slice(2))
       }
       const fullPath = isAbsolute(rawPath) ? rawPath : resolve(basePath, rawPath)
+      const blocked = sandboxWriteError(fullPath, context)
+      if (blocked) return JSON.stringify({ error: blocked })
       const content = String(args.content ?? '')
       const syntaxError = validateStructuredFile(fullPath, content)
       if (syntaxError) return JSON.stringify({ error: syntaxError })
@@ -376,6 +385,8 @@ export function registerFileTools(): void {
         rawPath = join(homedir(), rawPath.slice(2))
       }
       const fullPath = isAbsolute(rawPath) ? rawPath : resolve(basePath, rawPath)
+      const blocked = sandboxWriteError(fullPath, context)
+      if (blocked) return JSON.stringify({ error: blocked })
 
       if (!existsSync(fullPath)) {
         return JSON.stringify({ error: `File not found: ${rawPath}` })
@@ -682,6 +693,8 @@ function applyV4APatch(text: string, baseDir: string, context: ToolContext): Rec
         let rawPath = header[2]
         if (rawPath.startsWith('~/')) rawPath = join(homedir(), rawPath.slice(2))
         const path = isAbsolute(rawPath) ? rawPath : resolve(baseDir, rawPath)
+        const blocked = sandboxWriteError(path, context)
+        if (blocked) throw new Error(blocked)
         if (edits.has(path)) throw new Error(`Duplicate file section: ${rawPath}`)
         const operation = header[1].toLowerCase() as V4AEdit['operation']
         active = { path, operation }
@@ -741,6 +754,8 @@ function applyPatchBatch(files: any, baseDir: string, context: ToolContext): Rec
       let rawPath = String(edit.path || '')
       if (rawPath.startsWith('~/')) rawPath = join(homedir(), rawPath.slice(2))
       const path = isAbsolute(rawPath) ? rawPath : resolve(baseDir, rawPath)
+      const blocked = sandboxWriteError(path, context)
+      if (blocked) throw new Error(blocked)
       if (seen.has(path)) throw new Error(`Duplicate path in batch: ${rawPath}`)
       seen.add(path)
       const operation = (edit.operation || 'update') as StagedEdit['operation']
