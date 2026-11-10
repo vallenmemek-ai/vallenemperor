@@ -5,7 +5,7 @@
 // fillOnly: Enter completes the command but never runs it (destructive / starts an agent turn).
 export const COMMANDS = [
   { name: '/help', desc: 'Show this help' },
-  { name: '/model', args: '[name]', desc: 'Show or switch active model' },
+  { name: '/model', args: '[name]', desc: 'Pick provider/model live, or switch directly' },
   { name: '/token', args: '[status]', desc: 'Set 9router token (hidden input)' },
   { name: '/stop', desc: 'Interrupt active turn' },
   { name: '/exit', aliases: ['/quit'], desc: 'Exit VallenCLI' },

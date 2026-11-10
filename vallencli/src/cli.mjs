@@ -13,6 +13,7 @@ import { createCardStream, formatResponseCard } from './cli-markdown.mjs'
 import { fileToken, suggestFiles } from './cli-files.mjs'
 import { suggestCommands, commandToken, findCommand, needsMoreInput } from './cli-suggest.mjs'
 import { createLocalCommandHandler } from './cli-commands.mjs'
+import { backspacePicker, backPicker, createPickerState, enterPicker, fetchGatewayModels, formatModelCatalog, groupModelsByOwner, movePicker, pickerLines, typeInPicker } from './cli-model-picker.mjs'
 export { HELP, collectHealthChecks, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity } from './cli-ui.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -72,7 +73,7 @@ export async function runCli(options = {}) {
   const input = options.input || process.stdin
   const output = options.output || process.stdout
   const core = options.core || await import(pathToFileURL(CORE_PATH).href)
-  const state = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map() }
+  const state = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map() }
   let agent = options.agent
   if (!agent) agent = options.createAgent ? options.createAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } }) : new core.AIAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } })
   state.mcpServers = agent.mcpManager?.getStatus?.() || []
@@ -279,6 +280,7 @@ export async function runCli(options = {}) {
   // ---- command suggestions (dropdown under the input line) ----
   function updateSuggestions() {
     const sug = state.sug
+    if (state.modelPicker) { sug.open = false; sug.token = null; return sug }
     const line = state.rl?.line ?? ''
     const ok = interactive && state.rl && !state.busy && !state.closing && stringWidth(line) < termWidth() - 6
     const cmd = ok ? commandToken(line) : null
@@ -358,6 +360,104 @@ export async function runCli(options = {}) {
     return true
   }
 
+  // ---- /model picker: provider/account first, then the model ----
+  const fetchModels = options.fetchModels || fetchGatewayModels
+  function pickerWidth() { return Math.max(40, Math.min(termWidth() - 2, 100)) }
+
+  function paintModelPicker() {
+    const picker = state.modelPicker
+    if (!picker || picker.loading || !interactive) return
+    if (picker.rows) output.write(`\r\x1b[${picker.rows}A\x1b[J`)
+    const { lines, selectedIndex } = pickerLines(picker, { width: pickerWidth() })
+    lines.forEach((line, index) => {
+      out(`${index === selectedIndex ? color(line, ANSI.cyan) : line}\n`)
+    })
+    picker.rows = lines.length
+  }
+
+  function closeModelPicker({ keepRows = false } = {}) {
+    const picker = state.modelPicker
+    if (!picker) return
+    if (!keepRows && picker.rows) output.write(`\r\x1b[${picker.rows}A\x1b[J`)
+    state.modelPicker = null
+    prompt()
+  }
+
+  async function openModelPicker() {
+    const active = agent.config?.providers?.active
+    const provider = active ? agent.config?.providers?.[active] : null
+    const baseUrl = agent.provider?.baseURL || (provider && typeof provider === 'object' ? provider.base_url : '')
+    const apiKey = provider && typeof provider === 'object' ? provider.api_key || '' : ''
+    if (!baseUrl) {
+      displayLine(color('Tidak bisa memuat daftar model: base_url provider aktif kosong. Pakai /model <nama>.', ANSI.yellow))
+      return
+    }
+    if (!interactive) {
+      // Piped/non-TTY run: print the catalog instead of taking over the keyboard.
+      const result = await fetchModels({ baseUrl, apiKey })
+      if (!result.ok) { displayLine(color(`Gagal memuat model dari ${baseUrl} (${result.error}). Pakai /model <nama>.`, ANSI.yellow)); return }
+      const groups = groupModelsByOwner(result.models)
+      displayLine(`${formatModelCatalog(groups, { currentModel: agent.provider?.model || '' })}\n\nPakai /model <nama> untuk memilih.`)
+      return
+    }
+    clearPromptArea()
+    output.write('\r\x1b[2K')   // drop the readline prompt line left by the command echo
+    // Claim the keyboard immediately: keys pressed while the gateway responds must not
+    // turn into empty REPL lines (that used to redraw the prompt over the picker).
+    state.modelPicker = { loading: true, groups: [], level: 'owner', ownerIndex: 0, modelIndex: 0, query: '', rows: 0 }
+    out(color(`  Memuat model dari ${baseUrl} …\n`, ANSI.dim))
+    const result = await fetchModels({ baseUrl, apiKey })
+    if (!result.ok) {
+      state.modelPicker = null
+      out('\r\x1b[1A\x1b[J')
+      displayLine(color(`Gagal memuat model dari ${baseUrl} (${result.error}). Pakai /model <nama> untuk manual.`, ANSI.yellow))
+      return
+    }
+    const groups = groupModelsByOwner(result.models)
+    state.modelPicker = createPickerState(groups)
+    paintModelPicker()
+  }
+
+  function applyPickedModel(model) {
+    const picker = state.modelPicker
+    if (picker?.rows) output.write(`\r\x1b[${picker.rows}A\x1b[J`)
+    output.write('\r\x1b[2K')
+    state.modelPicker = null
+    try { agent.setModel(model, false) } catch (error) {
+      displayLine(color(`Gagal memasang model ${model}: ${error instanceof Error ? error.message : String(error)}`, ANSI.red))
+      return
+    }
+    // displayLine redraws the prompt (and therefore the status bar) with the new model.
+    displayLine(`${color('✔', ANSI.green)} model sesi: ${color(model, ANSI.bold)}\n  ${color('permanen? /model save ' + model, ANSI.dim)}`)
+  }
+
+  function handleModelPickerKey(text) {
+    const picker = state.modelPicker
+    if (!picker) return false
+    if (picker.loading) {
+      // Esc / Ctrl+C cancels the load; everything else waits for the model list.
+      if (text === '\x1b' || text === '\x03') { state.modelPicker = null; out('\r\x1b[1A\x1b[J'); prompt() }
+      return true
+    }
+    if (text === '\x1b[A' || text === '\x1bOA') { movePicker(picker, -1); paintModelPicker(); return true }
+    if (text === '\x1b[B' || text === '\x1bOB') { movePicker(picker, 1); paintModelPicker(); return true }
+    if (text === '\r' || text === '\n') {
+      const outcome = enterPicker(picker)
+      if (outcome.done) applyPickedModel(outcome.model)
+      else paintModelPicker()
+      return true
+    }
+    if (text === '\x1b' || text === '\x03') {
+      const outcome = backPicker(picker)
+      if (outcome.closed) closeModelPicker()
+      else paintModelPicker()
+      return true
+    }
+    if (text === '\x7f' || text === '\b') { backspacePicker(picker); paintModelPicker(); return true }
+    if (/^[\x20-\x7e]+$/.test(text)) { typeInPicker(picker, text); paintModelPicker(); return true }
+    return true
+  }
+
   // ---- raw input: suggestion keys + bracketed paste folding ----
   const decoder = new StringDecoder('utf8')
   let pasteBuffer = null
@@ -393,6 +493,7 @@ export async function runCli(options = {}) {
     const text = typeof chunk === 'string' ? chunk : decoder.write(chunk)
     // While an approval is pending a single y / n / a keypress answers it immediately (no Enter needed).
     if (state.pendingApproval && pasteBuffer === null && /^[yna]$/i.test(text)) { enqueue({ line: text.toLowerCase(), generation: state.generation }); return }
+    if (state.modelPicker && pasteBuffer === null) { handleModelPickerKey(text); return }
     if (pasteBuffer === null) {
       // Several arrow presses can arrive glued together in one chunk (key repeat): handle each one.
       const keys = /^(?:\x1b[\[O][AB])+$/.test(text) ? text.match(/\x1b[\[O][AB]/g) : [text]
@@ -738,6 +839,8 @@ export async function runCli(options = {}) {
       if (state.busy) { displayLine('Agent busy; use /stop or wait for the current turn.'); continue }
       if (text.startsWith('/') && isSlashCommand) {
         try {
+          // `/model` alone opens the live provider → model picker; `/model <name>` stays a direct switch.
+          if (/^\/model\s*$/i.test(text)) { await openModelPicker(); continue }
           if (await localCommand(text)) continue
           const shared = await sharedCommand?.({
             channel: 'terminal',

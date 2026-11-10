@@ -112,6 +112,14 @@ One-shot runs have nobody to answer an approval prompt, so a risky tool call is
 **refused** and the process exits non-zero. Add `--approval off` for trusted
 scripts that must run shell commands unattended.
 
+Pick a model interactively — `/model` lists the live provider/account list from your gateway
+(9router, OpenRouter, …), then the models behind it:
+
+```text
+/model          # ↑/↓ provider → Enter → ↑/↓ model → Enter
+/model save     # persist the choice
+```
+
 Configure a provider without hand-editing JSON:
 
 ```bash

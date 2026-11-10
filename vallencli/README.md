@@ -45,6 +45,28 @@ vallenemperor config set approval dangerous|all|off
 Presets fill `base_url` + default model; API keys are read from the environment and are never
 written to `config.json`.
 
+## Model picker
+
+`/model` with no argument asks the active gateway (9router included) for its live model list and
+opens a two-level picker:
+
+```text
+  Pilih provider/akun · ↑/↓ pilih provider · Enter lanjut · Esc batal
+  ────────────────────────────────────────────────────────────
+  ❯ antigravity (ag)                27 model
+    jawaaa                          81 model
+    kiro (kc)                        8 model
+    ...
+
+  Model di antigravity · ↑/↓ pilih model · Enter pasang · Esc kembali · ketik untuk cari
+  ❯ ag/claude-opus-4-6-thinking  200k ctx · tools · vision
+    ag/gemini-3.1-pro-high       1049k ctx · tools · vision
+```
+
+Typing filters (provider label, account id, or model id), Esc goes back one level, and the chosen
+model applies to the current session (`/model save <name>` makes it permanent). `/model <name>` still
+switches directly, and non-interactive runs print the catalog instead of taking over the keyboard.
+
 ## Slash commands
 
 `/model`, `/token`, `/sessions`, `/resume`, `/new`, `/stats`, `/context`, `/search`, `/memory`,

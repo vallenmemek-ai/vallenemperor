@@ -92,7 +92,7 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Sesi & model', name: '/help', desc: 'tampilkan bantuan ini' },
   { group: 'Sesi & model', name: '/status', desc: 'ringkasan sesi, model, konteks, turn' },
   { group: 'Sesi & model', name: '/stats', desc: 'telemetry token dan sesi' },
-  { group: 'Sesi & model', name: '/model', args: '[nama | save <nama>]', desc: 'lihat atau ganti model untuk sesi ini' },
+  { group: 'Sesi & model', name: '/model', args: '[nama | save <nama>]', desc: 'pilih provider & model dari gateway (live), atau ganti langsung' },
   { group: 'Sesi & model', name: '/sessions', desc: 'daftar sesi tersimpan' },
   { group: 'Sesi & model', name: '/resume', args: '[id | nomor]', desc: 'lanjutkan sesi' },
   { group: 'Sesi & model', name: '/new', desc: 'mulai sesi baru' },
