@@ -371,6 +371,12 @@ with a reason instead of crashing the agent. `/extensions tools` reports the opt
 `vallencli/tests/profile_isolation.test.mjs` (1) and `vallenagent/tests/extension_tools.test.mjs` (3).
 Suite at the time: **434/434 + 154/154**.
 
+**Evidence (R18 — done).** `x_search` calls the X API v2 recent-search endpoint with a bearer token from
+`X_BEARER_TOKEN`/`TWITTER_BEARER_TOKEN`; without a token it refuses with a clear hint instead of returning
+empty results, `max_results` is clamped to the API minimum, posts carry metrics and permalinks, and HTTP
+errors surface the status (429 included). `/fast on|off` lowers reasoning effort and disables background
+review. Tests: `vallenagent/tests/x_search.test.mjs` (4). Suite at the time: **438/438 + 154/154**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ✅
@@ -438,7 +444,7 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R15 | Curator — auto-archive stale skills | keeps the skill index lean | M | `[x]` |
 | R16 | Profiles (`--profile`) | isolated config/sessions/skills | M | `[x]` |
 | R17 | ACP server for editors | editor integration | L | `[x]` |
-| R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[ ]` (partial: `/fast` done; `x_search` needs an X API key) |
+| R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[x]` |
 | R19 | Approval mining (propose allowlist from history) | fewer prompts over time | M | `[x]` |
 | R20 | `/handoff <platform>` | move a CLI session to Telegram | M | `[x]` |
 | R21 | User-defined slash commands (`.vallenemperor/commands/*.md` → `/name`) | all three peers ship it; cheapest workflow win | S | `[x]` |

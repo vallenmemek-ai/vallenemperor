@@ -1,7 +1,30 @@
 import { registry, ToolSchema } from '../tools'
+import { formatXSearch, searchPosts } from '../../core/x_search'
 import { fetchSafeUrl } from '../../core/network_safety'
 
 export function registerWebTools(): void {
+  registry.register({
+    name: 'x_search',
+    toolset: 'web',
+    schema: {
+      name: 'x_search',
+      description: 'Search recent posts on X (Twitter) via the official API v2. Requires X_BEARER_TOKEN in the environment; without it the tool says so instead of returning empty results.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Search query (supports X search operators)' },
+          max_results: { type: 'integer', description: '10-100 results (default 10)' }
+        },
+        required: ['query']
+      }
+    },
+    handler: async (args: any) => {
+      const result = await searchPosts({ query: String(args.query || ''), maxResults: Number(args.max_results) || 10 })
+      return JSON.stringify({ ...result, summary: formatXSearch(result) })
+    }
+  })
+
+
   // 7. web_search
   const webSearchSchema: ToolSchema = {
     name: 'web_search',

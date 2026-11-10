@@ -99,6 +99,7 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 | Nested delegation depth cap | `vallenagent/tests/nested_agents.test.mjs` |
 | Browser recording script + gate | `vallenagent/tests/browser_record.test.mjs` |
 | Extension executable tools | `vallenagent/tests/extension_tools.test.mjs` |
+| x_search parsing + token handling | `vallenagent/tests/x_search.test.mjs` |
 | Profile isolation | `vallencli/tests/profile_isolation.test.mjs` |
 | /sandbox command | `vallencli/tests/sandbox_command.test.mjs` |
 | /artifact panel, /btw, /fork | `vallencli/tests/artifact_panel_btw.test.mjs` |
