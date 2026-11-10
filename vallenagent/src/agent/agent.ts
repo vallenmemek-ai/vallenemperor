@@ -234,6 +234,13 @@ export class AIAgent {
     return this.sessionId
   }
 
+  /** Read-only transcript for `/save`, `/history` and exports. */
+  exportTranscript(): Array<{ role: string; content: string }> {
+    return this.conversationHistory
+      .filter(message => message && typeof message.content === 'string' && message.content.trim())
+      .map(message => ({ role: message.role, content: message.content }))
+  }
+
   /**
    * Fork the current conversation into a new session id and switch to it.
    * The original session stays on disk, so both branches remain resumable.

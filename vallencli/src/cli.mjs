@@ -16,6 +16,7 @@ import { createLocalCommandHandler } from './cli-commands.mjs'
 import { runSetupCommand } from './cli-setup.mjs'
 import { formatDoctor, runDoctorCommand } from './cli-doctor.mjs'
 import { currentVersion, maybeNotifyUpdate, runUpdateCommand } from './cli-update-check.mjs'
+import { runCompletionCommand } from './cli-completion.mjs'
 import { backspacePicker, backPicker, createPickerState, enterPicker, fetchGatewayModels, formatModelCatalog, groupModelsByOwner, movePicker, pickerLines, typeInPicker } from './cli-model-picker.mjs'
 export { HELP, collectHealthChecks, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity } from './cli-ui.mjs'
 
@@ -952,6 +953,7 @@ export function parseArgs(argv) {
   if (head === 'setup') return { ...result, mode: 'setup' }
   if (head === 'doctor') return { ...result, mode: 'doctor', json: argv.includes('--json') }
   if (head === 'update') return { ...result, mode: 'update', json: argv.includes('--check') }
+  if (head === 'completion') return { ...result, mode: 'completion', shell: String(argv[1] || '') }
   for (let index = 0; index < argv.length; index++) {
     const arg = String(argv[index])
     if (arg === '--help' || arg === '-h') return { ...result, mode: 'help' }
@@ -1230,6 +1232,7 @@ export async function main(argv = process.argv.slice(2)) {
     if (parsed.mode === 'setup') return await runSetupCommand({ core })
     if (parsed.mode === 'doctor') return await runDoctorCommand({ core, json: parsed.json })
     if (parsed.mode === 'update') return await runUpdateCommand({ root: ROOT, checkOnly: parsed.json })
+    if (parsed.mode === 'completion') return runCompletionCommand({ shell: parsed.shell })
     if (parsed.mode === 'config') return await runConfigCommand(core, parsed)
 
     if (parsed.mode === 'prompt') {

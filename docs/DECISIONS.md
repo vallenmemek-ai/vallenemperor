@@ -360,3 +360,19 @@ it is less precise than tree-sitter, and that is an accepted trade-off for now.
 **Consequence.** A blocking hook must be fast (<10 s default) because it sits in the tool path. The
 repo map is *data* in the prompt, never instructions. If precision matters later, swap the extractor
 behind `buildRepoMap` without touching callers.
+
+---
+
+## D26 — Session UX is files and templates, not new engines
+
+**Decision.** `/save` builds the transcript from `AIAgent.exportTranscript()` with a regex redactor;
+custom commands are markdown files with a `description` and a body where `$ARGUMENTS` is substituted;
+completion scripts are static strings.
+
+**Why.** These are all "read state and render" features. Adding an engine for each one would multiply
+the test surface for no benefit, and the file-based layout (`.vallenemperor/commands/*.md`) lets users
+add workflows without touching code.
+
+**Consequence.** Redaction is best-effort by shape (well-known token prefixes), not a guarantee —
+`/save` prints whether redaction was applied. Custom commands must never shadow built-ins: built-in
+handlers run first.

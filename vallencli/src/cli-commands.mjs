@@ -1,6 +1,8 @@
-import { readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
+import { spawnSync } from 'node:child_process'
 import { color, startupBox, refreshThemeColors } from './cli-ui.mjs'
 import { THEMES, getThemeName, gradientText, saveTheme, setTheme, themeNames } from './cli-theme.mjs'
 
@@ -98,6 +100,67 @@ export function createLocalCommandHandler(context) {
       } catch (err) {
         printResponse(`Fork failed: ${err?.message || err}`)
       }
+      return true
+    }
+    if (cmd === '/save') {
+      const [formatArg, fileArg, redactArg] = value.split(/\s+/).filter(Boolean)
+      const format = formatArg === 'json' ? 'json' : 'md'
+      const redact = value.includes('redact') || redactArg === 'redact'
+      const transcript = agent.exportTranscript ? agent.exportTranscript() : []
+      if (!transcript.length) { printResponse('Nothing to save yet — no messages in this session.'); return true }
+      const content = core.exportSession({
+        messages: transcript,
+        sessionId: agent.getSessionId(),
+        model: agent.config?.providers?.[agent.config?.providers?.active]?.model,
+        title: state.sessionTitle,
+        format,
+        redact
+      })
+      const target = fileArg && !fileArg.startsWith('-') && fileArg !== 'redact'
+        ? resolve(agent.config?.terminal?.cwd || process.cwd(), fileArg)
+        : join(core.getVallenHome(), 'sessions', 'saved', core.defaultExportName(agent.getSessionId(), format))
+      try {
+        mkdirSync(join(target, '..'), { recursive: true })
+        writeFileSync(target, content, { mode: 0o600 })
+        printResponse(`Saved ${format} transcript (${transcript.length} messages${redact ? ', secrets redacted' : ''}):\n${target}`)
+      } catch (error) {
+        printResponse(`Save failed: ${error?.message || error}`)
+      }
+      return true
+    }
+    if (cmd === '/title') {
+      if (!value) { printResponse(`Session title: ${state.sessionTitle || '(untitled)'}`); return true }
+      state.sessionTitle = value.slice(0, 120)
+      printResponse(`Session title set: ${state.sessionTitle}`)
+      return true
+    }
+    if (cmd === '/history') {
+      const count = Math.max(1, Math.min(50, Number(value) || 10))
+      const transcript = agent.exportTranscript ? agent.exportTranscript() : []
+      if (!transcript.length) { printResponse('No messages yet.'); return true }
+      const lines = transcript.slice(-count).map(message => `${message.role === 'user' ? '›' : '‹'} ${message.content.slice(0, 200).replace(/\n/g, ' ')}`)
+      printResponse(lines.join('\n'))
+      return true
+    }
+    if (cmd === '/prompt') {
+      const editor = process.env.EDITOR || process.env.VISUAL || 'vi'
+      const file = join(tmpdir(), `vallen-prompt-${Date.now()}.md`)
+      try {
+        writeFileSync(file, value || '', 'utf8')
+        const runEditor = context.runEditor || ((command, path) => spawnSync(command, [path], { stdio: 'inherit' }).status === 0)
+        if (!runEditor(editor, file)) { printResponse(`Editor ${editor} exited with an error; prompt not sent.`); return true }
+        const text = readFileSync(file, 'utf8').trim()
+        if (!text) { printResponse('Empty prompt; nothing sent.'); return true }
+        await runTurn(text, text.slice(0, 80))
+        return true
+      } finally {
+        try { rmSync(file, { force: true }) } catch { }
+      }
+    }
+    if (cmd === '/commands') {
+      const workspace = agent.config?.terminal?.cwd || process.cwd()
+      const custom = core.discoverCustomCommands({ workspace, home: core.getVallenHome() })
+      printResponse(core.formatCustomCommandList(custom))
       return true
     }
     if (cmd === '/copy') {
@@ -354,6 +417,16 @@ export function createLocalCommandHandler(context) {
       return true
     }
     if (cmd === '/settings') { printResponse(`${cmd} is UI-only and unavailable in VallenCLI.`); return true }
+    // User-defined command from .vallenemperor/commands/*.md
+    if (cmd.startsWith('/')) {
+      const workspace = agent.config?.terminal?.cwd || process.cwd()
+      const custom = core.findCustomCommand(cmd, core.discoverCustomCommands({ workspace, home: core.getVallenHome() }))
+      if (custom) {
+        const prompt = core.renderCustomCommand(custom, value)
+        await runTurn(prompt, text)
+        return true
+      }
+    }
     return false
   }
   return localCommand

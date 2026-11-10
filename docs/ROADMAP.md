@@ -244,6 +244,14 @@ matchers filter by tool name, non-zero exits are reported not thrown, timeouts n
 ignored dirs skipped, budget truncation, relevance ranking, the `repo_map` tool payload, and the
 system-prompt injection when `repo_map.enabled` is on. Suite at the time: **383/383 + 133/133**.
 
+**Evidence (R3, R4, R12, R13, R21, R25 — done).** `/save md|json [file] [redact]` exports the
+transcript (secrets scrubbed: `sk-`, `ghp_`, `npm_`, `AKIA`, `Bearer`), `/title` names the session,
+`/history` shows recent messages, `/prompt` composes in `$EDITOR` and sends the buffer, `/<name>`
+runs a `.vallenemperor/commands/*.md` template with `$ARGUMENTS`, and `vallenemperor completion
+bash|zsh|fish` prints a script. Tests: `vallenagent/tests/session_ux.test.mjs` (2),
+`vallencli/tests/session_commands.test.mjs` (4). `vallenemperor update` and `/learn` were shipped in
+earlier batches and are ticked here for accuracy. Suite at the time: **385/385 + 137/137**.
+
 ### P2 — Differentiators (only after P0/P1)
 
 #### P2.1 Browser session recording (WebM) — ❌
@@ -296,8 +304,8 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | --- | --- | --- | --- | --- |
 | R1 | `/steer <text>` — inject a note after the next tool call, no interrupt | mid-turn control is the top ergonomic gap | M | `[ ]` |
 | R2 | `/rewind [fork N]` — transcript browser: edit a past prompt or branch before it | fixes wrong turns without losing work | M | `[ ]` |
-| R3 | `/save md\|json [redact]` — export the transcript | sharing, bug reports, redaction | S | `[ ]` |
-| R4 | `/title`, `/history`, `/prompt` (`$EDITOR` compose) | tiny QoL wins | S | `[ ]` |
+| R3 | `/save md\|json [redact]` — export the transcript | sharing, bug reports, redaction | S | `[x]` |
+| R4 | `/title`, `/history`, `/prompt` (`$EDITOR` compose) | tiny QoL wins | S | `[x]` |
 | R5 | `/<skill-name>` — invoke a skill directly as a command | skills become first-class commands | S | `[ ]` |
 | R6 | `/goal` + `/subgoal` with an auxiliary judge loop | long-horizon autonomy with a stop condition | M | `[ ]` |
 | R7 | `/queue` management (list/edit/rm/move/clear) | multi-prompt workflow while a turn runs | S | `[ ]` |
@@ -305,8 +313,8 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R9 | `/worktree new\|list` for the main session | parallel human work without stashing | M | `[ ]` |
 | R10 | `vallenemperor sessions` (browse/export/prune) + `/autoprune` | session hygiene | S | `[ ]` |
 | R11 | `prompt-size`, `insights`, `logs`, `dump` diagnostics | support and cost visibility | S–M | `[ ]` |
-| R12 | `vallenemperor completion` (bash/zsh/fish) | terminal ergonomics | S | `[ ]` |
-| R13 | `vallenemperor update` (+ `/update`) | self-update without npm knowledge | S | `[ ]` |
+| R12 | `vallenemperor completion` (bash/zsh/fish) | terminal ergonomics | S | `[x]` |
+| R13 | `vallenemperor update` (+ `/update`) | self-update without npm knowledge | S | `[x]` |
 | R14 | LSP tool (semantic diagnostics beyond tsc) | non-TypeScript projects | L | `[ ]` |
 | R15 | Curator — auto-archive stale skills | keeps the skill index lean | M | `[ ]` |
 | R16 | Profiles (`--profile`) | isolated config/sessions/skills | M | `[ ]` |
@@ -314,11 +322,11 @@ The owner may promote any of these into P1 by saying so; otherwise they follow t
 | R18 | `x_search` + `/fast` provider flags | extra sources / latency control | S | `[ ]` |
 | R19 | Approval mining (propose allowlist from history) | fewer prompts over time | M | `[ ]` |
 | R20 | `/handoff <platform>` | move a CLI session to Telegram | M | `[ ]` |
-| R21 | User-defined slash commands (`.vallenemperor/commands/*.md` → `/name`) | all three peers ship it; cheapest workflow win | S | `[ ]` |
+| R21 | User-defined slash commands (`.vallenemperor/commands/*.md` → `/name`) | all three peers ship it; cheapest workflow win | S | `[x]` |
 | R22 | Rule-based tool policies (allow/ask/deny per tool or path) | replaces today's global modes with per-tool rules | M | `[ ]` |
 | R23 | Formatter hook after edits (respect the project's formatter) | keeps diffs clean without manual runs | S | `[ ]` |
 | R24 | `/grill-me` — interview the user one question at a time before starting | fits our clarify policy; prevents wrong builds | S | `[ ]` |
-| R25 | `/learn` — turn corrections into skills/rules through a reviewable proposal | closes the self-improvement loop | M | `[ ]` |
+| R25 | `/learn` — turn corrections into skills/rules through a reviewable proposal | closes the self-improvement loop | M | `[x]` |
 | R26 | Skill provenance (who/when/why) + `/journey` learning timeline | audit and roll back a bad lesson | M | `[ ]` |
 | R27 | Curator — archive stale skills by usage | keeps the skill index lean | M | `[ ]` |
 | R28 | Skill-index budget/delta tracking | index growth silently eats the context window | S | `[ ]` |

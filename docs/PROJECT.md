@@ -353,6 +353,12 @@ Review surfaces: `/artifact` lists this session's artifacts and opens one by num
 `/artifacts` prints the flat list, `/btw <question>` asks a side question in a clean context, and
 `/fork` clones the conversation into a new session id.
 
+Session UX: `/save md|json [file] [redact]` (transcript export with secret scrubbing),
+`/title [name]`, `/history [n]`, `/prompt` (compose in `$EDITOR`), `/commands` (list custom commands),
+and `/<name>` runs a `.vallenemperor/commands/<name>.md` template with `$ARGUMENTS` substituted
+(workspace definitions win over global). `vallenemperor completion bash|zsh|fish` prints a shell
+completion script.
+
 `/permissions` prints the effective policy in one block: approval mode, filesystem sandbox mode and
 roots, subagent confinement, browser gate state, credential/instruction rules, staged-write status.
 `-p --json` (R33) prints one JSON object — `{ok, response, completionStatus, iterations, toolCalls,

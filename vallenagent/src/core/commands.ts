@@ -82,7 +82,7 @@ export interface CommandResult {
 }
 
 const NOT_HANDLED: CommandResult = { handled: false, response: '' }
-const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy'])
+const TERMINAL_ONLY = new Set(['/token', '/geteway', '/gateway', '/pty', '/sh', '/mcp', '/context', '/compact', '/init', '/undo', '/review', '/browser', '/plan', '/btw', '/fork', '/learn', '/copy', '/save', '/title', '/history', '/prompt', '/commands'])
 const initDrafts = new WeakMap<AIAgent, { cwd: string; draft: string; existingHash: string | null }>()
 const contentHash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -104,6 +104,11 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Sesi & model', name: '/model', args: '[nama | save <nama>]', desc: 'pilih provider & model dari gateway (live), atau ganti langsung' },
   { group: 'Sesi & model', name: '/effort', args: '[low|medium|high|status]', desc: 'reasoning effort model' },
   { group: 'Sesi & model', name: '/sessions', desc: 'daftar sesi tersimpan' },
+  { group: 'Sesi & model', name: '/save', args: '[md|json] [file] [redact]', desc: 'ekspor transkrip sesi' },
+  { group: 'Sesi & model', name: '/title', args: '[nama]', desc: 'judul sesi' },
+  { group: 'Sesi & model', name: '/history', args: '[n]', desc: 'riwayat percakapan terakhir' },
+  { group: 'Sesi & model', name: '/prompt', desc: 'tulis prompt di $EDITOR' },
+  { group: 'Kerja', name: '/commands', desc: 'daftar custom command dari .vallenemperor/commands' },
   { group: 'Sesi & model', name: '/resume', args: '[id | nomor]', desc: 'lanjutkan sesi' },
   { group: 'Sesi & model', name: '/new', desc: 'mulai sesi baru' },
   { group: 'Sesi & model', name: '/reset', desc: 'kosongkan percakapan' },
