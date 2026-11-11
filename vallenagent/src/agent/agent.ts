@@ -1143,6 +1143,7 @@ export class AIAgent {
       todoStore: this.todoStore,
       skillLoader: this.skillLoader,
       onTerminalOutput: (stream, chunk) => safeCallback(callbacks?.onTerminalOutput, { id: toolCall.id, stream, chunk }),
+      onClarify: callbacks?.onClarify,
       onSubagentProgress: event => safeCallback(callbacks?.onSubagentProgress, event),
       onBeforeTool: callbacks?.onBeforeTool,
       createSubagent: options => new AIAgent(options)

@@ -35,6 +35,8 @@ export interface ToolContextDeps {
   skillLoader: unknown
   /** Emits streamed terminal output for this tool call. */
   onTerminalOutput?: (stream: 'stdout' | 'stderr', chunk: string) => void
+  /** Interactive clarify bridge; absent on headless surfaces. */
+  onClarify?: ToolContext['onClarify']
   /** Emits subagent progress for this turn. */
   onSubagentProgress?: ToolContext['onSubagentProgress']
   /** Approval bridge handed to subagents. */
@@ -53,6 +55,7 @@ export function buildToolContext(deps: ToolContextDeps): ToolContext {
     workingDir: deps.config.terminal?.cwd
   })
   return {
+    onClarify: deps.isSubagent ? undefined : deps.onClarify,
     sessionId: deps.isSubagent ? undefined : deps.sessionId,
     turnNumber: deps.isSubagent ? undefined : deps.completedUserTurns + 1,
     checkpointRoot: join(getVallenHome(), 'checkpoints'),

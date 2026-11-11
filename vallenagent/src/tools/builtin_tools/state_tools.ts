@@ -5,7 +5,7 @@ import { MemoryStore } from '../../memory/memory'
 import { TodoStore } from '../../session/todo'
 import { DeepMemoryStore } from '../../memory/deep_memory'
 import { isTruthy } from './file_tools'
-import { evaluateClarifyRequest, formatClarifyOutcome, MAX_CLARIFY_CHOICES, MAX_CLARIFY_QUESTIONS } from '../../agent/clarify_policy'
+import { evaluateClarifyRequest, formatClarifyAnswers, formatClarifyOutcome, MAX_CLARIFY_CHOICES, MAX_CLARIFY_QUESTIONS } from '../../agent/clarify_policy'
 
 export function registerStateTools(memory: MemoryStore, todo: TodoStore): void {
   // 9. clarify
@@ -38,9 +38,14 @@ export function registerStateTools(memory: MemoryStore, todo: TodoStore): void {
     name: 'clarify',
     schema: clarifySchema,
     toolset: 'clarify',
-    handler: async (args) => {
+    handler: async (args, context) => {
       // Policy gate: a preference poll or a "may I continue?" is not worth stopping the turn.
-      return formatClarifyOutcome(evaluateClarifyRequest(args?.questions))
+      const evaluation = evaluateClarifyRequest(args?.questions)
+      if (!evaluation.ok || evaluation.advice || evaluation.questions.length === 0) return formatClarifyOutcome(evaluation)
+      // A host with a real prompt collects the answers and the turn continues with them.
+      if (!context?.onClarify) return formatClarifyOutcome(evaluation)
+      const answers = await context.onClarify(evaluation.questions)
+      return formatClarifyAnswers(evaluation, answers)
     }
   })
 

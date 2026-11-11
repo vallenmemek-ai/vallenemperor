@@ -90,6 +90,8 @@ export interface FileReadCoverage {
 }
 
 export interface ToolContext {
+  /** Blocks on a real human when the host has an interactive prompt. */
+  onClarify?: (questions: Array<{ question: string; choices?: string[]; multi_select?: boolean }>) => Promise<{ answers: Record<string, string | string[] | null>; outcome: 'submitted' | 'timed_out' | 'cancelled' | 'unavailable' }>
   sessionId?: string
   turnNumber?: number
   checkpointRoot?: string

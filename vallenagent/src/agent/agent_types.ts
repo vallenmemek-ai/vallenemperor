@@ -84,6 +84,8 @@ export interface AgentCallbacks {
   onReviewError?: (error: string) => void
   /** The review ran and finished without changing anything. */
   onReviewSkipped?: (reason: string) => void
+  /** Interactive clarify bridge. Without it the clarify tool tells the model to ask in prose. */
+  onClarify?: (questions: Array<{ question: string; choices?: string[]; multi_select?: boolean }>) => Promise<{ answers: Record<string, string | string[] | null>; outcome: 'submitted' | 'timed_out' | 'cancelled' | 'unavailable' }>
   onSubagentProgress?: (event: { taskId: string; goal: string; status: 'started' | 'thinking' | 'tool_start' | 'tool_end' | 'completed' | 'failed'; message?: string }) => void
   onChunk?: (chunk: string) => void
   /** Streamed reasoning/thinking text from the provider. */

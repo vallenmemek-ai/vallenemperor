@@ -1,7 +1,8 @@
 /**
  * Clarify policy — when asking is worth the interruption, and what a usable question looks like.
  *
- * The runtime cannot collect structured answers, so `clarify` is a decision gate, not a form.
+ * A host that can render an interactive prompt passes `onClarify` and gets real answers back;
+ * without it `clarify` stays a decision gate that tells the model to ask in prose.
  * A request that is really a permission check ("should I continue?") or a preference poll
  * (naming, style, file layout) must not stop the turn: the agent should pick the conventional
  * default and say so. Only a decision that changes what gets built or run is worth asking.
@@ -12,6 +13,15 @@ export interface ClarifyQuestion {
   choices?: string[]
   multi_select?: boolean
 }
+
+export interface ClarifyAnswerSet {
+  /** question text -> answer (string, string[] for multi-select, or null when skipped) */
+  answers: Record<string, string | string[] | null>
+  outcome: 'submitted' | 'timed_out' | 'cancelled' | 'unavailable'
+}
+
+/** Provided by a host UI (the CLI) so the clarify tool can block on a real human. */
+export type ClarifyHandler = (questions: ClarifyQuestion[]) => Promise<ClarifyAnswerSet>
 
 export interface ClarifyEvaluation {
   ok: boolean
@@ -133,5 +143,28 @@ export function formatClarifyOutcome(evaluation: ClarifyEvaluation): string {
       status: 'clarification_requested'
     })),
     message: 'This runtime cannot collect structured answers: ask these questions directly in the final response, then stop and wait for the user.'
+  })
+}
+
+/**
+ * Turn collected answers into the tool result. Used only when the host answered the
+ * questions; `formatClarifyOutcome` remains the fallback for headless surfaces.
+ */
+export function formatClarifyAnswers(evaluation: ClarifyEvaluation, result: ClarifyAnswerSet): string {
+  const responses = evaluation.questions.map(question => ({
+    question: question.question,
+    choices_offered: question.choices || [],
+    answer: result.answers[question.question] ?? null
+  }))
+  const skipped = responses.filter(item => item.answer === null || item.answer === '' || (Array.isArray(item.answer) && item.answer.length === 0))
+  return JSON.stringify({
+    clarification_needed: false,
+    proceed: true,
+    outcome: result.outcome,
+    answered: responses.length - skipped.length,
+    responses,
+    message: skipped.length
+      ? 'The user answered the rest. For anything skipped, pick the safest default and state the assumption in your final response.'
+      : 'Use these answers and continue the task now.'
   })
 }

@@ -143,3 +143,32 @@ test('the system prompt states when asking is allowed', () => {
   assert.match(prompt, /at most 5 questions and 4 choices/)
   assert.doesNotMatch(prompt, /ask only if ambiguity changes the action/)
 })
+
+test('the clarify tool blocks on the host prompt and returns real answers', async () => {
+  const { registry, registerBuiltinTools } = await import('../dist/tools/index.js')
+  registerBuiltinTools()
+  const seen = []
+  const result = await registry.execute('clarify', {
+    questions: [{ question: 'Database mana yang dipakai untuk migrasi ini?', choices: ['postgres', 'mysql'] }]
+  }, {
+    onClarify: async questions => {
+      seen.push(questions)
+      return { answers: { [questions[0].question]: 'postgres' }, outcome: 'submitted' }
+    }
+  })
+  assert.equal(seen.length, 1, 'the host prompt must be called once')
+  const parsed = JSON.parse(result)
+  assert.equal(parsed.outcome, 'submitted')
+  assert.equal(parsed.responses[0].answer, 'postgres')
+  assert.match(parsed.message, /continue the task/i)
+})
+
+test('without a host prompt the tool still refuses to pretend it asked', async () => {
+  const { registry, registerBuiltinTools } = await import('../dist/tools/index.js')
+  registerBuiltinTools()
+  const result = JSON.parse(await registry.execute('clarify', {
+    questions: [{ question: 'Database mana yang dipakai untuk migrasi ini?', choices: ['postgres', 'mysql'] }]
+  }, {}))
+  assert.equal(result.clarification_needed, true)
+  assert.match(result.message, /cannot collect structured answers/i)
+})

@@ -1,6 +1,6 @@
 {
   "name": "vallenemperor",
-  "version": "999.999.1025",
+  "version": "999.999.1026",
   "description": "Autonomous AI agent core and terminal CLI (VallenEmperor)",
   "bin": {
     "vallenemperor": "vallencli/dist/cli.js",

@@ -82,7 +82,7 @@ export async function runCli(options: any = {}) {
   const input = options.input || process.stdin
   const output = options.output || process.stdout
   const core = options.core || await import(pathToFileURL(CORE_PATH).href)
-  const state: any = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, modelCache: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map(), reasoning: createReasoningState(), suppressRobot: false, answerStarted: false }
+  const state: any = { busy: false, closing: false, pendingApproval: null, pendingClarify: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, modelCache: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map(), reasoning: createReasoningState(), suppressRobot: false, answerStarted: false }
   let agent = options.agent
   if (!agent) agent = options.createAgent ? options.createAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } }) : new core.AIAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } })
   const out = (value: any) => output.write(fixAscii(noColorMode ? stripAnsi(value) : value))
@@ -635,6 +635,62 @@ export async function runCli(options: any = {}) {
     pending.resolve(allowed)
     refreshStatus()
   }
+  // ---- clarify: the `clarify` tool blocks here until the human answers ----
+  function clarifyPrompt(question: any, index: number, total: number): void {
+    const choices = question.choices || []
+    const lines = [`? Clarify${total > 1 ? ` (${index + 1}/${total})` : ''} ${question.question}`]
+    choices.forEach((choice: string, position: number) => lines.push(`  ${position + 1}. ${choice}`))
+    lines.push(choices.length
+      ? (question.multi_select ? '  Jawab: nomor (boleh 1,2), teks bebas, atau kosong = lewati' : '  Jawab: nomor, teks bebas, atau kosong = lewati')
+      : '  Jawab: teks bebas, atau kosong = lewati')
+    displayLine(lines.join('\n'))
+  }
+
+  function askClarify(questions: any[]) {
+    // A headless run cannot ask; the tool then falls back to "ask in prose".
+    if (!interactive) return Promise.resolve({ answers: {}, outcome: 'unavailable' })
+    if (state.pendingClarify) return Promise.resolve({ answers: {}, outcome: 'cancelled' })
+    return new Promise<any>(resolveClarify => {
+      const timer = setTimeout(() => {
+        const pending = state.pendingClarify
+        state.pendingClarify = null
+        displayLine('Clarify timeout; continuing without an answer.')
+        resolveClarify({ answers: { ...(pending?.answers || {}) }, outcome: 'timed_out' })
+      }, options.clarifyTimeoutMs || 5 * 60_000)
+      state.pendingClarify = { questions: [...questions], index: 0, answers: {}, resolve: resolveClarify, timer }
+      showRobot('CLARIFY')
+      clarifyPrompt(questions[0], 0, questions.length)
+    })
+  }
+
+  function settleClarifyLine(text: string): void {
+    const pending = state.pendingClarify
+    const question = pending.questions[pending.index]
+    const raw = String(text || '').trim()
+    const choices: string[] = question.choices || []
+    const finish = (outcome: string) => {
+      clearTimeout(pending.timer)
+      state.pendingClarify = null
+      showRobot('WORKING')
+      pending.resolve({ answers: pending.answers, outcome })
+    }
+    if (/^(?:batal|cancel)$/i.test(raw)) { finish('cancelled'); return }
+    let answer: string | string[] | null = null
+    if (raw) {
+      const parts = raw.split(',').map(part => part.trim()).filter(Boolean)
+      const indexes = parts.map(part => Number(part)).filter(number => Number.isInteger(number) && number >= 1 && number <= choices.length)
+      if (choices.length && indexes.length === parts.length && indexes.length) {
+        answer = question.multi_select ? indexes.map(number => choices[number - 1]) : choices[indexes[0] - 1]
+      } else {
+        answer = question.multi_select ? parts : raw
+      }
+    }
+    pending.answers[question.question] = answer
+    pending.index += 1
+    if (pending.index < pending.questions.length) { clarifyPrompt(pending.questions[pending.index], pending.index, pending.questions.length); return }
+    finish('submitted')
+  }
+
   function askApproval(request) {
     const mode = core.approvalMode(agent.config?.agentApproval)
     const server = core.mcpServerFromTool(request.name)
@@ -792,6 +848,7 @@ export async function runCli(options: any = {}) {
           // Streaming is what makes the reasoning block and the answer appear live (Hermes-style).
           stream: true,
           requestApproval: request => askApproval(request),
+          onClarify: askClarify,
           onEvent: event => {
             if (event.type === 'reasoning') {
               // Hermes suppresses late reasoning once the answer box is open: a block inside the answer
@@ -940,6 +997,7 @@ export async function runCli(options: any = {}) {
         else displayLine(pending.canAlways ? 'Reply y, a (always this session) or n to approve; /stop interrupts turn.' : 'Reply y or n to approve; /stop interrupts turn.')
         continue
       }
+      if (state.pendingClarify) { settleClarifyLine(text); continue }
       if (state.busy) { displayLine('Agent busy; use /stop or wait for the current turn.'); continue }
       if (text.startsWith('/') && isSlashCommand) {
         try {
