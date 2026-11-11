@@ -161,10 +161,10 @@ A red CI is a real failure. Do not disable steps to make it green; fix the cause
 Always quote the real totals from `npm test`, e.g.:
 
 ```text
-vallenagent 438/438, vallencli 156/156
+vallenagent 444/444, vallencli 166/166
 ```
 
-Current baseline (version 999.999.1017). The suite is expected to stay green at these totals; adding
+Current baseline (version 999.999.1026). The suite is expected to stay green at these totals; adding
 tests raises them, removing coverage is a regression even if the numbers still pass.
 
 Never round, never invent, never omit a failing suite.

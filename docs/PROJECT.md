@@ -100,7 +100,7 @@ cannot break on the CJS/ESM boundary.
   `completionStatus: 'incomplete'`. Read-only commands (`ls`, `git status`) never count.
 - Skill stats record `verified` / `failed` / `unknown` from the last verification entry.
 
-## 5b. Turn artifacts
+## 5.1 Turn artifacts
 
 Every turn that produced something reviewable writes a directory:
 
@@ -122,7 +122,7 @@ Every turn that produced something reviewable writes a directory:
 - `browser_screenshot` writes straight into the current turn directory and returns the path, so the
   model can cite a real file and the user can open it.
 
-## 5c. Plan mode and milestone steering
+## 5.2 Plan mode and milestone steering
 
 `/plan <task>` runs a planning turn (read-only) whose deliverable is a markdown plan saved by the
 agent to `.vallenemperor/plans/YYYY-MM-DD_HHMMSS-<slug>.md`. The CLI then copies that file into the
@@ -147,7 +147,7 @@ run state lives in the CLI (`state.planRun`); progress is also written to the ar
 Parser shapes accepted: `### Step 1 — title`, `1. title`, `- Step 1: title`. The step body is kept
 verbatim (file paths, commands, expected output), because that is what makes a plan executable.
 
-## 5d. Subagents and the agent manager
+## 5.3 Subagents and the agent manager
 
 `delegate_task` has two modes:
 
@@ -181,7 +181,7 @@ handle the factory exposes (`onHandle({ interrupt })`), which aborts the subagen
 Worktrees are intentionally **not** deleted automatically on completion: the user reviews the branch
 first. `/agents clean` is the explicit cleanup step.
 
-## 5e. Routing: custom agents, planner, on-demand browser
+## 5.4 Routing: custom agents, planner, on-demand browser
 
 Three mechanisms keep tool choice from being pure model whim:
 
@@ -215,7 +215,7 @@ its own to browse the web.
 The system prompt (`# Delegation, Artifacts and Plan Mode`) states the triggers: background/branch
 delegation, screenshot proof for UI work, and plan-first for changes touching more than five files.
 
-## 5e2. Read tracking and path policy
+## 5.5 Read tracking and path policy
 
 - `tools/read_tracker.ts` — per-session economy for `read_file`: a repeated unchanged range returns a
   stub (`duplicate: true`, `sha256` kept, body omitted, `force: true` to override), and three identical
@@ -227,7 +227,7 @@ delegation, screenshot proof for UI work, and plan-first for changes touching mo
   `VALLENEMPEROR_ALLOW_INSTRUCTION_EDITS=1`. Guards run in `write_file`, `patch`, `patch_batch`,
   `apply_patch` before the sandbox check.
 
-## 5e4. Pending writes (review before permanence)
+## 5.6 Pending writes (review before permanence)
 
 `core/pending_writes.ts` stages cross-session writes under `<home>/pending/<subsystem>/<id>.json`.
 Enabled per subsystem with `write_approval: { memory: true, skills: true }`. The memory tool returns
@@ -238,7 +238,7 @@ the operations array, and `/skills pending | approve <id> | reject <id>` lists, 
 `skipSkillStaging: true`, or discards it. The background review fork reuses the parent's provider
 instance (same model/credentials/connection) instead of constructing a new one.
 
-## 5e6. Skill governance (`/skills journey`, `/skills index`)
+## 5.7 Skill governance (`/skills journey`, `/skills index`)
 
 - `skills/skill_history.ts` — every skill change carries a `source` (who asked: `skill_manage`,
   `/learn`, `review`). `buildJourney(changes, reviews, limit)` merges that history with the review log
@@ -248,7 +248,7 @@ instance (same model/credentials/connection) instead of constructing a new one.
   `<home>/skill-index.json`; `/skills index store` re-baselines it. `estimateTokens` is shared with
   `core/context_report.ts`, so index numbers match `/context all`.
 
-## 5e3. Write serialisation and `/learn`
+## 5.8 Write serialisation and `/learn`
 
 - `core/path_lock.ts` — in-process mutex keyed by canonical path. `write_file` and `patch` acquire it
   in `agent.ts` before `registry.execute`, so two subagents writing one file queue instead of
@@ -258,7 +258,7 @@ instance (same model/credentials/connection) instead of constructing a new one.
   `skill_manage` under explicit standards (description ≤ 60 chars, procedure-first, pitfalls as rules,
   no incident narration), (4) verifies the skill loads.
 
-## 5e5. Hooks and the repository map
+## 5.9 Hooks and the repository map
 
 - `core/hooks.ts` — lifecycle hooks (`session_start`, `user_prompt`, `pre_tool`, `post_tool`,
   `turn_end`, `session_end`). Each hook is a shell command that gets JSON on stdin and may print
@@ -270,7 +270,7 @@ instance (same model/credentials/connection) instead of constructing a new one.
   (default 12k ≈ 3k tokens). Available as the `repo_map` tool, and injected into the system prompt
   when `repo_map.enabled` is true (cached 60 s per workspace).
 
-## 5f. Filesystem sandbox
+## 5.10 Filesystem sandbox
 
 `core/sandbox.ts` bounds file **writes** (reads stay allowed):
 
@@ -309,13 +309,13 @@ instance (same model/credentials/connection) instead of constructing a new one.
 
 ## 8. Model picker (`/model`)
 
-- `cli-model-picker.mjs` is pure logic + `fetchGatewayModels()`:
+- `cli-model-picker.ts` is pure logic + `fetchGatewayModels()`:
   - `GET {base_url}/models`, grouped by `owned_by` (`ag` → antigravity, `kc` → kiro, others as-is).
   - Navigation: ↑/↓ wraps, Enter descends/selects, Esc goes back one level, typing filters
     (provider label, account id, model id), Backspace removes a character.
   - Non-TTY: prints a catalog instead of taking over the keyboard.
   - 15 s timeout, 5-minute session cache per `base_url`.
-- `cli.mjs` owns the terminal rendering and applies the choice with `agent.setModel(id, false)`
+- `cli.ts` owns the terminal rendering and applies the choice with `agent.setModel(id, false)`
   (session-only; `/model save <name>` persists).
 - `/model <name>` still switches directly; `/model save <name>` writes config.
 
@@ -349,7 +349,7 @@ Provider presets live in `core/config.ts` (`PROVIDER_PRESETS`): `openrouter`, `o
 - **Execution**: `terminal` (foreground/background), `process_manage` (list/poll/wait/kill, including
   other sessions with `confirm: true`), `execute_code`.
 - **Delegation**: `delegate_task` (foreground batches or `background: true`, `workspace:`
-  `inherit|branch|share`, `agent:` custom definition) — see §5d and §5e.
+  `inherit|branch|share`, `agent:` custom definition) — see §5.3 and §5.4.
 - **Web**: `web_search`, `web_extract` (always available), and `browser_exec` /
   `browser_screenshot` which are **on demand** — locked until `/browser <task>` unlocks the session.
   Screenshots save into the current turn's artifact directory (http/https only).
@@ -365,7 +365,7 @@ Provider presets live in `core/config.ts` (`PROVIDER_PRESETS`): `openrouter`, `o
 - **Extensions**: tools shipped by an installed pack, loaded only with `extensions.allow_tools: true`;
   names that would shadow a builtin are rejected.
 
-## 10c. Reasoning block and the `∴ Thought for Ns` footer
+## 10b. Reasoning block and the `∴ Thought for Ns` footer
 
 Providers that expose reasoning deltas (`reasoning_content` / `reasoning`) are streamed into a dim block
 and closed with `∴ Thought for Ns` (dim + italic, whole seconds). Rules:
@@ -391,10 +391,10 @@ and closed with `∴ Thought for Ns` (dim + italic, whole seconds). Rules:
   redraw while the footer + answer card print — otherwise `∴ Thought for Ns` ends up sandwiched between
   `[o_o] WORKING` rows.
 
-Code: `vallencli/src/cli-reasoning.mjs` (state machine), `vallencli/src/cli-ui.mjs` (`formatThoughtLine`,
+Code: `vallencli/src/cli-reasoning.ts` (state machine), `vallencli/src/cli-ui.ts` (`formatThoughtLine`,
 `formatReasoningLine`), `vallenagent/src/providers/providers.ts` (`onReasoning`), event `{type:'reasoning'}`.
 
-## 10b. Isolation boundaries
+## 10c. Isolation boundaries
 
 Three independent layers, each with its own test:
 
@@ -510,8 +510,8 @@ files in via `git diff --no-index`, caps at 50 untracked files and 200k chars, a
 `/artifacts` lives in the shared command handler (`vallenagent/src/core/commands.ts`), so the
 terminal and the Telegram gateway behave the same. `/plan` (including `go/next/edit/skip/stop/status`)
 is terminal-local because it drives the REPL's turn loop; the pure state machine it uses lives in
-`vallenagent/src/agent/plan_mode.ts`. The registry for autocomplete is `cli-suggest.mjs`; `HELP` is in
-`cli-ui.mjs`.
+`vallenagent/src/agent/plan_mode.ts`. The registry for autocomplete is `cli-suggest.ts`; `HELP` is in
+`cli-ui.ts`.
 
 ## 12. Invariants covered by tests (do not change without a test)
 
@@ -530,11 +530,11 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | Task | Touch |
 | --- | --- |
 | New tool | `tools/builtin_tools/*.ts` + register + schema + test |
-| New local slash command | `cli-commands.mjs` + `cli-suggest.mjs` + `HELP` in `cli-ui.mjs` |
+| New local slash command | `cli-commands.ts` + `cli-suggest.ts` + `HELP` in `cli-ui.ts` |
 | New shared command | `vallenagent/src/core/commands.ts` |
 | New provider preset | `core/config.ts` (`PROVIDER_PRESETS`), plus `providers/` if the API differs |
 | New turn stage | `agent/turn_*.ts`, call it from `agent.ts`, add an event-order test |
-| Plan-mode behavior | `agent/plan_mode.ts` (pure) + `cli-commands.mjs` wiring + tests |
+| Plan-mode behavior | `agent/plan_mode.ts` (pure) + `cli-commands.ts` wiring + tests |
 | Subagent behaviour | `agent/subagent_registry.ts` (state) + `agent/worktree.ts` (isolation) |
 | Agent routing | `agent/custom_agents.ts` (definitions + planner) |
 | Artifact review UI | `readArtifactPreview()` + `/artifact` |
@@ -552,8 +552,8 @@ is terminal-local because it drives the REPL's turn loop; the pure state machine
 | `Task incomplete: ... lack a typecheck/test run` | verification gate + which file was edited |
 | Turn keeps nudging "checklist still open" | auto-checklist logic in `turn_setup_phase.ts` / `agent.ts` |
 | `/model` prints the old text | you are running an old global install → `npm install -g .` |
-| `/model` times out | gateway latency; timeout is 15 s, cache 5 min (`cli-model-picker.mjs`) |
-| Bin prints nothing after global install | symlink guard in `cli.mjs` (`realpathSync` comparison) |
+| `/model` times out | gateway latency; timeout is 15 s, cache 5 min (`cli-model-picker.ts`) |
+| Bin prints nothing after global install | symlink guard in `cli.ts` (`realpathSync` comparison) |
 | `exports is not defined in ES module scope` | root `package.json` must not set `"type": "module"` (dist is CommonJS) |
 | Skill feels sticky | auto-match must not be stored in `activeSkill`; only `skill_view` sets it |
 | Gateway/Telegram auth errors | `gateway/store.ts` config + `telegram.ts` pairing logic |

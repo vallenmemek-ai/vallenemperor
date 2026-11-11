@@ -87,19 +87,19 @@ undo · enable · disable · sync · reset), `/review`, `/plan`, `/plans`, `/gam
 
 ```text
 src/
-  cli.mjs           REPL, argument parsing, one-shot mode, config commands
-  cli-ui.mjs        cards, status bar, approval boxes, diff rendering, themes
-  cli-markdown.mjs  markdown + code-fence renderer
-  cli-commands.mjs  slash command implementations
-  cli-files.mjs     @path file mentions and completion
-  cli-suggest.mjs   inline command suggestions
-  cli-theme.mjs     color levels and gradients
+  cli.ts           REPL, argument parsing, one-shot mode, config commands
+  cli-ui.ts        cards, status bar, approval boxes, diff rendering, themes
+  cli-markdown.ts  markdown + code-fence renderer
+  cli-commands.ts  slash command implementations
+  cli-files.ts     @path file mentions and completion
+  cli-suggest.ts   inline command suggestions
+  cli-theme.ts     color levels and gradients
 ```
 
 ## Development
 
 ```bash
-npm run build   # node --check src/cli.mjs
+npm run build   # node --check src/cli.ts
 npm test        # node --test tests/*.test.mjs
 ```
 

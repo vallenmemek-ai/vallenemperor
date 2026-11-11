@@ -81,8 +81,11 @@ passed the "two matching words" threshold.
 **Why.** `vallenagent/dist/*.js` is compiled as CommonJS. Adding `"type": "module"` made every import
 fail with `exports is not defined in ES module scope` (`config show` broke immediately).
 
-**Consequence.** CLI sources use `.mjs`. Converting to full ESM requires changing the TypeScript
-module target first — a separate, larger change.
+**Consequence.** CLI sources stayed `.mjs` at the time. Converting to full ESM required changing the
+TypeScript module target first — a separate, larger change.
+
+> **SUPERSEDED** by the `vallencli` TypeScript migration: CLI sources are now `.ts` compiled to
+> `vallencli/dist/*.js` (still CommonJS, same reasoning). Kept so the original constraint is not lost.
 
 ---
 
@@ -133,7 +136,7 @@ session cache, non-TTY catalog fallback. `/model <name>` still switches directly
 
 **Why.** Users could not see which providers/accounts were connected, and had to guess model ids.
 
-**Consequence.** `cli-model-picker.mjs` is pure logic + fetch (unit-tested); `cli.mjs` owns terminal
+**Consequence.** `cli-model-picker.ts` is pure logic + fetch (unit-tested); `cli.ts` owns terminal
 rendering. Keys are claimed immediately while loading, so early keystrokes cannot leak into the REPL.
 
 ---
@@ -145,7 +148,7 @@ mode, and cannot use an "always allow" session grant.
 
 **Why.** Silent large writes are the most expensive mistake a terminal agent can make.
 
-**Consequence.** `bigEditPreview()` in `cli.mjs`; non-interactive runs never block on it.
+**Consequence.** `bigEditPreview()` in `cli.ts`; non-interactive runs never block on it.
 
 ---
 
@@ -317,8 +320,8 @@ the skills it produces get rejected by review.
 
 ## D23 — First-run experience is three commands, all injectable
 
-**Decision.** `setup`, `doctor`, and `update` live in the CLI (`cli-setup.mjs`, `cli-doctor.mjs`,
-`cli-update-check.mjs`) and take every side effect as an injected dependency (prompting, model fetch,
+**Decision.** `setup`, `doctor`, and `update` live in the CLI (`cli-setup.ts`, `cli-doctor.ts`,
+`cli-update-check.ts`) and take every side effect as an injected dependency (prompting, model fetch,
 config write, probes, fetcher, installer). The daily update check is fire-and-forget with a 24-hour
 cache.
 

@@ -19,8 +19,8 @@ order — do not guess the architecture:
 
 ## Current status (keep this line honest)
 
-**ROADMAP is complete: 44/44 items shipped, 0 open.** Tests: **438 vallenagent + 156 vallencli = 594**,
-all green. Latest version **999.999.1017**. Terminal sandbox, LSP diagnostics, ACP editor bridge, nested
+**ROADMAP is complete: 46/46 items shipped, 0 open.** Tests: **444 vallenagent + 166 vallencli = 610**,
+all green. Latest version **999.999.1026**. Terminal sandbox, LSP diagnostics, ACP editor bridge, nested
 subagents, browser recording, extension packs with opt-in executable tools, and isolated profiles are all
 implemented and covered by tests. If you change anything, update this line with the real numbers.
 
@@ -79,13 +79,13 @@ vallenagent/src/
 
 vallencli/src/
   cli.ts               REPL, argument parsing, one-shot mode, config commands, model picker glue
-  cli-model-picker.mjs two-level picker (provider → model) over a live gateway
+  cli-model-picker.ts two-level picker (provider → model) over a live gateway
   cli-ui.ts           cards, status bar, approval boxes, diffs, themes
-  cli-markdown.mjs     markdown + code-fence renderer
+  cli-markdown.ts     markdown + code-fence renderer
   cli-commands.ts     local slash commands
-  cli-files.mjs        @path mentions and completion
+  cli-files.ts        @path mentions and completion
   cli-suggest.ts      command registry + fuzzy suggestions
-  cli-theme.mjs        color levels and gradients
+  cli-theme.ts        color levels and gradients
 ```
 
 Full detail: **[docs/PROJECT.md](docs/PROJECT.md)**.

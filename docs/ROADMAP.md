@@ -12,8 +12,8 @@ Companion document: **[REFERENCES.md](REFERENCES.md)** — the consolidated peer
 cross-peer adoption matrix. Every row in it is now implemented; the long-form per-peer inventories live in
 git history.
 
-**STATUS: COMPLETE.** 44/44 items shipped (`[x]`), 0 open, 0 partial. Final evidence: **438/438
-vallenagent + 156/156 vallencli** tests, version **999.999.1017**. New work should start as a new section
+**STATUS: COMPLETE.** 46/46 items shipped (`[x]`), 0 open, 0 partial. Final evidence: **444/444
+vallenagent + 166/166 vallencli** tests, version **999.999.1026**. New work should start as a new section
 here (with acceptance criteria) rather than reopening a finished item.
 
 Purpose: the single source of truth for **what to build next** and **how we know it is done**. Status
@@ -86,8 +86,8 @@ Format per item: **why**, **scope**, **acceptance**, **effort** (S ≤ 1 session
 #### P0.1 `vallenemperor setup` wizard — ✅
 - **Why.** A new user installs the package and lands in a REPL with no provider configured. That is
   the single biggest drop-off point, and Hermes/opencode both solve it with a wizard.
-- **Scope.** `vallencli/src/cli-setup.mjs` (new), `vallencli/src/cli.mjs` (dispatch before REPL),
-  `vallenagent/src/core/config.ts` (reuse `PROVIDER_PRESETS`), reuse `cli-model-picker.mjs` to fetch
+- **Scope.** `vallencli/src/cli-setup.ts` (new), `vallencli/src/cli.ts` (dispatch before REPL),
+  `vallenagent/src/core/config.ts` (reuse `PROVIDER_PRESETS`), reuse `cli-model-picker.ts` to fetch
   the live model list.
 - **Flow.** pick preset → base_url (prefilled) → fetch `/models` → pick model → paste API key
   (hidden input, never echoed, never written to logs) → pick approval mode → write `config.json` →
@@ -102,7 +102,7 @@ Format per item: **why**, **scope**, **acceptance**, **effort** (S ≤ 1 session
 #### P0.2 `vallenemperor doctor` — ✅
 - **Why.** Support load. When something breaks, users cannot tell whether it is Node, config, network,
   provider, skills, or MCP.
-- **Scope.** `vallencli/src/cli-doctor.mjs` (new), reuse `collectHealthChecks` in `cli.mjs`.
+- **Scope.** `vallencli/src/cli-doctor.ts` (new), reuse `collectHealthChecks` in `cli.ts`.
 - **Checks.** Node version ≥ 20 · config parse + `providers.active` resolvable · provider `/models`
   reachable with latency · API key present (presence only, never the value) · skills dir readable ·
   MCP servers status · write access to `~/.vallenemperor` · disk space · git available · optional
@@ -113,7 +113,7 @@ Format per item: **why**, **scope**, **acceptance**, **effort** (S ≤ 1 session
 
 #### P0.3 Update notifier — ✅
 - **Why.** Users stay on old versions (we shipped 7 versions in a day and the public one lagged).
-- **Scope.** `vallencli/src/cli-update-check.mjs` (new), called once per day from `cli.mjs`.
+- **Scope.** `vallencli/src/cli-update-check.ts` (new), called once per day from `cli.ts`.
 - **Behaviour.** Compare `package.json` version with `npm view vallenemperor version` (cached 24 h in
   `~/.vallenemperor/update-check.json`), print one dim line when newer: `update available: x.y.z →
   npm i -g vallenemperor`. Never blocks startup, never fails loudly, respects
@@ -135,7 +135,7 @@ call makes no network request), formats `update available: x → y`, honours
 #### P1.1 `/codesearch <query>` — ✅
 - **Why.** `search_files` exists for the agent, but the user has no fast way to search the workspace
   from inside the REPL.
-- **Scope.** `vallencli/src/cli-codesearch.mjs` (new), command registration in
+- **Scope.** `vallencli/src/cli-codesearch.ts` (new), command registration in
   `vallenagent/src/core/commands.ts`, reuse `search_files` internals.
 - **Behaviour.** ripgrep-style search across the workspace, grouped by file, `↑/↓` to move, `Enter`
   opens the hit in a preview pane (with line numbers), `Esc` closes; non-TTY prints the flat result
@@ -148,7 +148,7 @@ call makes no network request), formats `update available: x → y`, honours
 - **Why.** Reasoning budget is the biggest cost/quality lever, and every peer CLI exposes it.
 - **Scope.** `vallenagent/src/core/types.ts` (`reasoning_effort`), `providers/providers.ts` (pass
   `reasoning_effort` in the OpenAI-compatible payload when set), command in `core/commands.ts`,
-  status-bar hint in `cli.mjs`.
+  status-bar hint in `cli.ts`.
 - **Acceptance.** Value reaches the provider request (asserted on a captured payload); unsupported
   providers ignore it without error; `/effort` with no argument prints the current level; config
   persists.
@@ -156,7 +156,7 @@ call makes no network request), formats `update available: x → y`, honours
 
 #### P1.3 Interactive `/diff` viewer — ✅
 - **Why.** `/diff` currently prints text; checkpoints already exist, so this is presentation work.
-- **Scope.** `vallencli/src/cli-diff-viewer.mjs` (new), wire from `/diff`.
+- **Scope.** `vallencli/src/cli-diff-viewer.ts` (new), wire from `/diff`.
 - **Behaviour.** Per-turn file list → per-file unified diff with syntax colouring → `n`/`p` to move
   between files, `u` to undo that file (existing checkpoint API), `Esc` to exit.
 - **Acceptance.** Undo restores exactly the checkpointed content; tests cover navigation state and
@@ -165,7 +165,7 @@ call makes no network request), formats `update available: x → y`, honours
 
 #### P1.4 `/copy [n]` — ✅
 - **Why.** Copying the last answer is the most-used utility in every peer CLI.
-- **Scope.** `cli-commands.mjs` + clipboard helper (OSC 52 fallback, `pbcopy`/`clip`/`xclip`).
+- **Scope.** `cli-commands.ts` + clipboard helper (OSC 52 fallback, `pbcopy`/`clip`/`xclip`).
 - **Acceptance.** Works over SSH via OSC 52; reports which mechanism was used; tests with an injected
   clipboard writer.
 - **Effort.** S · **Risk.** low.

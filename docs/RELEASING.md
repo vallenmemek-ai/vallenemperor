@@ -50,7 +50,7 @@ vallenemperor config show                  # exercises config + packaged assets
 ```
 
 Smoke test the changed surface with the **installed** binary (e.g. `/model`, `-p`, gateway command).
-Testing `node vallencli/src/cli.mjs` is not enough: it bypasses the package layout.
+Testing `node vallencli/dist/cli.js` is not enough: it bypasses the package layout.
 
 ## 3. Report and wait
 

@@ -38,7 +38,7 @@ version). The owner is the release manager.
   npm run build && npm install -g .
   vallenemperor --version    # must print the new version
   ```
-- Smoke tests **MUST** use the installed binary. Running `node vallencli/src/cli.ts` alone is not
+- Smoke tests **MUST** use the installed binary. Running `node vallencli/dist/cli.js` alone is not
   enough: it bypasses the package layout (`files`, `dist/`, bundled skills, bin symlink).
 - Documentation-only changes: bump the version if the owner asked for it; otherwise state explicitly
   in the report that the version was not changed and why.

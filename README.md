@@ -38,11 +38,20 @@ commands, verifies its own work, resumes interrupted sessions, and loads skills 
 
 Both ship as one installable CLI: **`vallenemperor`**.
 
+## Contents
+
+- [Status](#status) · [Preview](#preview) · [Install](#install) · [Quick start](#quick-start)
+- [Features](#features) · [Configuration](#configuration) · [Architecture](#architecture)
+- [Reviewing work](#reviewing-work) · [Filesystem sandbox](#filesystem-sandbox)
+- [Custom agents and routing](#custom-agents-and-routing) · [Subagents and `/agents`](#subagents-and-agents)
+- [Plan mode](#plan-mode) · [Turn artifacts](#turn-artifacts)
+- [For AI agents](#for-ai-agents) · [Development](#development) · [License](#license)
+
 ## Status
 
-- **ROADMAP: 44/44 items shipped, 0 open.** Full list with per-item evidence in [docs/ROADMAP.md](docs/ROADMAP.md).
-- **Tests: 438 (agent) + 156 (CLI) = 594**, all green.
-- **Latest version: 999.999.1017.**
+- **ROADMAP: 46/46 items shipped, 0 open.** Full list with per-item evidence in [docs/ROADMAP.md](docs/ROADMAP.md).
+- **Tests: 444 (agent) + 166 (CLI) = 610**, all green.
+- **Latest version: 999.999.1026.**
 
 ## Preview
 
@@ -217,7 +226,7 @@ vallenagent/src/
 vallencli/src/
   cli.ts            REPL, argument parsing, one-shot mode, config commands
   cli-ui.ts        rendering: cards, status bar, approval boxes, diffs
-  cli-markdown.mjs  markdown and code-fence renderer
+  cli-markdown.ts  markdown and code-fence renderer
   cli-commands.ts  slash commands (/model, /skills, /resume, /plan, ...)
 ```
 
@@ -353,7 +362,7 @@ Both packages are TypeScript. `vallencli/src/*.ts` compiles to `vallencli/dist/*
 the `vallenemperor` bin points at; the CLI tests import the compiled `dist/`, so run `npm run build`
 before `npm test` (the `vallencli` test script does this for you).
 
-293 tests cover the turn loop and event order, provider retries and truncated-answer continuation,
+610 tests cover the turn loop and event order, provider retries and truncated-answer continuation,
 verification gates, skill relevance/release, patch engine, process manager, deferred tools, clarify
 policy, provider presets, the Telegram gateway (injected HTTP client, no network), and the CLI
 surface. CI runs the same three commands on every push and pull request.
