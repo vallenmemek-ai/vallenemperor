@@ -82,7 +82,7 @@ export async function runCli(options: any = {}) {
   const input = options.input || process.stdin
   const output = options.output || process.stdout
   const core = options.core || await import(pathToFileURL(CORE_PATH).href)
-  const state: any = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, modelCache: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map(), reasoning: createReasoningState() }
+  const state: any = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, modelCache: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map(), reasoning: createReasoningState(), suppressRobot: false }
   let agent = options.agent
   if (!agent) agent = options.createAgent ? options.createAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } }) : new core.AIAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } })
   const out = (value: any) => output.write(fixAscii(noColorMode ? stripAnsi(value) : value))
@@ -174,6 +174,14 @@ export async function runCli(options: any = {}) {
     }, 120)
     state.thinkingTimer.unref?.()
   }
+  /** Stop the spinner and wipe its live line so the answer (and the ∴ footer) never sandwich it. */
+  function clearRobotLine() {
+    stopThinkingTicker()
+    if (state.robotVisible && output.isTTY && input.isTTY) {
+      output.write('\r\x1b[2K')
+      state.robotVisible = false
+    }
+  }
   function showRobot(activity) {
     state.robotActivity = activity
     if (activity === 'THINKING') startThinkingTicker()
@@ -187,6 +195,9 @@ export async function runCli(options: any = {}) {
   function displayLine(value) {
     state.printSeq++
     const text = noColorMode ? stripAnsi(value) : value
+    // While the final answer/footer block is printed, never re-draw the live robot line between
+    // lines: that is what made `∴ Thought for Ns` appear sandwiched between `[o_o] WORKING` rows.
+    if (state.suppressRobot) { write(output, text); return }
     if (state.busy) {
       if (output.isTTY && input.isTTY) {
         if (!state.robotVisible) showRobot(state.pendingApproval ? 'APPROVAL' : state.robotActivity)
@@ -825,6 +836,8 @@ export async function runCli(options: any = {}) {
         })
         const streamed = state.streamedChars > 0
         const footer = turnFooter()
+        state.suppressRobot = true
+        clearRobotLine()
         closeStream(footer)
         finishTurn(state.reasoning, Date.now() - state.turnStartedAt, displayLine)
         if (result.completionStatus === 'incomplete') displayLine(color('Turn incomplete; check remaining work and errors above.', ANSI.yellow))
@@ -832,7 +845,9 @@ export async function runCli(options: any = {}) {
               lastTurnText = String(result?.response || '')
         if (result.artifacts?.summary) displayLine(result.artifacts.summary)
         if (result.artifacts?.dir) displayLine(color(`artifacts: ${result.artifacts.dir}`, 'dim'))
+        state.suppressRobot = false
       } catch (error) {
+        state.suppressRobot = false
         closeStream()
         displayLine(color(`Agent error: ${error instanceof Error ? error.message : String(error)}`, ANSI.red))
       } finally {
