@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
@@ -5,7 +6,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const CLI = new URL('../dist/cli.js', import.meta.url).pathname
+// .pathname yields '/D:/...' on Windows, which node turns into 'D:\D:\...'
+const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url))
 
 test('each profile is a fully isolated home: config, sessions and skills do not leak', () => {
   const base = mkdtempSync(join(tmpdir(), 'vallen-iso-'))

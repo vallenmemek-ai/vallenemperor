@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
@@ -7,7 +8,8 @@ import { join } from 'node:path'
 
 import { applyProfile, extractProfile, listProfiles, profileHome, runProfileCommand, sanitize } from '../dist/cli-profile.js'
 
-const CLI = new URL('../dist/cli.js', import.meta.url).pathname
+// .pathname yields '/D:/...' on Windows, which node turns into 'D:\D:\...'
+const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url))
 
 test('--profile is extracted from argv and points the home at the profile', () => {
   const parsed = extractProfile(['--profile', 'Work Client', 'run', 'hello'])

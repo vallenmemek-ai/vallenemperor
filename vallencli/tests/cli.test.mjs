@@ -1,3 +1,10 @@
+// A modern terminal (Windows Terminal, VS Code, ConEmu) is what these tests model.
+// Without WT_SESSION the CLI deliberately falls back to plain ASCII on win32, which
+// would turn every '·' separator into '.' and break these assertions. The ASCII
+// fallback has its own test in ascii_fallback.test.mjs.
+process.env.WT_SESSION = process.env.WT_SESSION || 'ci-test'
+delete process.env.VALLEN_ASCII
+
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { PassThrough, Writable } from 'node:stream'
