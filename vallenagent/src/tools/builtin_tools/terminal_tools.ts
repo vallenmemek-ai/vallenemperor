@@ -5,7 +5,7 @@ import { spawn } from 'child_process'
 import { registry, ToolSchema } from '../tools'
 import { manageProcess, startBackgroundProcess } from '../../core/process_manager'
 import { truncateOutput } from './tool_output'
-import { CWD_MARKER, SUPPORTS_PROCESS_GROUPS, killTree, pipelineStatusReliable, resolvePython, resolveShell, wrapCommand } from '../../core/platform'
+import { CWD_MARKER, SUPPORTS_PROCESS_GROUPS, killTree, pipelineStatusReliable, resolvePty, resolvePython, resolveShell, wrapCommand } from '../../core/platform'
 import { decideSandbox } from '../../core/terminal_sandbox'
 
 export function registerTerminalTools(): void {
@@ -20,7 +20,8 @@ export function registerTerminalTools(): void {
         workdir: { type: 'string', description: 'Working directory for this command' },
         timeout: { type: 'integer', description: 'Timeout in seconds (default: 120)' },
         background: { type: 'boolean', description: 'Start command in background and return a session_id for process_manage' },
-        notify: { type: 'boolean', description: 'Emit process exit status through terminal output callback when background process ends' }
+        notify: { type: 'boolean', description: 'Emit process exit status through terminal output callback when background process ends' },
+        pty: { type: 'boolean', description: 'Run on a pseudo-terminal so isatty() checks and TUI apps behave like a real terminal (Linux/macOS; Windows returns a clear error)' }
       },
       required: ['command']
     }
@@ -64,6 +65,10 @@ export function registerTerminalTools(): void {
         }
       }
 
+      if (args.pty === true && args.background === true) {
+        return JSON.stringify({ exit_code: 1, error: 'pty and background cannot be combined; use one of them.' })
+      }
+
       if (args.background === true) {
         const onExit = args.notify === true ? (sessionId: string, exitCode: number | null, processSignal: string | null) => {
           context.onTerminalOutput?.('stderr', `\n[Background process ${sessionId} exited with exit code ${exitCode ?? 'unknown'}${processSignal ? ` (${processSignal})` : ''}]\n`)
@@ -87,8 +92,18 @@ export function registerTerminalTools(): void {
       if (sandboxDecision.mode === 'required' && !sandboxDecision.sandbox) {
         return JSON.stringify({ exit_code: 126, error: `Terminal sandbox required but unavailable: ${sandboxDecision.reason}` })
       }
-      const spawnFile = sandboxDecision.sandbox ? sandboxDecision.sandbox.file : shellSpec.file
-      const spawnArgs = sandboxDecision.sandbox ? sandboxDecision.sandbox.args : shellSpec.argv(probeCommand)
+      let spawnFile = sandboxDecision.sandbox ? sandboxDecision.sandbox.file : shellSpec.file
+      let spawnArgs = sandboxDecision.sandbox ? sandboxDecision.sandbox.args : shellSpec.argv(probeCommand)
+
+      if (args.pty === true) {
+        if (sandboxDecision.sandbox) {
+          return JSON.stringify({ exit_code: 126, error: 'pty cannot be combined with the terminal sandbox; drop one of them.' })
+        }
+        const ptyPlan = resolvePty(shellSpec, rawCommand)
+        if (!ptyPlan.plan) return JSON.stringify({ exit_code: 127, error: ptyPlan.error })
+        spawnFile = ptyPlan.plan.command
+        spawnArgs = ptyPlan.plan.args
+      }
 
       return new Promise<string>((resolveResult) => {
         const proc = spawn(spawnFile, spawnArgs, {

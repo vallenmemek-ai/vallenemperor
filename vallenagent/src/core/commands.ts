@@ -272,6 +272,32 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
       const id = args[1] || ''
       return { handled: true, response: await store.remove(id, ownerId) ? `Scheduled job removed: ${id}` : 'Scheduled job not found.' }
     }
+    if (action === 'pause' || action === 'resume') {
+      const id = args[1] || ''
+      const job = await store.setEnabled(id, action === 'resume', ownerId)
+      return { handled: true, response: job
+        ? (action === 'pause' ? `Job paused: ${job.name} (${job.id}). It stays listed but is never claimed.` : `Job resumed: ${job.name} · next ${job.nextRunAt}.`)
+        : 'Scheduled job not found.' }
+    }
+    if (action === 'run') {
+      const id = args[1] || ''
+      const job = await store.runNow(id, ownerId)
+      return { handled: true, response: job
+        ? `Job queued to fire on the next scheduler tick: ${job.name} (${job.id}). Its schedule is unchanged.`
+        : 'Scheduled job not found.' }
+    }
+    if (action === 'update') {
+      const id = args[1] || ''
+      const field = (args[2] || '').toLowerCase()
+      const value = args.slice(3).join(' ').trim()
+      if (!id || !['name', 'prompt', 'cron', 'timezone', 'delivery'].includes(field) || !value) {
+        return { handled: true, response: 'Usage: /schedule update <id> <name|prompt|cron|timezone|delivery> <value>.' }
+      }
+      try {
+        const job = await store.update(id, { [field]: value } as any, ownerId)
+        return { handled: true, response: job ? `Job updated: ${job.name} · ${job.cron} (${job.timezone}) · next ${job.nextRunAt}.` : 'Scheduled job not found.' }
+      } catch (error) { return { handled: true, response: `Update rejected: ${error instanceof Error ? error.message : 'invalid value'}` } }
+    }
     if (action === 'add') {
       const match = text.trim().match(/^\/schedule\s+add\s+(.+?)\s+([A-Za-z0-9_+./-]+)\s*\|\s*(.{1,100}?)\s*\|\s*([\s\S]{1,4000})$/i)
       if (!match) return { handled: true, response: 'Usage: /schedule add <minute hour day month weekday> <timezone> | <name> | <prompt>.' }
@@ -280,7 +306,7 @@ export async function handleCommand(ctx: CommandContext, text: string): Promise<
         return { handled: true, response: `Scheduled job created. ID: ${job.id} · next: ${job.nextRunAt} · ${job.timezone}${remote ? ' · each run asks Telegram approval.' : ' · results go to ~/.vallenemperor/gateway/cron-local.log (run by the gateway daemon).'}` }
       } catch (error) { return { handled: true, response: `Schedule rejected: ${error instanceof Error ? error.message : 'invalid schedule'}` } }
     }
-    return { handled: true, response: 'Usage: /schedule [list|history [limit]|add ...|remove <id>].' }
+    return { handled: true, response: 'Usage: /schedule [list|history [limit]|add ...|update <id> <field> <value>|pause <id>|resume <id>|run <id>|remove <id>].' }
   }
 
   if (cmd === '/review' && ctx.channel === 'terminal') {

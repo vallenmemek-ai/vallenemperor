@@ -80,16 +80,18 @@ sessions and memories, so never run it without explicit approval.
 
 Surface facts worth remembering:
 
-- 38 tools are registered; `COMMAND_REFERENCE` documents 76 commands. The registry is:
+- 40 tools are registered; `COMMAND_REFERENCE` documents 75 commands. The registry is:
   `read_file write_file patch patch_batch apply_patch search_files list_dir repo_map
   typecheck lsp_diagnostics lsp_servers terminal process_manage execute_code checkpoint
   schedule session_search session_view clarify memory deep_memory todo_list
   image_generate vision_analyze browser_exec browser_screenshot browser_record
   manage_connections delegate_task skills_list skill_view skill_manage tool_search
-  tool_describe tool_call web_search web_extract x_search`.
+  tool_describe tool_call web_search web_extract x_search set_theme text_to_speech`.
   There is **no** `computer_use` tool — desktop automation is not part of this runtime.
 - Commands that change session/model/state live in **core** so CLI, `-p`, gateway and
   scheduled jobs behave the same. Only commands that need REPL state stay in the CLI.
+- `terminal` accepts `pty: true` (Linux/macOS) so TUI apps see a real terminal;
+  Windows returns a clear error instead of pretending.
 - `clarify` blocks on a real prompt in the CLI (numbered choices, multi-select, free
   text, empty = skip, `batal` = cancel, 5 min timeout). Headless runs still get the
   "ask in prose" fallback.

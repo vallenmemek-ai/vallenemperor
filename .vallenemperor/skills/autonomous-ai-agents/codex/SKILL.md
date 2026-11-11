@@ -30,7 +30,7 @@ Requires the codex CLI and a git repository.
 - OpenAI auth configured: either `OPENAI_API_KEY` or Codex OAuth credentials
   from the Codex CLI login flow
 - **Must run inside a git repository** — Codex refuses to run outside one
-- VallenEmperor's `terminal` has no `pty` argument — drive interactive Codex through `tmux`, or run it with `background: true` and read it back with `process_manage`
+- Use `pty: true` in terminal calls — VallenEmperor runs the command on a pseudo-terminal, which interactive Codex needs
 
 Inside VallenEmperor, provider credentials live in `~/.vallenemperor/config.json`
 (`providers.<name>.api_key`) or the environment key shown by `config show`; there is no
@@ -142,7 +142,7 @@ terminal(command="gh pr comment 86 --body '<review>'", workdir="~/project")
 
 ## Rules
 
-1. **Always give Codex a PTY** — it is an interactive terminal app and hangs without one. VallenEmperor's `terminal` has no `pty` flag, so start it under `tmux new-session -d` and read it with `tmux capture-pane`
+1. **Always pass `pty: true`** — Codex is an interactive terminal app and hangs without a PTY. If you also need to read the screen while it runs, wrap it in `tmux` and use `capture-pane`
 2. **Git repo required** — Codex won't run outside a git directory. Use `mktemp -d && git init` for scratch
 3. **Use `exec` for one-shots** — `codex exec "prompt"` runs and exits cleanly
 4. **`--sandbox workspace-write` for building** — auto-approves changes within the sandbox (`--full-auto` is deprecated for this)

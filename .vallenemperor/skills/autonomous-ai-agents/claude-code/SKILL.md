@@ -727,7 +727,7 @@ Use `/context` in interactive mode to see a colored grid of context usage. Key t
 
 ## Pitfalls & Gotchas
 
-1. **Interactive mode REQUIRES tmux** — Claude Code is a full TUI app. VallenEmperor's `terminal` tool has no `pty` flag, so tmux is mandatory here: it gives you `capture-pane` for monitoring and `send-keys` for input, which is essential for orchestration.
+1. **Interactive mode needs a PTY, and tmux for orchestration** — Claude Code is a full TUI app, so pass `pty: true`. For monitoring and sending input while it runs, wrap it in tmux: `capture-pane` and `send-keys` are what make orchestration possible.
 2. **The `--dangerously-skip-permissions` warning dialog defaults to "No, exit"** — that default is the safe answer; only send Down then Enter when you deliberately opted into the bypass in an isolated environment. Print mode (`-p`) skips the dialog entirely.
 3. **`--max-budget-usd` minimum is ~$0.05** — system prompt cache creation alone costs this much. Setting lower will error immediately.
 4. **`--max-turns` is print-mode only** — ignored in interactive sessions.

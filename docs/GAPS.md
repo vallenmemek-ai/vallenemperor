@@ -1,7 +1,7 @@
 # GAPS.md — hasil scan kekurangan & tahapan berikutnya
 
 Dibuat `2026-11-11` dari scan nyata (bukan perkiraan). Versi saat scan: **999.999.1026**.
-Registry: **38 tool**, **75 command** terdokumentasi, test **444 agent + 166 CLI**.
+Registry: **40 tool**, **75 command** terdokumentasi, test **461 agent + 167 CLI**.
 
 > Aturan centang: `[x]` hanya boleh dipasang setelah perintah pembuktian dijalankan dan
 > output-nya ditempel di bagian bukti. `[ ]` = belum. Jangan centang karena "kelihatannya sudah".
@@ -43,35 +43,38 @@ Pembanding yang produktif adalah kode Hermes langsung, bukan teks skill.
 
 ### P0 — memblokir use case yang sudah didokumentasikan skill
 
-- [ ] **`terminal` tidak punya `pty`.** Skill `codex`, `opencode`, `claude-code` mengorkestrasi
+- [x] **`terminal` tidak punya `pty`.** Skill `codex`, `opencode`, `claude-code` mengorkestrasi
       TUI interaktif; tanpa pty agent harus menyuruh user pakai `tmux` manual.
-      Bukti: `grep -c pty vallenagent/src/tools/builtin_tools/terminal_tools.ts` → `0`;
-      schema hanya `command, workdir, timeout, background, notify`.
-      Kriteria selesai: `terminal` menerima `pty: true`, jalan di Linux/macOS; di Windows
-      memakai `conpty`/fallback yang jelas; ada test yang menjalankan program yang butuh TTY
-      dan membuktikan output-nya bukan pipe.
+      **Selesai:** `terminal` menerima `pty: true`; `resolvePty()` memakai `script -qefc`
+      (util-linux, exit code anak dipropagasikan) di Linux dan BSD `script` di macOS.
+      Windows mengembalikan error jelas, bukan diam-diam jalan tanpa TTY.
+      Bukti: `python3 -c "import sys; print(sys.stdin.isatty())"` → `True` dengan pty,
+      `False` tanpa; `exit 7` → exit_code 7.
 
-- [ ] **Cron tidak bisa diubah setelah dibuat.** `schedule` hanya `list/add/remove/history`.
-      `CronStore` sudah punya field `enabled` tapi tidak ada cara memakainya.
-      Bukti: `grep -n "async .*(" vallenagent/src/core/cron_scheduler.ts` → add/list/history/
-      remove/claimDue/complete saja.
-      Kriteria selesai: aksi `update`, `pause`, `resume`, `run` (fire sekarang), `cancel`
-      tersedia di tool dan `/schedule`, dengan test untuk tiap aksi.
+- [x] **Cron tidak bisa diubah setelah dibuat.** `schedule` hanya `list/add/remove/history`.
+      **Selesai:** `CronStore.update/setEnabled/runNow` + aksi `update`, `pause`, `resume`,
+      `run` di tool `schedule` dan `/schedule`. Job `paused` tidak pernah di-claim.
+      `cancel` **tidak** diimplementasi dan itu disengaja: VallenEmperor tidak punya
+      registry run aktif, jadi tidak ada proses berjalan untuk dihentikan — `pause`
+      adalah padanan jujurnya.
+      Bukti: `vallenagent/tests/cron_lifecycle.test.mjs` (6 test) + test tool lifecycle.
 
 ### P1 — kurang untuk kenyamanan, tidak memblokir
 
-- [ ] **Timeout `clarify` belum bisa diatur.** Sekarang hardcode 5 menit di `vallencli/src/cli.ts`
-      (`options.clarifyTimeoutMs || 5 * 60_000`), tidak ada key config.
-      Kriteria: `gateway.clarify_timeout_ms` (atau `clarify.timeout_ms`) dibaca, didokumentasikan,
-      dan ada test.
+- [x] **Timeout `clarify` belum bisa diatur.** **Selesai:** `gateway.clarify_timeout_ms`
+      (default `300000`) dibaca CLI sebelum fallback 5 menit.
+      Bukti: test `clarify timeout has a config default`.
 
-- [ ] **Agent tidak bisa mengganti tema.** `saveTheme` hanya ada di CLI (`cli-theme.ts`),
-      tidak ada tool. `/theme` bisa diketik user, agent tidak.
-      Kriteria: tool `set_theme` (nama tema tervalidasi, hasilnya terlihat di status bar).
+- [x] **Agent tidak bisa mengganti tema.** **Selesai:** tool `set_theme` (status/set) menulis
+      file `cli_theme` yang sama yang dibaca CLI saat start; nama tema divalidasi.
+      Bukti: test `set_theme reports, saves and rejects unknown themes` + guard
+      `core theme names match the CLI theme table`.
 
-- [ ] **`text_to_speech` tidak ada.** Hermes punya; VallenEmperor tidak.
-      Kriteria: tool dengan provider yang bisa dikonfigurasi, gagal jelas kalau tidak ada
-      kredensial, dan tidak pernah mencetak key.
+- [x] **`text_to_speech` tidak ada.** **Selesai:** tool `text_to_speech` memakai engine yang
+      sudah ada di host (`say`, `espeak-ng`/`espeak`, `termux-tts-speak`) atau
+      `tts.command` dari config. Tidak ada dependency native baru.
+      Bukti: di mesin ini tidak ada engine → tool menjawab
+      `No speech engine found...` (jujur), bukan gagal diam-diam.
 
 ### P2 — opsional / perlu keputusan positioning
 
@@ -89,32 +92,30 @@ Pembanding yang produktif adalah kode Hermes langsung, bukan teks skill.
 |---|---|
 | `browser_navigate/click/type/snapshot` | VallenEmperor sengaja memakai satu `browser_exec` serbaguna |
 | `image_gen` | Sudah ada sebagai `image_generate` |
-| `cronjob_manage` | Sudah ada sebagai `schedule` (yang kurang hanya aksinya — lihat P0) |
+| `cronjob_manage` | Sudah ada sebagai `schedule` (aksi lengkap sejak Stage 2) |
 | `feishu_*`, `discord*`, `react_to_message` | Integrasi platform Hermes, di luar positioning CLI |
 | `read_terminal` / `close_terminal` | `process_manage` sudah menutup poll/log/write/close/kill |
-| `set_theme` sebagai *tool* | Tetap masuk P1; ini satu-satunya item UI yang masuk akal untuk agent |
 
 ---
 
 ## 4. Tahapan kerja
 
-### Stage 1 — parity terminal (P0)
-- [ ] Desain: `pty` memakai paket apa (node-pty vs spawn di pty host)
-- [ ] Implementasi di `terminal_tools.ts` + platform adapter
-- [ ] Test: program yang butuh TTY (mis. `python3 -c "import sys; print(sys.stdin.isatty())"`)
-- [ ] Update skill `codex`/`opencode`/`claude-code`: buang instruksi tmux manual
-- [ ] `npm run typecheck && npm run build && npm test` hijau + tempel angkanya
+### Stage 1 — parity terminal (P0) — SELESAI
+- [x] Desain: tanpa native module, pakai `script` (util-linux / BSD)
+- [x] Implementasi `resolvePty()` di `core/platform.ts` + `pty` di `terminal_tools.ts`
+- [x] Test: `terminal_pty.test.mjs` (isatty True vs False, exit code, kombinasi terlarang)
+- [x] Update skill `codex`/`opencode`/`claude-code`: pakai `pty: true` lagi
 
-### Stage 2 — cron lifecycle (P0)
-- [ ] `CronStore.update/pause/resume` + `enabled` dihormati `claimDue`
-- [ ] Aksi `run` (fire sekarang tanpa mengubah jadwal) + `cancel`
-- [ ] Tool `schedule` + `/schedule` memakai aksi baru
-- [ ] Test per aksi + test bahwa job `paused` tidak di-claim
+### Stage 2 — cron lifecycle (P0) — SELESAI
+- [x] `CronStore.update/setEnabled/runNow` + `enabled` dihormati `claimDue`
+- [x] Aksi `update`, `pause`, `resume`, `run` di tool `schedule` + `/schedule`
+- [x] Test: `cron_lifecycle.test.mjs` (6 test, termasuk job paused tidak di-claim)
+- [x] `cancel` dinyatakan tidak berlaku (tidak ada registry run aktif)
 
-### Stage 3 — config & tool kecil (P1)
-- [ ] `clarify_timeout_ms` di config + dokumentasi
-- [ ] Tool `set_theme`
-- [ ] `text_to_speech` (kalau diputuskan masuk)
+### Stage 3 — config & tool kecil (P1) — SELESAI
+- [x] `gateway.clarify_timeout_ms` + dokumentasi
+- [x] Tool `set_theme` + guard daftar tema
+- [x] Tool `text_to_speech` (auto-detect, tanpa dependency baru)
 
 ### Stage 4 — keputusan P2
 - [ ] Putuskan `computer_use`: extension pack atau hapus dari bundel
@@ -124,8 +125,11 @@ Pembanding yang produktif adalah kode Hermes langsung, bukan teks skill.
 
 ## 5. Bukti per item
 
-Isi tabel ini setiap kali satu item dicentang.
-
 | Item | Perintah | Output | Tanggal |
 |---|---|---|---|
-| — | — | — | — |
+| pty ada | `node --test tests/terminal_pty.test.mjs` | 5 pass, `isatty` True vs False | 2026-11-11 |
+| cron lifecycle | `node --test tests/cron_lifecycle.test.mjs` | 6 pass | 2026-11-11 |
+| clarify timeout | `node --test tests/stage3_tools.test.mjs` | `clarify timeout has a config default` pass | 2026-11-11 |
+| set_theme | `registry.execute('set_theme',{action:'set',name:'matrix'})` | `{"action":"set","theme":"matrix",...}` | 2026-11-11 |
+| text_to_speech | `registry.execute('text_to_speech',{text:'halo'})` | `No speech engine found...` (mesin ini) | 2026-11-11 |
+| suite penuh | `npm test` | **461 agent + 167 CLI**, 0 gagal | 2026-11-11 |

@@ -28,7 +28,7 @@ Use [OpenCode](https://opencode.ai) as an autonomous coding worker orchestrated 
 - Auth configured: `opencode auth login` or set provider env vars (OPENROUTER_API_KEY, etc.)
 - Verify: `opencode auth list` should show at least one provider
 - Git repository for code tasks (recommended)
-- `tmux` for interactive TUI sessions (VallenEmperor's `terminal` has no `pty` flag)
+- `pty: true` for interactive TUI sessions
 
 ## Binary Resolution (Important)
 
@@ -188,7 +188,7 @@ terminal(command="opencode stats --days 7 --models anthropic/claude-sonnet-4")
 
 ## Pitfalls
 
-- Interactive `opencode` (TUI) sessions need a PTY: run them under `tmux`. `opencode run` does not need one.
+- Interactive `opencode` (TUI) sessions need a PTY: pass `pty: true`. `opencode run` does not need one.
 - `/exit` is NOT a valid command — it opens an agent selector. Use Ctrl+C to exit the TUI.
 - PATH mismatch can select the wrong OpenCode binary/model config.
 - If OpenCode appears stuck, inspect logs before killing:

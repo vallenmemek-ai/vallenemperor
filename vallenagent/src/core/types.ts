@@ -72,11 +72,18 @@ export interface AgentConfig {
     /** true (default) = compaction boleh memakai satu panggilan model untuk ringkasan yang lebih kaya. */
     llm_compaction?: boolean
     background_review_interval?: number
+    /** How long an interactive clarify prompt waits before returning "timed_out" (default 300000). */
+    clarify_timeout_ms?: number
     telegram?: {
       approval?: 'dangerous' | 'all' | 'off'
       max_iterations?: number
       turn_timeout_ms?: number
     }
+  }
+  tts?: {
+    /** Custom speech command; empty = auto-detect (say / espeak-ng / termux-tts-speak). */
+    command?: string
+    voice?: string
   }
 }
 

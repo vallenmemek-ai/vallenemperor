@@ -64,6 +64,8 @@ export const DEFAULT_CONFIG: AgentConfig = {
     // Background review may invoke a model and propose persistent skill/memory edits; set false to disable.
     background_review: true,
     background_review_interval: 5,
+    // How long an interactive clarify prompt waits before it returns "timed_out".
+    clarify_timeout_ms: 300_000,
     telegram: { approval: 'dangerous', max_iterations: 60, turn_timeout_ms: 900_000 }
   },
   skills: {
@@ -75,6 +77,11 @@ export const DEFAULT_CONFIG: AgentConfig = {
   },
   terminal: {
     cwd: process.cwd()
+  },
+  tts: {
+    // Empty command = auto-detect (say / espeak-ng / termux-tts-speak).
+    command: '',
+    voice: ''
   }
 }
 

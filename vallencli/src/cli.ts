@@ -656,7 +656,7 @@ export async function runCli(options: any = {}) {
         state.pendingClarify = null
         displayLine('Clarify timeout; continuing without an answer.')
         resolveClarify({ answers: { ...(pending?.answers || {}) }, outcome: 'timed_out' })
-      }, options.clarifyTimeoutMs || 5 * 60_000)
+      }, options.clarifyTimeoutMs || Number(agent.config?.gateway?.clarify_timeout_ms) || 5 * 60_000)
       state.pendingClarify = { questions: [...questions], index: 0, answers: {}, resolve: resolveClarify, timer }
       showRobot('CLARIFY')
       clarifyPrompt(questions[0], 0, questions.length)

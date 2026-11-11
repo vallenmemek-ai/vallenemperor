@@ -218,6 +218,30 @@ export function interactiveShell(): CommandSpec {
 }
 
 /**
+ * Runs one command on a pseudo-terminal, so tools that check `isatty()` (TUI apps,
+ * progress bars, interactive CLIs) behave like they do in a real terminal.
+ *
+ * No native module: util-linux `script -e` on Linux (propagates the child's exit
+ * code), BSD `script` on macOS. Windows has no equivalent in this build, so it
+ * returns a reason instead of pretending.
+ */
+export function resolvePty(shell: ShellSpec, userCommand: string): { plan?: CommandSpec; error?: string } {
+  if (IS_WINDOWS) {
+    return { error: 'pty is not available on Windows in this build; use background=true with notify, or run the command under WSL.' }
+  }
+  const script = findOnPath('script')
+  if (!script) {
+    return { error: 'pty needs the `script` utility (util-linux / bsdextrautils); install it, or use background=true with notify.' }
+  }
+  if (process.platform === 'darwin') {
+    // BSD script: script [-q] file [command ...] — no -e, so the exit code is script's own.
+    return { plan: { command: script, args: ['-q', '/dev/null', shell.file, ...shell.argv(userCommand)] } }
+  }
+  // util-linux: -q quiet, -e return the child's exit status, -f flush, -c <command>.
+  return { plan: { command: script, args: ['-qefc', userCommand, '/dev/null'] } }
+}
+
+/**
  * Tells the model which shell syntax actually works here. Without this the agent
  * emits POSIX commands on cmd.exe and every terminal call fails.
  */

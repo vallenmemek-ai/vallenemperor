@@ -133,6 +133,62 @@ export class CronStore {
     })
   }
 
+  /** Edit a job in place. Changing cron/timezone recomputes the next run. */
+  async update(id: string, patch: Partial<Pick<CronJobInput, 'name' | 'prompt' | 'cron' | 'timezone' | 'delivery'>>, ownerId?: number, now = new Date()): Promise<CronJob | null> {
+    return this.exclusive(async () => {
+      const state = await this.read()
+      const job = state.jobs.find(item => item.id === id && (ownerId === undefined || item.ownerId === ownerId))
+      if (!job) return null
+      if (patch.name !== undefined) {
+        const name = String(patch.name).trim()
+        if (!name || name.length > 100) throw new Error('Job name must be 1-100 characters')
+        job.name = name
+      }
+      if (patch.prompt !== undefined) {
+        const prompt = String(patch.prompt).trim()
+        if (!prompt || prompt.length > 4000) throw new Error('Job prompt must be 1-4000 characters')
+        job.prompt = prompt
+      }
+      if (patch.delivery !== undefined) {
+        if (!['local', 'telegram'].includes(patch.delivery)) throw new Error('Invalid delivery; choose local or telegram (WhatsApp has no adapter yet)')
+        job.delivery = patch.delivery
+      }
+      if (patch.timezone !== undefined) job.timezone = String(patch.timezone)
+      if (patch.cron !== undefined) job.cron = String(patch.cron).trim()
+      if (patch.cron !== undefined || patch.timezone !== undefined) {
+        job.nextRunAt = nextCronRun(job.cron, job.timezone, now).toISOString()
+      }
+      await this.write(state)
+      return job
+    })
+  }
+
+  /** Pause (enabled=false) or resume a job. Resuming recomputes the next run. */
+  async setEnabled(id: string, enabled: boolean, ownerId?: number, now = new Date()): Promise<CronJob | null> {
+    return this.exclusive(async () => {
+      const state = await this.read()
+      const job = state.jobs.find(item => item.id === id && (ownerId === undefined || item.ownerId === ownerId))
+      if (!job) return null
+      job.enabled = Boolean(enabled)
+      if (job.enabled) job.nextRunAt = nextCronRun(job.cron, job.timezone, now).toISOString()
+      await this.write(state)
+      return job
+    })
+  }
+
+  /** Fire a job on the next scheduler tick without touching its schedule. */
+  async runNow(id: string, ownerId?: number, now = new Date()): Promise<CronJob | null> {
+    return this.exclusive(async () => {
+      const state = await this.read()
+      const job = state.jobs.find(item => item.id === id && (ownerId === undefined || item.ownerId === ownerId))
+      if (!job) return null
+      job.enabled = true
+      job.nextRunAt = now.toISOString()
+      await this.write(state)
+      return job
+    })
+  }
+
   async claimDue(now = new Date()): Promise<CronJob[]> {
     return this.exclusive(async () => {
       const state = await this.read(); const due = state.jobs.filter(job => job.enabled && Date.parse(job.nextRunAt) <= now.getTime())
