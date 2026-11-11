@@ -1,7 +1,7 @@
 # GAPS.md — hasil scan kekurangan & tahapan berikutnya
 
 Dibuat `2026-11-11` dari scan nyata (bukan perkiraan). Versi saat scan: **999.999.1026**.
-Registry: **41 tool**, **75 command** terdokumentasi, test **466 agent + 167 CLI**.
+Registry: **41 tool**, **75 command** terdokumentasi, test **467 agent + 169 CLI**.
 
 > Aturan centang: `[x]` hanya boleh dipasang setelah perintah pembuktian dijalankan dan
 > output-nya ditempel di bagian bukti. `[ ]` = belum. Jangan centang karena "kelihatannya sudah".
@@ -142,4 +142,5 @@ Pembanding yang produktif adalah kode Hermes langsung, bukan teks skill.
 | set_theme | `registry.execute('set_theme',{action:'set',name:'matrix'})` | `{"action":"set","theme":"matrix",...}` | 2026-11-11 |
 | text_to_speech | `registry.execute('text_to_speech',{text:'halo'})` | `No speech engine found...` (mesin ini) | 2026-11-11 |
 | video_analyze | `registry.execute('video_analyze',{video_path:'/tmp/vtest.mp4',frames:3})` | model mendeskripsikan SMPTE color bar | 2026-11-11 |
-| suite penuh | `npm test` | **466 agent + 167 CLI**, 0 gagal | 2026-11-11 |
+| suite penuh | `npm test` | **467 agent + 169 CLI**, 0 gagal | 2026-11-11 |
+| CI 4 platform | GitHub Actions run `5119ead` | ubuntu ✅ macOS ✅ windows ✅ termux-shape ✅ | 2026-11-11 |

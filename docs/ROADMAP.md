@@ -12,8 +12,8 @@ Companion document: **[REFERENCES.md](REFERENCES.md)** — the consolidated peer
 cross-peer adoption matrix. Every row in it is now implemented; the long-form per-peer inventories live in
 git history.
 
-**STATUS: COMPLETE.** 46/46 items shipped (`[x]`), 0 open, 0 partial. Final evidence: **466/466
-vallenagent + 167/167 vallencli** tests, version **999.999.1026**. New work should start as a new section
+**STATUS: COMPLETE.** 46/46 items shipped (`[x]`), 0 open, 0 partial. Final evidence: **467/467
+vallenagent + 169/169 vallencli** tests, version **999.999.1026**. New work should start as a new section
 here (with acceptance criteria) rather than reopening a finished item.
 
 Purpose: the single source of truth for **what to build next** and **how we know it is done**. Status

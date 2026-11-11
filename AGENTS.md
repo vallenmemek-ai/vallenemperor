@@ -19,7 +19,7 @@ order — do not guess the architecture:
 
 ## Current status (keep this line honest)
 
-**ROADMAP is complete: 46/46 items shipped, 0 open.** Tests: **466 vallenagent + 167 vallencli = 633**,
+**ROADMAP is complete: 46/46 items shipped, 0 open.** Tests: **467 vallenagent + 169 vallencli = 636**,
 all green. Latest version **999.999.1026**. Terminal sandbox, LSP diagnostics, ACP editor bridge, nested
 subagents, browser recording, extension packs with opt-in executable tools, and isolated profiles are all
 implemented and covered by tests. If you change anything, update this line with the real numbers.
