@@ -398,6 +398,24 @@ export function createLocalCommandHandler(context) {
       printResponse(`Process CPU: ${((cpu.user + cpu.system) / 1e6 / elapsed * 100).toFixed(1)}%\nRSS: ${(rss / 1048576).toFixed(1)} MiB`)
       return true
     }
+    if (cmd === '/reasoning') {
+      const block = state.reasoning || {}
+      const action = (args[0] || '').toLowerCase()
+      if (action === 'on' || action === 'off') {
+        block.enabled = action === 'on'
+        printResponse(`Reasoning display ${action}.`)
+        return true
+      }
+      if (!block.last) {
+        printResponse('No reasoning captured yet. Providers that do not send reasoning deltas leave this empty.')
+        return true
+      }
+      const lines = String(block.last).trim().split('\n').filter(line => line.length > 0)
+      const shown = action === 'full' ? lines : lines.slice(0, 10)
+      const more = lines.length > shown.length ? `\n  … ${lines.length - shown.length} more line(s) — /reasoning full` : ''
+      printResponse(`Reasoning (${lines.length} lines)\n${shown.join('\n')}${more}`)
+      return true
+    }
     if (cmd === '/journey') {
       return await localCommand('/skills journey')
     }

@@ -170,6 +170,9 @@ Keys stay in the environment (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC
   approvals); `vallenemperor profile list|create|delete` manages them.
 - **Review and handoff** — `/diff review` walks hunks and can revert one with a reverse `git apply`;
   `/handoff` exports a redacted transcript plus the resume command.
+- **Visible thinking** — streamed reasoning prints as a dim block closed by `∴ Thought for Ns`;
+  `/reasoning [full|off|on]` replays or hides it. Providers without reasoning still get the footer
+  (only when the thinking phase took a second or more).
 
 ## Configuration
 

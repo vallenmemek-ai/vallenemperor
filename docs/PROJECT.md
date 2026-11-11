@@ -353,6 +353,23 @@ Provider presets live in `core/config.ts` (`PROVIDER_PRESETS`): `openrouter`, `o
 - **Extensions**: tools shipped by an installed pack, loaded only with `extensions.allow_tools: true`;
   names that would shadow a builtin are rejected.
 
+## 10c. Reasoning block and the `∴ Thought for Ns` footer
+
+Providers that expose reasoning deltas (`reasoning_content` / `reasoning`) are streamed into a dim block
+and closed with `∴ Thought for Ns` (dim + italic, whole seconds). Rules:
+
+- The block opens on the **first** reasoning delta and closes when real content arrives, or at turn end.
+- Complete lines print immediately; a partial line longer than 80 chars is force-flushed so reasoning
+  stays realtime.
+- Providers that send **no** reasoning still get a footer, but only if the thinking phase lasted at least
+  one second — never a fake `0s`.
+- `/reasoning` replays the last block (first 10 lines), `/reasoning full` prints all of it, `/reasoning
+  off|on` toggles the block.
+- One-shot (`-p`) runs stay clean: no reasoning is printed there, so `--json` output is never polluted.
+
+Code: `vallencli/src/cli-reasoning.mjs` (state machine), `vallencli/src/cli-ui.mjs` (`formatThoughtLine`,
+`formatReasoningLine`), `vallenagent/src/providers/providers.ts` (`onReasoning`), event `{type:'reasoning'}`.
+
 ## 10b. Isolation boundaries
 
 Three independent layers, each with its own test:

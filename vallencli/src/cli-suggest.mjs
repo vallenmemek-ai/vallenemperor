@@ -63,6 +63,7 @@ export const COMMANDS = [
   { name: '/extensions', desc: 'Extension manifest' },
   { name: '/curator', args: '[days] [apply]', desc: 'Archive stale skills' },
   { name: '/fast', args: '[on|off|status]', desc: 'Fast mode' },
+  { name: '/reasoning', args: '[full|on|off]', desc: 'Replay reasoning' },
   { name: '/handoff', args: '[platform]', desc: 'Hand off this session' },
   { name: '/worktree', args: '[new|list]', desc: 'Git worktree for this session' },
   { name: '/health', desc: 'Run diagnostics' },

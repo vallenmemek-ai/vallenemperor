@@ -100,6 +100,9 @@ vallenagent/tests/fixtures/      stdio MCP server used by the end-to-end MCP tes
 | Browser recording script + gate | `vallenagent/tests/browser_record.test.mjs` |
 | Extension executable tools | `vallenagent/tests/extension_tools.test.mjs` |
 | x_search parsing + token handling | `vallenagent/tests/x_search.test.mjs` |
+| Provider reasoning deltas | `vallenagent/tests/provider_reasoning.test.mjs` |
+| Reasoning events to the surface | `vallenagent/tests/reasoning_events.test.mjs` |
+| Thought footer + reasoning block | `vallencli/tests/reasoning.test.mjs` |
 | Profile isolation | `vallencli/tests/profile_isolation.test.mjs` |
 | /sandbox command | `vallencli/tests/sandbox_command.test.mjs` |
 | /artifact panel, /btw, /fork | `vallencli/tests/artifact_panel_btw.test.mjs` |

@@ -30,6 +30,8 @@ export interface CompletionRequest {
   stream?: boolean
   signal?: AbortSignal  // BUG-18: Support abort
   onChunk?: (chunk: string) => void
+  /** Streamed reasoning/thinking deltas, when the provider exposes them. */
+  onReasoning?: (chunk: string) => void
   timeout?: number
   fallbackModels?: string[]
   onModelFallback?: (model: string) => void
@@ -38,6 +40,8 @@ export interface CompletionRequest {
 export interface CompletionResponse {
   id: string
   model: string
+  /** Reasoning/thinking text when the provider returns it (non-stream or streamed). */
+  reasoning?: string
   choices: Array<{
     message: Message
     finish_reason: string
@@ -221,6 +225,12 @@ export class OpenAICompatibleProvider implements Provider {
           throw new Error(`Provider returned no choices: ${errorMsg}`)
         }
 
+        // Non-stream providers may still return reasoning; surface it once so the UI can show it.
+        const nonStreamReasoning = data?.choices?.[0]?.message?.reasoning_content ?? data?.choices?.[0]?.message?.reasoning
+        if (typeof nonStreamReasoning === 'string' && nonStreamReasoning) {
+          ;(data as any).reasoning = nonStreamReasoning
+          request.onReasoning?.(nonStreamReasoning)
+        }
         return data as CompletionResponse
       }
 
@@ -229,6 +239,7 @@ export class OpenAICompatibleProvider implements Provider {
       const decoder = new TextDecoder('utf-8')
       let buffer = ''
       let fullContent = ''
+    let fullReasoning = ''
       const toolCallsMap = new Map<string, { id: string; name: string; args: string }>()
       const toolCallIndexes = new Map<number, string>()
       let finishReason = 'stop'
@@ -251,6 +262,11 @@ export class OpenAICompatibleProvider implements Provider {
         if (!choice) return
         if (choice.finish_reason) finishReason = choice.finish_reason
         const delta = choice.delta
+        const reasoningDelta = delta?.reasoning_content ?? delta?.reasoning
+        if (typeof reasoningDelta === 'string' && reasoningDelta) {
+          fullReasoning += reasoningDelta
+          request.onReasoning?.(reasoningDelta)
+        }
         if (delta?.content) {
           fullContent += delta.content
           wrappedOnChunk(delta.content)
@@ -313,6 +329,7 @@ export class OpenAICompatibleProvider implements Provider {
       return {
         id: `chatcmpl-${Date.now()}`,
         model: request.model || this.model,
+        ...(fullReasoning ? { reasoning: fullReasoning } : {}),
         choices: [{
           message: {
             role: 'assistant',

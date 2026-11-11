@@ -7,7 +7,7 @@ import { PassThrough } from 'node:stream'
 import { StringDecoder } from 'node:string_decoder'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { ANSI, color, stripAnsi, stringWidth, clipWidth, HELP, collectHealthChecks, startupBox, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity, formatSuggestions, colorizeDiff, THINKING_FACES, THINKING_VERBS, formatStatusBar, formatApprovalBox, formatToolResult, formatFileEditResult, formatSessionSummary, formatTip, formatUserMessage, formatToolCall, formatToolLine, buildEditPreview, formatTerminalLine, isDangerousCommand, toAscii, fmtTokens, fmtDuration, refreshThemeColors, invalidateGit } from './cli-ui.mjs'
+import { ANSI, color, stripAnsi, stringWidth, clipWidth, HELP, collectHealthChecks, startupBox, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity, formatThoughtLine, formatReasoningLine, formatReasoningMoreLines, formatSuggestions, colorizeDiff, THINKING_FACES, THINKING_VERBS, formatStatusBar, formatApprovalBox, formatToolResult, formatFileEditResult, formatSessionSummary, formatTip, formatUserMessage, formatToolCall, formatToolLine, buildEditPreview, formatTerminalLine, isDangerousCommand, toAscii, fmtTokens, fmtDuration, refreshThemeColors, invalidateGit } from './cli-ui.mjs'
 import { loadSavedTheme, shimmerText, getColorLevel } from './cli-theme.mjs'
 import { createCardStream, formatResponseCard } from './cli-markdown.mjs'
 import { fileToken, suggestFiles } from './cli-files.mjs'
@@ -21,6 +21,7 @@ import { dumpReport, insightsReport, listLogs, promptSizeReport } from './cli-di
 import { runSessionsCommand } from './cli-sessions.mjs'
 import { applyProfile, extractProfile, runProfileCommand } from './cli-profile.mjs'
 import { runAcpServer } from './cli-acp.mjs'
+import { appendReasoning, closeReasoning, closeThinkingPhase, createReasoningState, resetReasoning } from './cli-reasoning.mjs'
 import { backspacePicker, backPicker, createPickerState, enterPicker, fetchGatewayModels, formatModelCatalog, groupModelsByOwner, movePicker, pickerLines, typeInPicker } from './cli-model-picker.mjs'
 export { HELP, collectHealthChecks, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity } from './cli-ui.mjs'
 
@@ -81,7 +82,7 @@ export async function runCli(options = {}) {
   const input = options.input || process.stdin
   const output = options.output || process.stdout
   const core = options.core || await import(pathToFileURL(CORE_PATH).href)
-  const state = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, modelCache: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map() }
+  const state = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, modelCache: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map(), reasoning: createReasoningState() }
   let agent = options.agent
   if (!agent) agent = options.createAgent ? options.createAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } }) : new core.AIAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } })
   state.mcpServers = agent.mcpManager?.getStatus?.() || []
@@ -762,6 +763,7 @@ export async function runCli(options = {}) {
 
   async function runTurn(message, displayMessage = message) {
     state.turnStartedAt = Date.now()
+    resetReasoning(state.reasoning)
     state.thinkingFaceIndex = Math.floor(Math.random() * THINKING_FACES.length)
     state.thinkingVerbIndex = Math.floor(Math.random() * THINKING_VERBS.length)
     state.busy = true
@@ -777,7 +779,10 @@ export async function runCli(options = {}) {
         const result = await agent.runTurn({ message, surfaceId: 'vallenemperor' }, {
           requestApproval: request => askApproval(request),
           onEvent: event => {
+            if (event.type === 'reasoning') { appendReasoning(state.reasoning, event.text, displayLine); return }
             if (interactive && DELTA_EVENTS.has(event.type)) {
+              if (!state.reasoning.turnHad) closeThinkingPhase(state.reasoning, Date.now() - state.turnStartedAt, displayLine)
+              else closeReasoning(state.reasoning, displayLine)
               const piece = event.text ?? event.delta ?? event.content ?? event.chunk
               if (typeof piece === 'string' && piece) { state.streamedChars += piece.length; pushStream(piece) }
               return
@@ -821,6 +826,7 @@ export async function runCli(options = {}) {
         const streamed = state.streamedChars > 0
         const footer = turnFooter()
         closeStream(footer)
+        closeReasoning(state.reasoning, displayLine)
         if (result.completionStatus === 'incomplete') displayLine(color('Turn incomplete; check remaining work and errors above.', ANSI.yellow))
         if (!streamed) printResponse(result.response, { markdown: true, footer })
               lastTurnText = String(result?.response || '')

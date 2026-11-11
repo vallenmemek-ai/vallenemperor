@@ -475,6 +475,7 @@ export class AIAgent {
       onReviewSkipped: reason => emit({ type: 'review_skipped', reason }),
       onSubagentProgress: event => emit({ type: 'subagent_progress', ...event }),
       ...(surface.stream ? { onChunk: (chunk: string) => emit({ type: 'chunk', chunk }) } : {}),
+      onReasoning: (text: string) => emit({ type: 'reasoning', text }),
       ...(surface.requestApproval ? {
         onBeforeTool: info => surface.requestApproval!({ ...info, sessionId, surfaceId: request.surfaceId })
       } : {})
@@ -697,7 +698,8 @@ export class AIAgent {
           onModelFallback: (model) => safeCallback(callbacks?.onThinking, `Provider failover: switching to ${model}`),
           signal: this.abortController?.signal, // BUG-18: Pass abort signal
           stream: Boolean(callbacks?.onChunk),
-          onChunk: onProviderChunk
+          onChunk: onProviderChunk,
+          onReasoning: (chunk: string) => safeCallback(callbacks?.onReasoning, chunk)
         });
         let response = await callProviderWithRetry({
           call: callProvider,

@@ -86,6 +86,8 @@ export interface AgentCallbacks {
   onReviewSkipped?: (reason: string) => void
   onSubagentProgress?: (event: { taskId: string; goal: string; status: 'started' | 'thinking' | 'tool_start' | 'tool_end' | 'completed' | 'failed'; message?: string }) => void
   onChunk?: (chunk: string) => void
+  /** Streamed reasoning/thinking text from the provider. */
+  onReasoning?: (text: string) => void
 }
 
 export interface AgentTurnRequest {
@@ -104,6 +106,7 @@ export type AgentTurnEvent =
   | { type: 'review_skipped'; sessionId: string; surfaceId: string; reason: string }
   | { type: 'error'; sessionId: string; surfaceId: string; error: string }
   | { type: 'chunk'; sessionId: string; surfaceId: string; chunk: string }
+  | { type: 'reasoning'; sessionId: string; surfaceId: string; text: string }
   | { type: 'subagent_progress'; sessionId: string; surfaceId: string; taskId: string; goal: string; status: 'started' | 'thinking' | 'tool_start' | 'tool_end' | 'completed' | 'failed'; message?: string }
 
 export type AgentTurnEventPayload = AgentTurnEvent extends infer Event
