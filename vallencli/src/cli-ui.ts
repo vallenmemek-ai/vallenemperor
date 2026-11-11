@@ -476,7 +476,9 @@ export function formatToolLine(callText, resultText, { durationMs = 0, width = 8
   const detail = stripAnsi(String(resultText || '')).replace(/^([^\n]*)\s+\d+(?:\.\d+)?s(?=\r?$)/m, '$1').split('\n').map(line => line.trim()).find(Boolean) || ''
   const timing = durationMs > 0 ? ` · ${fmtDuration(durationMs)}` : ''
   const room = Math.max(16, width - 6 - stringWidth(timing))
-  const shownHead = clipEllipsis(head, room)
+  // Cap the head so the detail always keeps a usable slice; previously a long head
+  // ate the whole row and the detail collapsed to "pa…".
+  const shownHead = clipEllipsis(head, Math.max(12, Math.floor(room * 0.6)))
   const left = room - stringWidth(shownHead) - 3
   const tail = detail && detail !== head && left > 8 ? ` ${dimText(`— ${clipEllipsis(detail, left - 2)}`)}` : ''
   return `  ${paint('✓', 'ok', true)} ${shownHead}${tail}${dimText(timing)}`

@@ -89,6 +89,39 @@ export function formatToolStart(name: string, args: Record<string, any> = {}): s
   return `  ${ANSI.DIM}┊${ANSI.RESET} ${emoji} preparing ${name}…${detail ? ` ${detail}` : ''}`
 }
 
+/**
+ * Stable one-line label for a *finished* tool call: `🔎 search_files package.json`.
+ * `formatToolStart` is the in-flight wording ("preparing …"); using it for the final row
+ * made the tool name appear twice ("preparing search_files… — find …").
+ */
+export function formatToolLabel(name: string, args: Record<string, any> = {}): string {
+  const emoji = getToolEmoji(name)
+  let detail = ''
+  if (name === 'terminal') detail = truncateString(args.command || '', 50)
+  else if (['read_file', 'write_file', 'patch', 'list_dir'].includes(name)) detail = truncateString(cutePath(args.path || ''), 42)
+  else if (name === 'search_files') detail = truncateString(args.pattern || '', 42)
+  else if (name === 'skill_view') detail = truncateString(args.name || '', 42)
+  else if (name === 'clarify') detail = truncateString(args?.questions?.[0]?.question || '', 42)
+  else if (name === 'web_search') detail = truncateString(args.query || '', 42)
+  else if (name === 'delegate_task') detail = truncateString(args.goal || '', 42)
+  return `${emoji} ${name}${detail ? ` ${detail}` : ''}`
+}
+
+export function formatToolName(name: string): string {
+  return `${getToolEmoji(name)} ${name}`
+}
+
+/**
+ * The *result* part of a finished call, with the `┊ <emoji> <verb>` prefix stripped:
+ * `package.json (2 found)`. The compact row already prints the tool name, so repeating
+ * it here produced "🔎 search_files … — ┊ 🔎 grep package.json".
+ */
+export function formatToolSummary(name: string, args: Record<string, any>, rawResult: string): string {
+  const full = formatToolEnd(name, args, rawResult, 0)
+  const plain = full.replace(/\x1b\[[0-9;]*m/g, '').trim()
+  return plain.replace(/^[┊│|]\s*\S+\s+\S+\s*/, '').replace(/\s+0\.0s$/, '').trim()
+}
+
 export function formatUnifiedDiff(diff: string, maxLines: number = 30): string {
   if (!diff) return ''
   const lines = diff.split('\n')

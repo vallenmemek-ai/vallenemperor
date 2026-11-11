@@ -80,8 +80,12 @@ export function closeReasoning(state, emit, now = Date.now(), fallbackStartedAt 
 /** No reasoning deltas at all: close the thinking phase with a footer only if it was not instant. */
 export function closeThinkingPhase(state, elapsedMs, emit) {
   if (state.turnHad || state.opened) return closeReasoning(state, emit)
-  if (!state.enabled) return state
-  if (elapsedMs >= 1000) emit(formatThoughtLine(elapsedMs / 1000))
+  if (!state.enabled || state.printed) return state
+  if (elapsedMs >= 1000) {
+    emit(formatThoughtLine(elapsedMs / 1000))
+    state.printed = true
+    state.lastPrinted = true
+  }
   return state
 }
 

@@ -41,7 +41,7 @@ implemented and covered by tests. If you change anything, update this line with 
 7. **Artifacts are the proof.** A turn that changed files or verified work must leave a reviewable
    record under `~/.vallenemperor/artifacts/` (walkthrough + screenshots). Do not break that store.
 8. **Docs move with the code.** New flags, commands, or behavior require updating `README.md`,
-   `HELP` in `vallencli/src/cli-ui.mjs`, the command registry in `vallencli/src/cli-suggest.mjs`,
+   `HELP` in `vallencli/src/cli-ui.ts`, the command registry in `vallencli/src/cli-suggest.ts`,
    and the relevant file under `docs/`.
 
 ## Daily commands
@@ -78,13 +78,13 @@ vallenagent/src/
   core/sandbox.ts           file-write boundary (subagents always confined)
 
 vallencli/src/
-  cli.mjs              REPL, argument parsing, one-shot mode, config commands, model picker glue
+  cli.ts               REPL, argument parsing, one-shot mode, config commands, model picker glue
   cli-model-picker.mjs two-level picker (provider → model) over a live gateway
-  cli-ui.mjs           cards, status bar, approval boxes, diffs, themes
+  cli-ui.ts           cards, status bar, approval boxes, diffs, themes
   cli-markdown.mjs     markdown + code-fence renderer
-  cli-commands.mjs     local slash commands
+  cli-commands.ts     local slash commands
   cli-files.mjs        @path mentions and completion
-  cli-suggest.mjs      command registry + fuzzy suggestions
+  cli-suggest.ts      command registry + fuzzy suggestions
   cli-theme.mjs        color levels and gradients
 ```
 

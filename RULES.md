@@ -38,7 +38,7 @@ version). The owner is the release manager.
   npm run build && npm install -g .
   vallenemperor --version    # must print the new version
   ```
-- Smoke tests **MUST** use the installed binary. Running `node vallencli/src/cli.mjs` alone is not
+- Smoke tests **MUST** use the installed binary. Running `node vallencli/src/cli.ts` alone is not
   enough: it bypasses the package layout (`files`, `dist/`, bundled skills, bin symlink).
 - Documentation-only changes: bump the version if the owner asked for it; otherwise state explicitly
   in the report that the version was not changed and why.
@@ -129,7 +129,7 @@ npm test
 Update, in the same change:
 
 - `README.md` (features / quick start) and the affected package README,
-- `HELP` in `vallencli/src/cli-ui.mjs` and the command registry in `vallencli/src/cli-suggest.mjs`,
+- `HELP` in `vallencli/src/cli-ui.ts` and the command registry in `vallencli/src/cli-suggest.ts`,
 - `vallenagent/src/core/commands.ts` for commands shared by every surface,
 - `docs/PROJECT.md` when adding a module or a turn stage,
 - `docs/DECISIONS.md` when you make an architectural choice that future agents might undo by accident.

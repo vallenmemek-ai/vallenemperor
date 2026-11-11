@@ -215,10 +215,10 @@ vallenagent/src/
   core/        config, approval policy, project context, cron
 
 vallencli/src/
-  cli.mjs           REPL, argument parsing, one-shot mode, config commands
-  cli-ui.mjs        rendering: cards, status bar, approval boxes, diffs
+  cli.ts            REPL, argument parsing, one-shot mode, config commands
+  cli-ui.ts        rendering: cards, status bar, approval boxes, diffs
   cli-markdown.mjs  markdown and code-fence renderer
-  cli-commands.mjs  slash commands (/model, /skills, /resume, /plan, ...)
+  cli-commands.ts  slash commands (/model, /skills, /resume, /plan, ...)
 ```
 
 Each folder owns an `index.ts` barrel; the root `src/index.ts` only re-exports folders, so a new

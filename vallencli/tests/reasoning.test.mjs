@@ -111,3 +111,24 @@ test('a burst-delivered reasoning block falls back to the turn timer instead of 
   closeReasoning(state, out.emit, 10_200, 4_000)  // block lasted 0.2s, turn started 6.2s ago
   assert.match(out.lines[out.lines.length - 1], /Thought for 6s/)
 })
+
+test('the thought footer is printed once per turn, even on every content delta', async () => {
+  const { createReasoningState, closeThinkingPhase } = await import('../dist/cli-reasoning.js')
+  const state = createReasoningState()
+  const lines = []
+  for (let i = 0; i < 15; i++) closeThinkingPhase(state, 15_000, line => lines.push(line))
+  assert.equal(lines.length, 1, `expected one footer, got ${lines.length}`)
+  assert.match(lines[0], /Thought for 15s/)
+})
+
+test('a closed reasoning block never reprints its footer', async () => {
+  const { createReasoningState, appendReasoning, closeReasoning } = await import('../dist/cli-reasoning.js')
+  const state = createReasoningState()
+  const lines = []
+  appendReasoning(state, 'thinking about it\n', line => lines.push(line))
+  closeReasoning(state, line => lines.push(line), Date.now() + 3000)
+  const first = lines.filter(line => /Thought for/.test(line)).length
+  for (let i = 0; i < 5; i++) closeReasoning(state, line => lines.push(line), Date.now() + 5000)
+  assert.equal(lines.filter(line => /Thought for/.test(line)).length, first, 'footer must not repeat')
+  assert.equal(first, 1)
+})

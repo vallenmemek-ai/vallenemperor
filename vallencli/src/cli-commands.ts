@@ -25,7 +25,6 @@ export function createLocalCommandHandler(context) {
       printResponse('9router token saved; value hidden.')
       return true
     }
-    if (cmd === '/stop') { const stopped = agent.interrupt(); if (state.pendingApproval) settleApproval(false); printResponse(stopped ? 'Stopping agent turn…' : 'No agent turn is running.'); return true }
     if (cmd === '/exit' || cmd === '/quit') {
       state.closing = true
       if (state.pendingApproval) settleApproval(false)

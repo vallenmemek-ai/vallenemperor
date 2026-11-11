@@ -865,10 +865,12 @@ export async function runCli(options: any = {}) {
             if (DELTA_EVENTS.has(event.type)) {
               // Close the thinking phase on the first content token in every mode, so the footer and the
               // closing rule land before the answer (Hermes ordering) instead of at turn end.
-              if (!state.reasoning.turnHad) closeThinkingPhase(state.reasoning, Date.now() - state.turnStartedAt, displayLine)
-              else {
-                closeReasoning(state.reasoning, displayLine, Date.now(), state.turnStartedAt)
-                if (state.reasoning.lastPrinted) displayLine(color('─'.repeat(40), ANSI.dim))
+              // Close the block exactly once; every content delta used to re-emit the
+              // footer and the closing rule (15x on a single answer).
+              if (!state.reasoning.printed) {
+                if (!state.reasoning.turnHad) closeThinkingPhase(state.reasoning, Date.now() - state.turnStartedAt, displayLine)
+                else closeReasoning(state.reasoning, displayLine, Date.now(), state.turnStartedAt)
+                if (state.reasoning.printed) displayLine(color('─'.repeat(40), ANSI.dim))
               }
               const piece = event.text ?? event.delta ?? event.content ?? event.chunk
               if (interactive && typeof piece === 'string' && piece) { state.answerStarted = true; state.streamedChars += piece.length; pushStream(piece) }
@@ -879,7 +881,11 @@ export async function runCli(options: any = {}) {
             else if (event.type === 'tool_start') {
               closeStream()
               const args = event.tool.args || {}
-              const target = String(args.path || args.file_path || args.command || args.query || args.pattern || args.name || '')
+              const rawTarget = String(args.path || args.file_path || '')
+              const target = String(
+                (rawTarget && core.cutePath ? core.cutePath(rawTarget) : rawTarget)
+                || args.command || args.query || args.pattern || args.name || ''
+              )
               showRobot(`WORKING · ${event.tool.name}${target ? ` · ${target}` : ''}`)
               const text = event.tool.preview || core.formatToolStart(event.tool.name, event.tool.args)
               state.toolCalls++
@@ -892,14 +898,22 @@ export async function runCli(options: any = {}) {
               closeStream()
               const startedAt = state.toolStarts.get(toolKey(event.tool))
               const terminalOutputShown = event.tool.name === 'terminal' && flushTerminalChunk(toolKey(event.tool), event.tool, startedAt ? Date.now() - startedAt : 0)
-              const callText = state.toolCallText.get(toolKey(event.tool)) || String(event.tool.name || 'tool')
+              // Stable label for the finished row; the stored text is the in-flight
+              // "preparing …" wording and must not be reused here.
+              const failed = hasToolError(event.tool.result)
+              const fullText = event.tool.preview || core.formatToolEnd(event.tool.name, event.tool.args, event.tool.result)
+              const summary = failed || !core.formatToolSummary
+                ? ''
+                : core.formatToolSummary(event.tool.name, event.tool.args || {}, event.tool.result || '')
+              const callText = summary && core.formatToolName
+                ? core.formatToolName(event.tool.name)
+                : (core.formatToolLabel ? core.formatToolLabel(event.tool.name, event.tool.args || {}) : String(event.tool.name || 'tool'))
               state.toolCallText.delete(toolKey(event.tool))
               state.toolStarts.delete(toolKey(event.tool))
-              const failed = hasToolError(event.tool.result)
               if (failed) state.toolErrors++
               if (event.tool.name === 'shell' && String(toolError(event.tool.result)).includes('Tool not found')) displayLine('Unsupported tool "shell". Use "terminal" instead.')
               else if (!terminalOutputShown && (event.tool.name !== 'skill_view' || failed)) {
-                const text = event.tool.preview || core.formatToolEnd(event.tool.name, event.tool.args, event.tool.result)
+                const text = summary || fullText
                 const durationMs = startedAt ? Date.now() - startedAt : 0
                 displayLine(renderToolEnd(event.tool, { callText, text, durationMs, failed }))
               }
@@ -983,7 +997,13 @@ export async function runCli(options: any = {}) {
       const command = text.split(/\s+/, 1)[0].toLowerCase()
       const isSlashCommand = /^\/[a-z][\w-]*$/.test(command) // "/home/me/app" is a path, not a command
       if (command === '/exit' || command === '/quit') { await localCommand('/exit'); continue }
-      if (command === '/stop' && state.busy) { await localCommand('/stop'); continue }
+      if (command === '/stop' && state.busy) {
+        // /stop is owned by core; the CLI only clears its own pending prompt.
+        if (state.pendingApproval) settleApproval(false)
+        const stopped = await sharedCommand?.({ channel: 'terminal', agent, onStop: () => {} }, '/stop')
+        if (stopped?.handled) printResponse(stopped.response)
+        continue
+      }
       if (state.pendingApproval) {
         const pending = state.pendingApproval
         const answer = text.toLowerCase()
@@ -1007,6 +1027,7 @@ export async function runCli(options: any = {}) {
           const shared = await sharedCommand?.({
             channel: 'terminal',
             agent,
+            onStop: () => { if (state.pendingApproval) settleApproval(false) },
             // /review lives in core; the CLI only supplies where its result is shown.
             reviewCallbacks: {
               onReviewComplete: message => displayLine(message),

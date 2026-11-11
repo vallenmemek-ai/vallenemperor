@@ -132,10 +132,13 @@ test('/new resets with the channel prefix', async () => {
   assert.match(telegram.calls.resetSession[0], /^tg-7-\d+$/)
 })
 
-test('/stop stays remote-only because the CLI needs its own approval cleanup', async () => {
+test('/stop is handled by core on every surface and lets the host clean up', async () => {
   const agent = fakeAgent()
-  const local = await handleCommand(terminal(agent), '/stop')
-  assert.equal(local.handled, false)
+  let cleaned = 0
+  const local = await handleCommand({ ...terminal(agent), onStop: () => { cleaned++ } }, '/stop')
+  assert.equal(local.handled, true, 'the terminal must not need its own /stop')
+  assert.match(local.response, /Stopping agent turn|No agent turn/)
+  assert.equal(cleaned, 1, 'the host callback must run so a pending prompt is settled')
   const telegram = await handleCommand(remote(agent), '/stop')
   assert.equal(telegram.handled, true)
 })
