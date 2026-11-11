@@ -115,7 +115,9 @@ test('a branch worktree is created outside the repo and removed cleanly', t => {
   assert.ok(info.path.startsWith(home), 'worktrees live under the home dir, not the repo')
   assert.equal(existsSync(join(info.path, 'README.md')), true, 'the worktree has a checkout')
   assert.equal(info.branch, 'vallen/subagent-sa-1')
-  assert.ok(listWorktrees(repo).map(path => realpathSync(path)).includes(realpathSync(info.path)), 'git reports the resolved path')
+  // git may report forward slashes or an 8.3 short name; compare normalised paths.
+  const normalise = value => realpathSync(value).replace(/\\/g, '/').toLowerCase()
+  assert.ok(listWorktrees(repo).map(normalise).includes(normalise(info.path)), 'git reports the resolved path')
 
   removeSubagentWorktree(info)
   assert.equal(existsSync(info.path), false)

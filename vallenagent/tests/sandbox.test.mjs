@@ -122,7 +122,7 @@ test('a subagent tool context gets sandbox roots from its working directory', as
       createSubagent: () => ({ chat: async () => ({ response: '' }), interrupt: () => {} })
     }
     const subContext = buildToolContext({ ...base, isSubagent: true, sessionId: 'sub' })
-    assert.deepEqual(subContext.sandboxRoots, [cwd])
+    assert.deepEqual(subContext.sandboxRoots.map(root => realpathSync(root)), [realpathSync(cwd)])
 
     const mainContext = buildToolContext({ ...base, isSubagent: false, sessionId: 'main' })
     assert.equal(mainContext.sandboxRoots, undefined, 'main agent is unrestricted by default')

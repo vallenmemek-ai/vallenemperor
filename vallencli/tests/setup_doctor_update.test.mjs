@@ -139,9 +139,17 @@ test('update check compares versions and caches for a day', async () => {
     assert.equal(formatUpdateNotice('9.9.9', '9.9.9'), null)
     assert.equal(updateCheckDisabled({ VALLENEMPEROR_NO_UPDATE_CHECK: '1' }), true)
 
-    let printed = null
-    await maybeNotifyUpdate({ home, current: '1.0.0', fetcher: async () => '9.9.9', print: line => { printed = line } })
-    assert.match(String(printed), /update available/)
+    // The check is deliberately silent on CI (updateCheckDisabled honours CI=true),
+    // so this assertion must run with CI cleared — that is the real user environment.
+    const savedCI = process.env.CI
+    delete process.env.CI
+    try {
+      let printed = null
+      await maybeNotifyUpdate({ home, current: '1.0.0', fetcher: async () => '9.9.9', print: line => { printed = line } })
+      assert.match(String(printed), /update available/)
+    } finally {
+      if (savedCI !== undefined) process.env.CI = savedCI
+    }
   } finally {
     rmSync(home, { recursive: true, force: true })
   }

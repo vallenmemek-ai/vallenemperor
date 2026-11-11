@@ -71,13 +71,13 @@ test('skipping a hunk reverts only that hunk in a real repository', () => {
 
     const result = revertHunk({ repo, hunk: hunks[0] })
     assert.equal(result.ok, true, result.output)
-    const afterFirst = readFileSync(file, 'utf8').split('\n')
+    const afterFirst = readFileSync(file, 'utf8').replace(/\r\n/g, '\n').split('\n')
     assert.equal(afterFirst[0], 'line 1', 'only the first hunk was reverted')
     assert.equal(afterFirst[39], 'LINE 40 CHANGED')
 
     const second = revertHunk({ repo, hunk: hunks[1] })
     assert.equal(second.ok, true, second.output)
-    assert.equal(readFileSync(file, 'utf8'), `${base.join('\n')}\n`, 'the working tree is clean again')
+    assert.equal(readFileSync(file, 'utf8').replace(/\r\n/g, '\n'), `${base.join('\n')}\n`, 'the working tree is clean again')
   } finally {
     rmSync(repo, { recursive: true, force: true })
   }
