@@ -11,10 +11,12 @@ import { formatReasoningLine, formatThoughtLine } from './cli-ui.js'
  */
 
 export const REASONING_PREVIEW_LINES = 10
+/** Hermes uses a fixed 40-cell rule so it never re-wraps when the terminal is resized. */
+export const SEPARATOR_WIDTH = 40
 const FLUSH_AT = 80
 
 export function createReasoningState({ enabled = true } = {}) {
-  return { enabled, opened: false, startedAt: 0, buffer: '', text: '', last: '', turnHad: false }
+  return { enabled, opened: false, startedAt: 0, buffer: '', text: '', last: '', turnHad: false, printed: false, lastPrinted: false }
 }
 
 export function resetReasoning(state) {
@@ -23,6 +25,8 @@ export function resetReasoning(state) {
   state.buffer = ''
   state.text = ''
   state.turnHad = false
+  state.printed = false
+  state.lastPrinted = false
   return state
 }
 
@@ -54,16 +58,22 @@ export function appendReasoning(state, text, emit, now = Date.now()) {
 export function closeReasoning(state, emit, now = Date.now(), fallbackStartedAt = 0) {
   // A provider that delivers reasoning in one burst closes the block in under a second; falling back to
   // the turn start keeps "Thought for 0s" from being printed when the model really did think for a while.
+  if (state.printed) return state  // one footer per turn, whichever path closes the block
   const startedAt = state.startedAt && now - state.startedAt >= 1000 ? state.startedAt : (fallbackStartedAt || state.startedAt)
+  let printed = false
   if (state.opened) {
     if (state.buffer.trim()) emit(formatReasoningLine(state.buffer))
     state.buffer = ''
     emit(formatThoughtLine((now - startedAt) / 1000))
     state.opened = false
+    printed = true
   } else if (state.turnHad) {
     emit(formatThoughtLine((now - startedAt) / 1000))
+    printed = true
   }
   if (state.text.trim()) state.last = state.text
+  state.printed = printed
+  state.lastPrinted = printed
   return state
 }
 

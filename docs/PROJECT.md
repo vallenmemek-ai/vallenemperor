@@ -375,6 +375,11 @@ and closed with `∴ Thought for Ns` (dim + italic, whole seconds). Rules:
   dim, exactly like Hermes: dim separator → dim reasoning lines → `∴ Thought for Ns` → answer.
 - If a provider delivers reasoning in one burst (block < 1s), the footer falls back to the turn timer so
   it never says `Thought for 0s` when the model actually thought for several seconds.
+- Parity details taken from Hermes source (`hermes_cli/cli_modern_layout.py`,
+  `hermes_cli/cli_stream_mixin.py`): the rule is a **fixed 40 cells** (`_SEPARATOR_WIDTH = 40`, so it
+  never re-wraps on resize), a blank line precedes it, a closing rule follows the footer, late reasoning
+  is dropped once the answer box is open (`if self._stream_box_opened: return`), and exactly one footer
+  is printed per turn (the module tracks `printed`, whichever path closes the block).
 - Complete lines print immediately; a partial line longer than 80 chars is force-flushed so reasoning
   stays realtime.
 - Providers that send **no** reasoning still get a footer, but only if the thinking phase lasted at least

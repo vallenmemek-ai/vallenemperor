@@ -82,7 +82,7 @@ export async function runCli(options: any = {}) {
   const input = options.input || process.stdin
   const output = options.output || process.stdout
   const core = options.core || await import(pathToFileURL(CORE_PATH).href)
-  const state: any = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, modelCache: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map(), reasoning: createReasoningState(), suppressRobot: false }
+  const state: any = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, modelCache: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map(), reasoning: createReasoningState(), suppressRobot: false, answerStarted: false }
   let agent = options.agent
   if (!agent) agent = options.createAgent ? options.createAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } }) : new core.AIAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } })
   const out = (value: any) => output.write(fixAscii(noColorMode ? stripAnsi(value) : value))
@@ -775,6 +775,7 @@ export async function runCli(options: any = {}) {
   async function runTurn(message, displayMessage = message) {
     state.turnStartedAt = Date.now()
     resetReasoning(state.reasoning)
+    state.answerStarted = false
     state.thinkingFaceIndex = Math.floor(Math.random() * THINKING_FACES.length)
     state.thinkingVerbIndex = Math.floor(Math.random() * THINKING_VERBS.length)
     state.busy = true
@@ -793,18 +794,28 @@ export async function runCli(options: any = {}) {
           requestApproval: request => askApproval(request),
           onEvent: event => {
             if (event.type === 'reasoning') {
+              // Hermes suppresses late reasoning once the answer box is open: a block inside the answer
+              // would interleave two streams.
+              if (state.answerStarted) return
               if (!state.reasoning.opened && state.reasoning.enabled) {
                 clearRobotLine()
-                displayLine(color('─'.repeat(Math.max(10, termWidth() - 1)), ANSI.dim))
+                displayLine('')
+                displayLine(color('─'.repeat(40), ANSI.dim))
               }
               appendReasoning(state.reasoning, event.text, displayLine)
               return
             }
-            if (interactive && DELTA_EVENTS.has(event.type)) {
+            if (DELTA_EVENTS.has(event.type)) {
+              // Close the thinking phase on the first content token in every mode, so the footer and the
+              // closing rule land before the answer (Hermes ordering) instead of at turn end.
               if (!state.reasoning.turnHad) closeThinkingPhase(state.reasoning, Date.now() - state.turnStartedAt, displayLine)
-              else closeReasoning(state.reasoning, displayLine, Date.now(), state.turnStartedAt)
+              else {
+                closeReasoning(state.reasoning, displayLine, Date.now(), state.turnStartedAt)
+                if (state.reasoning.lastPrinted) displayLine(color('─'.repeat(40), ANSI.dim))
+              }
               const piece = event.text ?? event.delta ?? event.content ?? event.chunk
-              if (typeof piece === 'string' && piece) { state.streamedChars += piece.length; pushStream(piece) }
+              if (interactive && typeof piece === 'string' && piece) { state.answerStarted = true; state.streamedChars += piece.length; pushStream(piece) }
+              else if (typeof piece === 'string' && piece) state.answerStarted = true
               return
             }
             if (event.type === 'thinking') refreshStatus('THINKING')
