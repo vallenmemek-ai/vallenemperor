@@ -12,6 +12,7 @@ import { registerCheckpointTools } from './builtin_tools/checkpoint_tools'
 import { registerScheduleTools } from './builtin_tools/schedule_tools'
 import { registerThemeTools } from './builtin_tools/theme_tools'
 import { registerTtsTools } from './builtin_tools/tts_tools'
+import { registerVideoTools } from './builtin_tools/video_tools'
 import { registerTerminalTools } from './builtin_tools/terminal_tools'
 import { registerSkillsTools } from './builtin_tools/skills_tools'
 import { registerMediaTools } from './builtin_tools/media_tools'
@@ -49,6 +50,7 @@ export function registerBuiltinTools(
   registerScheduleTools()
   registerThemeTools()
   registerTtsTools()
+  registerVideoTools()
 
   registerSessionTools()
 

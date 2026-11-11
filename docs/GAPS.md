@@ -1,7 +1,7 @@
 # GAPS.md — hasil scan kekurangan & tahapan berikutnya
 
 Dibuat `2026-11-11` dari scan nyata (bukan perkiraan). Versi saat scan: **999.999.1026**.
-Registry: **40 tool**, **75 command** terdokumentasi, test **461 agent + 167 CLI**.
+Registry: **41 tool**, **75 command** terdokumentasi, test **466 agent + 167 CLI**.
 
 > Aturan centang: `[x]` hanya boleh dipasang setelah perintah pembuktian dijalankan dan
 > output-nya ditempel di bagian bukti. `[ ]` = belum. Jangan centang karena "kelihatannya sudah".
@@ -76,13 +76,20 @@ Pembanding yang produktif adalah kode Hermes langsung, bukan teks skill.
       Bukti: di mesin ini tidak ada engine → tool menjawab
       `No speech engine found...` (jujur), bukan gagal diam-diam.
 
-### P2 — opsional / perlu keputusan positioning
+### P2 — keputusan positioning
 
-- [ ] **`video_analyze` / `video_generate`.** Belum ada. Perlu keputusan: masuk produk atau tidak.
-- [ ] **`computer_use`.** Belum ada dan skill-nya sudah diberi banner peringatan.
-      Keputusan: tambah lewat extension pack, atau hapus skill-nya dari bundel.
-- [ ] **`annotate_preview` / `desktop_preview`.** Khusus desktop UI Hermes; kemungkinan besar
-      tidak relevan untuk CLI.
+- [x] **`video_analyze` — DIIMPLEMENTASI.** ffmpeg mengambil frame representatif
+      (`thumbnail` filter, maks 12), lalu dikirim lewat jalur vision yang sama dengan
+      `vision_analyze`. Tanpa dependency baru; kalau ffmpeg tidak ada, tool menjawab jujur.
+      Bukti: video uji `testsrc` 3 detik → model mendeskripsikan color bar SMPTE dengan benar.
+- [x] **`video_generate` — TIDAK dikerjakan (keputusan).** Butuh API video berbayar dan
+      tidak ada fallback lokal yang jujur. Menambah tool yang selalu gagal hanya menambah
+      jalan buntu.
+- [x] **`computer_use` — TIDAK dikerjakan (keputusan).** Butuh cua-driver + sesi desktop.
+      Skill `computer-use` tetap dibundel dengan banner "VallenEmperor tidak mendaftarkan
+      tool ini" supaya agent tidak menjanjikannya.
+- [x] **`annotate_preview` / `desktop_preview` — TIDAK dikerjakan (keputusan).** Khusus
+      desktop UI Hermes; tidak ada padanan di CLI dan tidak ada permintaan nyata.
 
 ---
 
@@ -117,9 +124,11 @@ Pembanding yang produktif adalah kode Hermes langsung, bukan teks skill.
 - [x] Tool `set_theme` + guard daftar tema
 - [x] Tool `text_to_speech` (auto-detect, tanpa dependency baru)
 
-### Stage 4 — keputusan P2
-- [ ] Putuskan `computer_use`: extension pack atau hapus dari bundel
-- [ ] Putuskan video tools
+### Stage 4 — P2 (keputusan + implementasi) — SELESAI
+- [x] `video_analyze` diimplementasi (ffmpeg + jalur vision yang sudah ada)
+- [x] `video_generate` diputuskan tidak dikerjakan, alasannya ditulis
+- [x] `computer_use` diputuskan tidak dikerjakan; skill diberi banner peringatan
+- [x] `annotate_preview` / `desktop_preview` diputuskan tidak dikerjakan
 
 ---
 
@@ -132,4 +141,5 @@ Pembanding yang produktif adalah kode Hermes langsung, bukan teks skill.
 | clarify timeout | `node --test tests/stage3_tools.test.mjs` | `clarify timeout has a config default` pass | 2026-11-11 |
 | set_theme | `registry.execute('set_theme',{action:'set',name:'matrix'})` | `{"action":"set","theme":"matrix",...}` | 2026-11-11 |
 | text_to_speech | `registry.execute('text_to_speech',{text:'halo'})` | `No speech engine found...` (mesin ini) | 2026-11-11 |
-| suite penuh | `npm test` | **461 agent + 167 CLI**, 0 gagal | 2026-11-11 |
+| video_analyze | `registry.execute('video_analyze',{video_path:'/tmp/vtest.mp4',frames:3})` | model mendeskripsikan SMPTE color bar | 2026-11-11 |
+| suite penuh | `npm test` | **466 agent + 167 CLI**, 0 gagal | 2026-11-11 |

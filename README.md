@@ -50,7 +50,7 @@ Both ship as one installable CLI: **`vallenemperor`**.
 ## Status
 
 - **ROADMAP: 46/46 items shipped, 0 open.** Full list with per-item evidence in [docs/ROADMAP.md](docs/ROADMAP.md).
-- **Tests: 461 (agent) + 167 (CLI) = 628**, all green.
+- **Tests: 466 (agent) + 167 (CLI) = 633**, all green.
 - **Latest version: 999.999.1026.**
 
 ## Preview
@@ -362,7 +362,7 @@ Both packages are TypeScript. `vallencli/src/*.ts` compiles to `vallencli/dist/*
 the `vallenemperor` bin points at; the CLI tests import the compiled `dist/`, so run `npm run build`
 before `npm test` (the `vallencli` test script does this for you).
 
-628 tests cover the turn loop and event order, provider retries and truncated-answer continuation,
+633 tests cover the turn loop and event order, provider retries and truncated-answer continuation,
 verification gates, skill relevance/release, patch engine, process manager, deferred tools, clarify
 policy, provider presets, the Telegram gateway (injected HTTP client, no network), and the CLI
 surface. CI runs the same three commands on every push and pull request.
