@@ -4,8 +4,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { dumpReport, insightsReport, listLogs, promptSizeReport } from '../src/cli-diagnostics.mjs'
-import { runSessionsCommand } from '../src/cli-sessions.mjs'
+import { dumpReport, insightsReport, listLogs, promptSizeReport } from '../dist/cli-diagnostics.js'
+import { runSessionsCommand } from '../dist/cli-sessions.js'
 
 function tempHome() {
   return mkdtempSync(join(tmpdir(), 'vallen-diag-'))

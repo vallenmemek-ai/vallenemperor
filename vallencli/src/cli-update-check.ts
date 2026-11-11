@@ -67,7 +67,7 @@ export function npmLatestVersion() {
 }
 
 /** Fire-and-forget startup notice. Never throws, never blocks. */
-export async function maybeNotifyUpdate({ home, current, fetcher = npmLatestVersion, print = () => {} }) {
+export async function maybeNotifyUpdate({ home, current, fetcher = npmLatestVersion, print = () => {} }: any) {
   if (updateCheckDisabled()) return null
   try {
     const result = await checkForUpdate({ current, home, fetcher })

@@ -5,9 +5,9 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { applyProfile, extractProfile, listProfiles, profileHome, runProfileCommand, sanitize } from '../src/cli-profile.mjs'
+import { applyProfile, extractProfile, listProfiles, profileHome, runProfileCommand, sanitize } from '../dist/cli-profile.js'
 
-const CLI = new URL('../src/cli.mjs', import.meta.url).pathname
+const CLI = new URL('../dist/cli.js', import.meta.url).pathname
 
 test('--profile is extracted from argv and points the home at the profile', () => {
   const parsed = extractProfile(['--profile', 'Work Client', 'run', 'hello'])

@@ -1,7 +1,8 @@
 # AGENTS.md — read this before touching the code
 
-**VallenEmperor** is an autonomous coding agent for the terminal. Two workspace packages
-(`vallenagent` = engine, `vallencli` = terminal UI) ship as one npm package, `vallenemperor`.
+**VallenEmperor** is an autonomous coding agent for the terminal. Two TypeScript workspace packages
+(`vallenagent` = engine, `vallencli` = terminal UI) ship as one npm package, `vallenemperor`. Both
+compile to `dist/`; the CLI bin is `vallencli/dist/cli.js` and `vallencli/package.json` is ESM.
 
 If you are an AI starting a fresh session (new model, cleared context, different tool), read in this
 order — do not guess the architecture:

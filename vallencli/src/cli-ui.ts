@@ -4,8 +4,8 @@ import { join } from 'node:path'
 import http from 'node:http'
 import https from 'node:https'
 import { spawnSync } from 'node:child_process'
-import { fg, bg, FG_OFF, BG_OFF, getColorLevel, getTheme, gradientText, gradientBlock } from './cli-theme.mjs'
-import { matchPositions } from './cli-suggest.mjs'
+import { fg, bg, FG_OFF, BG_OFF, getColorLevel, getTheme, gradientText, gradientBlock } from './cli-theme.js'
+import { matchPositions } from './cli-suggest.js'
 
 export const ANSI = { reset: '\x1b[0m', cyan: '\x1b[36m', bold: '\x1b[1m', dim: '\x1b[2m', green: '\x1b[32m', yellow: '\x1b[33m', red: '\x1b[31m', purple: '\x1b[38;5;141m' }
 export const color = (value, code) => process.env.NO_COLOR ? value : `${code}${value}${ANSI.reset}`
@@ -111,7 +111,7 @@ function probeGateway(baseURL, timeout = 1200) {
 
 export function summarizeMcp(agent, mcpServers = []) {
   const runtime = mcpServers.filter(server => server.status !== 'disabled')
-  const configured = Object.values(agent?.config?.mcpServers || {}).filter(server => server.enabled !== false).length
+  const configured = Object.values(agent?.config?.mcpServers || {}).filter(server => (server as any).enabled !== false).length
   const total = runtime.length || configured
   return { total, ready: runtime.filter(server => server.status === 'ready').length }
 }
@@ -132,11 +132,11 @@ export async function collectHealthChecks(agent, mcpServers = [], core = null) {
     { title: 'Modular Skills', detail: `${skills} loaded`, status: 'ok' },
     { title: 'Core Toolsets', detail: `${typeof tools === 'number' ? tools : 'available'} tools available`, status: 'ok' },
     { title: 'MCP Servers', detail: mcpTotal ? `${mcpReady}/${mcpTotal} ready` : 'none configured', status: !mcpTotal || mcpReady === mcpTotal ? 'ok' : 'warn' },
-    { title: 'AI Gateway', detail: `${provider?.model || 'no model'} · ${gateway.detail}`, status: gateway.status }
+    { title: 'AI Gateway', detail: `${provider?.model || 'no model'} · ${(gateway as any).detail}`, status: (gateway as any).status }
   ]
 }
 
-export function startupBox(agent, bannerText, checks, width, opts = {}) {
+export function startupBox(agent, bannerText, checks, width, opts: any = {}) {
   const fancy = Boolean(opts.fancy)
   if (opts.compact) {
     const bad = checks.filter(c => c.status === 'error')
@@ -328,7 +328,7 @@ export function gitInfo(cwd, ttl = 5000) {
 
 // Segmented status line: model | cwd | git | context bar | MCP | session timer | activity.
 // Low-priority segments are dropped first when the terminal is narrow.
-export function formatStatusBar(agent, mcpServers, { activity = 'VALLENEMPEROR', width = 80, startedAt = 0, git, hint = '' } = {}) {
+export function formatStatusBar(agent, mcpServers, { activity = 'VALLENEMPEROR', width = 80, startedAt = 0, git, hint = '' }: any = {}) {
   const stats = agent.getContextStats?.() || { percent: 0, estimated: true }
   const { total, ready } = summarizeMcp(agent, mcpServers)
   const percent = Math.max(0, Math.min(100, Number(stats.percent) || 0))
@@ -390,7 +390,7 @@ const DANGEROUS = /(\brm\s+-[a-z]*r[a-z]*|\bsudo\b|\bmkfs\b|\bdd\s+if=|\bchmod\s
 export const isDangerousCommand = command => DANGEROUS.test(String(command || ''))
 
 // Summarise a file-edit tool call (diff/patch text, or old/new strings, or whole new content) for the approval box.
-export function buildEditPreview(args = {}) {
+export function buildEditPreview(args: any = {}) {
   const text = value => (typeof value === 'string' ? value : null)
   const lines = []
   let added = 0
@@ -516,7 +516,7 @@ export function formatToolResult(text, { error = false, durationMs = 0, maxLines
   return rows.join('\n')
 }
 
-export function formatFileEditResult(name, args = {}, rawResult = '', { durationMs = 0, width = 80 } = {}) {
+export function formatFileEditResult(name, args: any = {}, rawResult = '', { durationMs = 0, width = 80 } = {}) {
   let result
   try { result = typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult } catch { result = { error: String(rawResult) } }
   const rawPath = String(result?.path || result?.resolved_path || args.path || '(unknown path)')
@@ -653,7 +653,7 @@ export function formatSessionSummary({ model = '', sessionId = '', startedAt = 0
   const content = columns - 4
   const edge = text => paint(text, 'accent')
   const title = ' Session summary '
-  const row = (text, role) => `${edge('│')} ${role ? paint(clipEllipsis(text, content), role) : dimText(clipEllipsis(text, content))}${' '.repeat(Math.max(0, content - stringWidth(clipEllipsis(text, content))))} ${edge('│')}`
+  const row = (text, role = null) => `${edge('│')} ${role ? paint(clipEllipsis(text, content), role) : dimText(clipEllipsis(text, content))}${' '.repeat(Math.max(0, content - stringWidth(clipEllipsis(text, content))))} ${edge('│')}`
   const rows = [
     row(`⏱ ${fmtDuration(Date.now() - (startedAt || Date.now()))}   ↻ ${turns} turn${turns === 1 ? '' : 's'}   ⚙ ${toolCalls} tool call${toolCalls === 1 ? '' : 's'}${toolErrors ? ` (${toolErrors} failed)` : ''}`, 'primary'),
     row(`◆ ${model || 'model'}   ctx ${percent}%`, 'accent')

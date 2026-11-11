@@ -345,9 +345,13 @@ change and install it (`npm install -g .`), prove changes with real test output,
 
 ```bash
 npm test          # vallenagent + vallencli suites (node --test, no network)
-npm run typecheck # tsc --noEmit
-npm run build     # compile core + syntax-check CLI
+npm run typecheck # tsc --noEmit for both packages
+npm run build     # compile vallenagent (engine) and vallencli (CLI) to dist/
 ```
+
+Both packages are TypeScript. `vallencli/src/*.ts` compiles to `vallencli/dist/*.js`, which is what
+the `vallenemperor` bin points at; the CLI tests import the compiled `dist/`, so run `npm run build`
+before `npm test` (the `vallencli` test script does this for you).
 
 293 tests cover the turn loop and event order, provider retries and truncated-answer continuation,
 verification gates, skill relevance/release, patch engine, process manager, deferred tools, clarify

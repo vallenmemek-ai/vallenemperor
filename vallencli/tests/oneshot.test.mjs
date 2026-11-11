@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { applyRuntimeOverrides, createOneShotApproval, isSlashCommandLine, parseArgs, runOneShot, runOneShotCommand } from '../src/cli.mjs'
+import { applyRuntimeOverrides, createOneShotApproval, isSlashCommandLine, parseArgs, runOneShot, runOneShotCommand } from '../dist/cli.js'
 
 function sink() {
   const chunks = []

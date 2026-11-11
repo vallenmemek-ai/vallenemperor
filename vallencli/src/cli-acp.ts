@@ -19,6 +19,7 @@ export function encodeAcp(payload, framing = 'ndjson') {
 
 /** Incremental reader for ndjson and Content-Length framed JSON-RPC. */
 export class AcpReader {
+  buffer = ''
   constructor() { this.buffer = '' }
   push(chunk) {
     this.buffer += chunk
@@ -136,7 +137,7 @@ export async function handleAcpMessage(message, state, deps) {
   else log?.(`ignored notification: ${message.method}`)
 }
 
-export async function runAcpServer({ createAgent, version, stdin = process.stdin, stdout = process.stdout } = {}) {
+export async function runAcpServer({ createAgent, version, stdin = process.stdin, stdout = process.stdout }: any = {}) {
   const state = { sessions: new Map() }
   const write = payload => stdout.write(encodeAcp(payload))
   const reader = new AcpReader()

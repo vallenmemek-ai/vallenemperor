@@ -1,13 +1,13 @@
 {
   "name": "vallenemperor",
-  "version": "999.999.1019",
+  "version": "999.999.1020",
   "description": "Autonomous AI agent core and terminal CLI (VallenEmperor)",
   "bin": {
-    "vallenemperor": "vallencli/src/cli.mjs",
-    "vallenemperorcli": "vallencli/src/cli.mjs"
+    "vallenemperor": "vallencli/dist/cli.js",
+    "vallenemperorcli": "vallencli/dist/cli.js"
   },
   "files": [
-    "vallencli/src/",
+    "vallencli/dist/",
     "vallencli/package.json",
     "vallenagent/dist/",
     "banner.txt",
@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "build": "npm --prefix vallenagent run build && npm --prefix vallencli run build",
-    "typecheck": "npm -w vallenagent run typecheck",
+    "typecheck": "npm -w vallenagent run typecheck && npm -w vallencli run typecheck",
     "cli": "npm -w vallenagent run build && npm -w vallencli run start",
     "test": "npm -w vallenagent run test && npm -w vallencli run test",
     "prepack": "npm run build",

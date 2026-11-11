@@ -4,10 +4,10 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { runSetup, runSetupCommand, SETUP_PRESETS } from '../src/cli-setup.mjs'
-import { doctorExitCode, formatDoctor, runDoctor, runDoctorCommand, FAIL, OK, WARN } from '../src/cli-doctor.mjs'
-import { checkForUpdate, formatUpdateNotice, isNewer, maybeNotifyUpdate, runUpdateCommand, updateCheckDisabled } from '../src/cli-update-check.mjs'
-import { parseArgs } from '../src/cli.mjs'
+import { runSetup, runSetupCommand, SETUP_PRESETS } from '../dist/cli-setup.js'
+import { doctorExitCode, formatDoctor, runDoctor, runDoctorCommand, FAIL, OK, WARN } from '../dist/cli-doctor.js'
+import { checkForUpdate, formatUpdateNotice, isNewer, maybeNotifyUpdate, runUpdateCommand, updateCheckDisabled } from '../dist/cli-update-check.js'
+import { parseArgs } from '../dist/cli.js'
 
 function scriptedSetup({ answers, choices, models = ['model-a', 'model-b'], fetchThrows = false }) {
   const printed = []
@@ -183,7 +183,7 @@ test('parseArgs routes the new subcommands', () => {
 })
 
 test('-p --json emits a stable machine-readable result', async () => {
-  const { formatOneShotJson, runOneShot } = await import('../src/cli.mjs')
+  const { formatOneShotJson, runOneShot } = await import('../dist/cli.js')
   const result = {
     response: 'done',
     completionStatus: 'complete',

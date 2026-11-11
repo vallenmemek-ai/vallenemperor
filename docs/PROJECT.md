@@ -55,16 +55,28 @@ vallenagent/src/
   mcp/            MCP client manager, tool conversion, project config
   core/           config, approval policy, project context, cron, display, plan prompt, model eval
 
-vallencli/src/
-  cli.mjs              REPL, argument parsing, one-shot, config commands, model picker glue
-  cli-model-picker.mjs two-level picker state machine + gateway fetch
-  cli-ui.mjs           cards, status bar, approval boxes, diffs, themes
-  cli-markdown.mjs     markdown + code-fence renderer
-  cli-commands.mjs     local slash commands
-  cli-files.mjs        @path mentions and completion
-  cli-suggest.mjs      command registry + fuzzy suggestions
-  cli-theme.mjs        color levels and gradients
-```
+vallencli/src/            TypeScript, compiled by `tsc` to vallencli/dist (the bin target)
+  cli.ts                REPL, argument parsing, one-shot, config commands, model picker glue
+  cli-model-picker.ts   two-level picker state machine + gateway fetch
+  cli-ui.ts             cards, status bar, approval boxes, diffs, themes
+  cli-markdown.ts       markdown + code-fence renderer
+  cli-commands.ts       local slash commands
+  cli-files.ts          @path mentions and completion
+  cli-suggest.ts        command registry + fuzzy suggestions
+  cli-theme.ts          color levels and gradients
+  cli-reasoning.ts      reasoning block state machine + `∴ Thought for Ns` footer
+  cli-acp.ts            ACP server (editor bridge)
+  cli-profile.ts        `--profile` isolation
+  cli-sessions.ts       sessions browser/export/prune
+  cli-diagnostics.ts    prompt-size, insights, logs, dump
+  cli-doctor.ts         health checks
+  cli-setup.ts          provider setup wizard
+  cli-completion.ts     bash/zsh/fish completion scripts
+  cli-update-check.ts   daily update notifier
+
+Both packages ship compiled output: `vallenagent/dist` (engine) and `vallencli/dist` (CLI).
+`vallencli` is ESM (`"type": "module"`); the repo root deliberately is not, so a global install
+cannot break on the CJS/ESM boundary.
 
 ## 4. Request assembly (how a turn reaches the model)
 

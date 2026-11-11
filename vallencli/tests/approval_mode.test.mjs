@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { shouldAskApproval, bigEditPreview } from '../src/cli.mjs'
+import { shouldAskApproval, bigEditPreview } from '../dist/cli.js'
 
 test('/auto on (mode off) never asks, even for a big edit', () => {
   assert.equal(shouldAskApproval({ mode: 'off', required: false, bigPreview: { added: 105, removed: 0 } }), false)

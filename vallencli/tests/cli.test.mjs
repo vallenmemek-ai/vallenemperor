@@ -5,9 +5,9 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { execFileSync } from 'node:child_process'
-import { BIG_EDIT_PREVIEW_LINES, bigEditPreview, chatBoxRedrawSequence, collectHealthChecks, createCliAgent, formatChatBox, formatStatus, formatThinkingActivity, parseArgs, runCli, runConfigCommand } from '../src/cli.mjs'
-import { HELP } from '../src/cli-ui.mjs'
-import { colorizeDiffPro, formatFileEditResult, formatToolResult, stringWidth } from '../src/cli-ui.mjs'
+import { BIG_EDIT_PREVIEW_LINES, bigEditPreview, chatBoxRedrawSequence, collectHealthChecks, createCliAgent, formatChatBox, formatStatus, formatThinkingActivity, parseArgs, runCli, runConfigCommand } from '../dist/cli.js'
+import { HELP } from '../dist/cli-ui.js'
+import { colorizeDiffPro, formatFileEditResult, formatToolResult, stringWidth } from '../dist/cli-ui.js'
 
 function fakeAgent({ turn, sessions = [] } = {}) {
   const calls = []
@@ -616,7 +616,7 @@ test('the CLI still runs when invoked through a symlink, as npm global installs 
   const dir = mkdtempSync(join(tmpdir(), 'vallenemperor-binlink-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   const link = join(dir, 'vallenemperor')
-  symlinkSync(resolve('src/cli.mjs'), link)
+  symlinkSync(resolve('dist/cli.js'), link)
 
   const output = execFileSync(process.execPath, [link, '--version'], { encoding: 'utf8' })
   assert.match(output, /vallenemperor v\d+\.\d+\.\d+/)
@@ -653,7 +653,7 @@ test('/artifacts lists the current session artifacts and explains the empty stat
 })
 
 test('HELP and suggestions advertise /artifacts', async () => {
-  const { COMMANDS } = await import('../src/cli-suggest.mjs')
+  const { COMMANDS } = await import('../dist/cli-suggest.js')
   assert.ok(HELP.includes('/artifacts'), 'HELP must document /artifacts')
   assert.ok(COMMANDS.some(entry => entry.name === '/artifacts'), 'suggestions must include /artifacts')
 })

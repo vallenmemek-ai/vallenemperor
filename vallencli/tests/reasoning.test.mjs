@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { appendReasoning, closeReasoning, closeThinkingPhase, createReasoningState, reasoningPreview, resetReasoning } from '../src/cli-reasoning.mjs'
-import { formatReasoningLine, formatThoughtLine } from '../src/cli-ui.mjs'
+import { appendReasoning, closeReasoning, closeThinkingPhase, createReasoningState, reasoningPreview, resetReasoning } from '../dist/cli-reasoning.js'
+import { formatReasoningLine, formatThoughtLine } from '../dist/cli-ui.js'
 
 function collector() {
   const lines = []

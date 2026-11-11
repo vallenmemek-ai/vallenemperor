@@ -4,12 +4,14 @@
   "private": true,
   "type": "module",
   "bin": {
-    "vallenemperor": "src/cli.mjs",
-    "vallenemperorcli": "src/cli.mjs"
+    "vallenemperor": "dist/cli.js",
+    "vallenemperorcli": "dist/cli.js"
   },
   "scripts": {
-    "build": "node --check src/cli.mjs",
-    "start": "node src/cli.mjs",
-    "test": "node ../scripts/run-tests.mjs tests"
-  }
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "npm run build && node dist/cli.js",
+    "test": "npm run build && node ../scripts/run-tests.mjs tests"
+  },
+  "main": "dist/cli.js"
 }

@@ -5,7 +5,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const CLI = new URL('../src/cli.mjs', import.meta.url).pathname
+const CLI = new URL('../dist/cli.js', import.meta.url).pathname
 
 test('each profile is a fully isolated home: config, sessions and skills do not leak', () => {
   const base = mkdtempSync(join(tmpdir(), 'vallen-iso-'))

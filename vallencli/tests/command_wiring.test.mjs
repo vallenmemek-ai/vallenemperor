@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
  * which is exactly the bug this file prevents.
  */
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const source = readFileSync(join(root, 'src/cli-commands.mjs'), 'utf8')
+const source = readFileSync(join(root, 'src/cli-commands.ts'), 'utf8')
 
 const CORE_OWNED = ['/model', '/status', '/stats', '/sessions', '/resume', '/new', '/reset', '/memory']
 const CLI_ONLY = ['/token', '/cd', '/output', '/theme', '/skills', '/sh', '/pty', '/health', '/perf', '/tools', '/auto', '/plan', '/plans', '/search', '/gamedev', '/session', '/todos', '/settings', '/clear']
@@ -36,7 +36,7 @@ test('/review and /help are owned by core, not re-implemented in the CLI', () =>
 })
 
 test('the CLI passes review callbacks so core can run /review for it', () => {
-  const cli = readFileSync(new URL('../src/cli.mjs', import.meta.url), 'utf8')
+  const cli = readFileSync(new URL('../dist/cli.js', import.meta.url), 'utf8')
   assert.match(cli, /reviewCallbacks:\s*{/, 'without callbacks a REPL /review would be silent')
 })
 
@@ -45,7 +45,7 @@ test('the CLI reaches core through the public barrel, never internal dist paths'
 })
 
 test('commands that exist are also discoverable in the dropdown', async () => {
-  const { COMMANDS } = await import('../src/cli-suggest.mjs')
+  const { COMMANDS } = await import('../dist/cli-suggest.js')
   const names = new Set(COMMANDS.flatMap(command => [command.name, ...(command.aliases || [])]))
   for (const command of ['/output', '/schedule', '/status', '/context', '/settings', '/gateway']) {
     assert.equal(names.has(command), true, `${command} must be suggested`)
@@ -53,7 +53,7 @@ test('commands that exist are also discoverable in the dropdown', async () => {
 })
 
 test('every suggested command is documented in the core help reference', async () => {
-  const { COMMANDS } = await import('../src/cli-suggest.mjs')
+  const { COMMANDS } = await import('../dist/cli-suggest.js')
   const core = await import('../../vallenagent/dist/index.js')
   const reference = new Set(core.COMMAND_REFERENCE.map(entry => entry.name))
   const missing = COMMANDS.flatMap(command => [command.name, ...(command.aliases || [])]).filter(name => !reference.has(name))

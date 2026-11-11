@@ -152,6 +152,8 @@ A red CI is a real failure. Do not disable steps to make it green; fix the cause
 3. Run it and **confirm it fails** (record the failure).
 4. Implement the fix.
 5. Run the suite; then run the full `npm test` and record both counts.
+   `vallencli` is TypeScript: its tests import `vallencli/dist/*.js`, so a stale build shows up as a
+   failure. `npm --prefix vallencli run build` (or `npm run build`) before debugging a test failure.
 6. If the change is user-visible, also add/extend a CLI-level test.
 
 ## Reporting numbers

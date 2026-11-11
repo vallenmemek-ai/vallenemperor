@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { PassThrough } from 'node:stream'
 
-import { ACP_PROTOCOL_VERSION, AcpReader, acpTextFromPrompt, encodeAcp, handleAcpMessage, runAcpServer } from '../src/cli-acp.mjs'
+import { ACP_PROTOCOL_VERSION, AcpReader, acpTextFromPrompt, encodeAcp, handleAcpMessage, runAcpServer } from '../dist/cli-acp.js'
 
 const CLOSE_METHOD = 'shut' + 'down'
 

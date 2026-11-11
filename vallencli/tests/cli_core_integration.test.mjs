@@ -4,7 +4,7 @@ import { PassThrough, Writable } from 'node:stream'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { runCli } from '../src/cli.mjs'
+import { runCli } from '../dist/cli.js'
 
 test('VallenCLI drives real AIAgent.runTurn with deterministic in-process provider', async t => {
   const oldHome = process.env.VALLENEMPEROR_HOME

@@ -17,8 +17,8 @@ import {
   typeInPicker,
   visibleGroups,
   visibleModels
-} from '../src/cli-model-picker.mjs'
-import { runCli } from '../src/cli.mjs'
+} from '../dist/cli-model-picker.js'
+import { runCli } from '../dist/cli.js'
 
 // A trimmed copy of a real 9router /v1/models payload.
 const gatewayPayload = {

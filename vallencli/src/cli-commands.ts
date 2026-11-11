@@ -3,8 +3,8 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
-import { color, startupBox, refreshThemeColors } from './cli-ui.mjs'
-import { THEMES, getThemeName, gradientText, saveTheme, setTheme, themeNames } from './cli-theme.mjs'
+import { color, startupBox, refreshThemeColors } from './cli-ui.js'
+import { THEMES, getThemeName, gradientText, saveTheme, setTheme, themeNames } from './cli-theme.js'
 
 export function createLocalCommandHandler(context) {
   const { agent, core, state, output, printResponse, readHiddenToken, settleApproval, enqueue, out, refreshStatus, healthCheck, enterShell, runTurn, displayLine } = context
@@ -327,7 +327,7 @@ export function createLocalCommandHandler(context) {
       }
       if (sub === 'next') {
         if (!state.planRun || state.planRun.status !== 'running') { printResponse('No running plan. Use /plan go to start one.'); return true }
-        await runPlanStep()
+        await runPlanStep(undefined)
         return true
       }
       if (sub === 'edit') {
@@ -349,7 +349,7 @@ export function createLocalCommandHandler(context) {
           return true
         }
         printResponse(core.formatPlanStatus(state.planRun))
-        await runPlanStep()
+        await runPlanStep(undefined)
         return true
       }
 

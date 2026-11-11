@@ -1,6 +1,6 @@
 // Terminal markdown renderer + framed response card (streaming-friendly: feed it lines as they arrive).
-import { stringWidth, stripAnsi, clipWidth, clipEllipsis } from './cli-ui.mjs'
-import { fg, bg, FG_OFF, BG_OFF, getColorLevel, gradientText } from './cli-theme.mjs'
+import { stringWidth, stripAnsi, clipWidth, clipEllipsis } from './cli-ui.js'
+import { fg, bg, FG_OFF, BG_OFF, getColorLevel, gradientText } from './cli-theme.js'
 
 const lvl = () => getColorLevel()
 const sgr = code => (lvl() === 0 ? '' : code)
@@ -14,7 +14,7 @@ const tone = (text, role) => `${fg(role)}${text}${FG_OFF}`
 const linksOn = () => lvl() > 0 && Boolean(process.stdout.isTTY) && process.env.VALLEN_LINKS !== '0'
 const safeHref = href => { const h = String(href || '').replace(/[\x00-\x1f\x7f]/g, ''); return /^(https?:|file:|mailto:)/i.test(h) ? h : '' }
 
-function styled(text, s = {}) {
+function styled(text, s: any = {}) {
   if (lvl() === 0) return text
   let open = ''
   let close = ''
@@ -32,7 +32,7 @@ function styled(text, s = {}) {
 // ---------- inline ----------
 const INLINE_SOURCE = String.raw`(` + '`' + String.raw`+)([^` + '`' + String.raw`]|[^` + '`' + String.raw`][\s\S]*?[^` + '`' + String.raw`])\1(?!` + '`' + String.raw`)|\*\*([^\s*][\s\S]*?)\*\*|__([^\s_][\s\S]*?)__|~~([^\s~][\s\S]*?)~~|\*([^\s*][\s\S]*?)\*|(?<![\w])_([^\s_][\s\S]*?)_(?![\w])|\[([^\]]+)\]\((\S+?)\)|(https?:\/\/[^\s<>()\x00-\x1f\x7f]*[^\s<>().,;:!?'"\x00-\x1f\x7f])`
 
-export function inlineSegments(text, base = {}) {
+export function inlineSegments(text, base: any = {}) {
   const re = new RegExp(INLINE_SOURCE, 'g')
   const segs = []
   let last = 0
@@ -91,7 +91,7 @@ function wrapAtoms(atoms, width, first = '', rest = '') {
       if (line) { flush(); continue }
       const chunk = clipWidth(text, Math.max(1, width - w)) || Array.from(text)[0]
       line += styled(chunk, atom.style)
-      text = text.slice(chunk.length)
+      text = text.slice((chunk as string).length)
       flush()
       if (!text) break
     }
@@ -151,7 +151,7 @@ export function createMarkdownRenderer({ width = 76, emit }) {
   const out = line => { emit(line); lastBlank = line === '' }
   const blank = () => { if (!lastBlank) out('') }
   const muted = text => tone(text, 'muted')
-  const paragraph = (text, first = '', rest = '', base = {}) => { for (const l of wrapAtoms(toAtoms(inlineSegments(text, base)), W, first, rest)) out(l) }
+  const paragraph = (text, first = '', rest = '', base: any = {}) => { for (const l of wrapAtoms(toAtoms(inlineSegments(text, base)), W, first, rest)) out(l) }
 
   const codeRow = content => {
     const pad = ' '.repeat(Math.max(0, W - 2 - stringWidth(content)))
@@ -299,7 +299,7 @@ export function createCardStream({ title = ' ☤ VallenEmperor CLI ', width = 80
     while (value) {
       const piece = clipWidth(value, content) || Array.from(value)[0]
       emit(piece)
-      value = value.slice(piece.length)
+      value = value.slice((piece as string).length)
     }
   }
   const feed = text => (md ? md.line(text) : plainLine(text))

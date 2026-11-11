@@ -115,7 +115,7 @@ test('/worktree new creates a git worktree and retargets the session', async t =
   execFileSync('git', ['add', '.'], { cwd: repo })
   execFileSync('git', ['commit', '-q', '-m', 'init'], { cwd: repo })
 
-  const { createLocalCommandHandler } = await import('../../vallencli/src/cli-commands.mjs')
+  const { createLocalCommandHandler } = await import('../../vallencli/dist/cli-commands.js')
   const printed = []
   const agent = { config: { providers: {}, terminal: { cwd: repo } }, getSessionId: () => 'wt', getContextStats: () => ({ turns: 1 }), memoryStore: { setWorkingDir: () => {} } }
   const handler = createLocalCommandHandler({

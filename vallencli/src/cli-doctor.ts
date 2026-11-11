@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { accessSync, constants, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fetchGatewayModels } from './cli-model-picker.mjs'
+import { fetchGatewayModels } from './cli-model-picker.js'
 
 /**
  * `vallenemperor doctor` — one screen that says what is broken and how to fix it.
@@ -16,7 +16,7 @@ function check(name, status, detail, fix) {
   return { name, status, detail, fix }
 }
 
-export async function runDoctor({ home, config, probes = {} }) {
+export async function runDoctor({ home, config, probes = {} }: any) {
   const checks = []
 
   const nodeVersion = probes.nodeVersion || process.version

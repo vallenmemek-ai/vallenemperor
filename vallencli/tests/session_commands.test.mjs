@@ -4,9 +4,9 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { createLocalCommandHandler } from '../src/cli-commands.mjs'
-import { completionScript, runCompletionCommand } from '../src/cli-completion.mjs'
-import { parseArgs } from '../src/cli.mjs'
+import { createLocalCommandHandler } from '../dist/cli-commands.js'
+import { completionScript, runCompletionCommand } from '../dist/cli-completion.js'
+import { parseArgs } from '../dist/cli.js'
 
 const core = await import(new URL('../../vallenagent/dist/index.js', import.meta.url).href)
 

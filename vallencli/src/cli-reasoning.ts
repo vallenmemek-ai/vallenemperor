@@ -1,4 +1,4 @@
-import { formatReasoningLine, formatThoughtLine } from './cli-ui.mjs'
+import { formatReasoningLine, formatThoughtLine } from './cli-ui.js'
 
 /**
  * Reasoning block + `∴ Thought for Ns` footer (pure state machine).

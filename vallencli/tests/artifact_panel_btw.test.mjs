@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { createLocalCommandHandler } from '../src/cli-commands.mjs'
+import { createLocalCommandHandler } from '../dist/cli-commands.js'
 
 const core = await import(new URL('../../vallenagent/dist/index.js', import.meta.url).href)
 

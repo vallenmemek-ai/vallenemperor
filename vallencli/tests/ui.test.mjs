@@ -1,9 +1,9 @@
 // Run with: node --test vallencli/tests/ui.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { setColorLevel, setTheme } from '../src/cli-theme.mjs'
-import { stringWidth, stripAnsi, toAscii, formatUserMessage, startupBox, buildEditPreview, formatApprovalBox, formatToolLine, formatStatusBar, formatTerminalLine, colorizeDiffPro } from '../src/cli-ui.mjs'
-import { formatResponseCard, renderMarkdown } from '../src/cli-markdown.mjs'
+import { setColorLevel, setTheme } from '../dist/cli-theme.js'
+import { stringWidth, stripAnsi, toAscii, formatUserMessage, startupBox, buildEditPreview, formatApprovalBox, formatToolLine, formatStatusBar, formatTerminalLine, colorizeDiffPro } from '../dist/cli-ui.js'
+import { formatResponseCard, renderMarkdown } from '../dist/cli-markdown.js'
 
 setColorLevel(0)
 setTheme('vallen')

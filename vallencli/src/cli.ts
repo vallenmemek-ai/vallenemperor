@@ -7,23 +7,23 @@ import { PassThrough } from 'node:stream'
 import { StringDecoder } from 'node:string_decoder'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { ANSI, color, stripAnsi, stringWidth, clipWidth, HELP, collectHealthChecks, startupBox, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity, formatThoughtLine, formatReasoningLine, formatReasoningMoreLines, formatSuggestions, colorizeDiff, THINKING_FACES, THINKING_VERBS, formatStatusBar, formatApprovalBox, formatToolResult, formatFileEditResult, formatSessionSummary, formatTip, formatUserMessage, formatToolCall, formatToolLine, buildEditPreview, formatTerminalLine, isDangerousCommand, toAscii, fmtTokens, fmtDuration, refreshThemeColors, invalidateGit } from './cli-ui.mjs'
-import { loadSavedTheme, shimmerText, getColorLevel } from './cli-theme.mjs'
-import { createCardStream, formatResponseCard } from './cli-markdown.mjs'
-import { fileToken, suggestFiles } from './cli-files.mjs'
-import { suggestCommands, commandToken, findCommand, needsMoreInput } from './cli-suggest.mjs'
-import { createLocalCommandHandler } from './cli-commands.mjs'
-import { runSetupCommand } from './cli-setup.mjs'
-import { formatDoctor, runDoctorCommand } from './cli-doctor.mjs'
-import { currentVersion, maybeNotifyUpdate, runUpdateCommand } from './cli-update-check.mjs'
-import { runCompletionCommand } from './cli-completion.mjs'
-import { dumpReport, insightsReport, listLogs, promptSizeReport } from './cli-diagnostics.mjs'
-import { runSessionsCommand } from './cli-sessions.mjs'
-import { applyProfile, extractProfile, runProfileCommand } from './cli-profile.mjs'
-import { runAcpServer } from './cli-acp.mjs'
-import { appendReasoning, closeReasoning, closeThinkingPhase, createReasoningState, resetReasoning } from './cli-reasoning.mjs'
-import { backspacePicker, backPicker, createPickerState, enterPicker, fetchGatewayModels, formatModelCatalog, groupModelsByOwner, movePicker, pickerLines, typeInPicker } from './cli-model-picker.mjs'
-export { HELP, collectHealthChecks, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity } from './cli-ui.mjs'
+import { ANSI, color, stripAnsi, stringWidth, clipWidth, HELP, collectHealthChecks, startupBox, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity, formatThoughtLine, formatReasoningLine, formatReasoningMoreLines, formatSuggestions, colorizeDiff, THINKING_FACES, THINKING_VERBS, formatStatusBar, formatApprovalBox, formatToolResult, formatFileEditResult, formatSessionSummary, formatTip, formatUserMessage, formatToolCall, formatToolLine, buildEditPreview, formatTerminalLine, isDangerousCommand, toAscii, fmtTokens, fmtDuration, refreshThemeColors, invalidateGit } from './cli-ui.js'
+import { loadSavedTheme, shimmerText, getColorLevel } from './cli-theme.js'
+import { createCardStream, formatResponseCard } from './cli-markdown.js'
+import { fileToken, suggestFiles } from './cli-files.js'
+import { suggestCommands, commandToken, findCommand, needsMoreInput } from './cli-suggest.js'
+import { createLocalCommandHandler } from './cli-commands.js'
+import { runSetupCommand } from './cli-setup.js'
+import { formatDoctor, runDoctorCommand } from './cli-doctor.js'
+import { currentVersion, maybeNotifyUpdate, runUpdateCommand } from './cli-update-check.js'
+import { runCompletionCommand } from './cli-completion.js'
+import { dumpReport, insightsReport, listLogs, promptSizeReport } from './cli-diagnostics.js'
+import { runSessionsCommand } from './cli-sessions.js'
+import { applyProfile, extractProfile, runProfileCommand } from './cli-profile.js'
+import { runAcpServer } from './cli-acp.js'
+import { appendReasoning, closeReasoning, closeThinkingPhase, createReasoningState, resetReasoning } from './cli-reasoning.js'
+import { backspacePicker, backPicker, createPickerState, enterPicker, fetchGatewayModels, formatModelCatalog, groupModelsByOwner, movePicker, pickerLines, typeInPicker } from './cli-model-picker.js'
+export { HELP, collectHealthChecks, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity } from './cli-ui.js'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const CORE_PATH = join(ROOT, 'vallenagent', 'dist', 'index.js')
@@ -78,13 +78,14 @@ const DELTA_EVENTS = new Set(['text_delta', 'delta', 'response_delta', 'message_
 
 function safeInput(value) { return String(value).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '') }
 
-export async function runCli(options = {}) {
+export async function runCli(options: any = {}) {
   const input = options.input || process.stdin
   const output = options.output || process.stdout
   const core = options.core || await import(pathToFileURL(CORE_PATH).href)
-  const state = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, modelCache: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map(), reasoning: createReasoningState() }
+  const state: any = { busy: false, closing: false, pendingApproval: null, activeTurn: null, mcpServers: [], rl: null, generation: 0, queue: [], waiter: null, ended: false, started: false, terminalBuffer: '', robotVisible: false, robotActivity: 'THINKING', turnStartedAt: 0, thinkingFaceIndex: 0, thinkingVerbIndex: 0, thinkingTimer: null, thinkingTicks: 0, spinnerFrame: 0, statusRows: 0, sugRows: 0, sugReserved: 0, sugTimer: null, sug: { token: null, kind: 'cmd', fileStart: 0, items: [], index: 0, top: 0, open: false, dismissed: null }, pastes: new Map(), pasteSeq: 0, lastSigint: 0, sessionStartedAt: Date.now(), turns: 0, toolCalls: 0, toolErrors: 0, toolStarts: new Map(), terminalOutputs: new Map(), terminalOutputTruncated: new Set(), lastTerminalOutput: '', stream: null, streamedChars: 0, sessionAllow: new Set(), printSeq: 0, approvalBox: null, modelPicker: null, modelCache: null, lastTokens: 0, turnToolCalls: 0, toolCallText: new Map(), reasoning: createReasoningState() }
   let agent = options.agent
   if (!agent) agent = options.createAgent ? options.createAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } }) : new core.AIAgent({ onMcpStatus: servers => { state.mcpServers = servers; if (state.started) refreshStatus() } })
+  const out = (value: any) => output.write(fixAscii(noColorMode ? stripAnsi(value) : value))
   state.mcpServers = agent.mcpManager?.getStatus?.() || []
   if (options.resumeSessionId || options.resumeLatest) {
     try {
@@ -107,7 +108,6 @@ export async function runCli(options = {}) {
   const supportsAnsi = !legacyWindowsConsole
   const noColorMode = process.env.NO_COLOR || output.isTTY === false || !supportsAnsi
   const fixAscii = value => (ASCII_MODE ? toAscii(value) : value)
-  const out = value => output.write(fixAscii(noColorMode ? stripAnsi(value) : value))
   const verboseTools = process.env.VALLEN_VERBOSE === '1'
   const interactive = Boolean(input.isTTY && output.isTTY)
   const compactUi = interactive && ((output.columns || 80) < 70 || (output.rows || 40) < 24)
@@ -583,7 +583,7 @@ export async function runCli(options = {}) {
           output.write('\n')
           resolveToken(result)
         }
-        const onKey = (text, key = {}) => {
+        const onKey = (text, key: any = {}) => {
           if (key.ctrl && key.name === 'c') return finish({ error: 'Token entry cancelled.' })
           if (key.name === 'return' || key.name === 'enter' || text === '\r' || text === '\n') {
             return finish(token ? { value: token } : { error: 'Empty token not saved.' })
@@ -717,8 +717,8 @@ export async function runCli(options = {}) {
   if (interactive) {
     // readline reads from a proxy so the dropdown keys (Tab/arrows/Esc/Enter) and bracketed paste can be handled first.
     const proxy = new PassThrough()
-    proxy.isTTY = true
-    proxy.setRawMode = mode => { if (typeof input.setRawMode === 'function') input.setRawMode(mode); return proxy }
+    ;(proxy as any).isTTY = true
+    ;(proxy as any).setRawMode = (mode: any) => { if (typeof input.setRawMode === 'function') input.setRawMode(mode); return proxy }
     readerInput = proxy
     input.on('data', onInputData)
     process.once('exit', resetPasteMode)
@@ -859,7 +859,7 @@ export async function runCli(options = {}) {
     }
     detachReader()
     write(output, `Entering ${spec.command}; type exit to return to VallenCLI.`)
-    await new Promise(resolveShell => {
+    await new Promise<void>(resolveShell => {
       const child = spawn(spec.command, spec.args, { cwd: agent.config?.terminal?.cwd || process.cwd(), stdio: 'inherit' })
       child.once('error', error => { write(output, `Shell error: ${error.message}`); resolveShell() })
       child.once('exit', (code, signal) => { write(output, `Shell closed (${signal || (code ?? 0)}).`); resolveShell() })
@@ -939,7 +939,7 @@ export async function runCli(options = {}) {
     if (state.busy) agent.interrupt()
     await state.activeTurn
     if (interactive && (state.turns > 0 || state.toolCalls > 0)) {
-      let stats = {}
+      let stats: any = {}
       try { stats = agent.getContextStats?.() || {} } catch {}
       let sessionId = ''
       try { sessionId = agent.getSessionId?.() || '' } catch {}
@@ -994,7 +994,7 @@ function parseConfigArgs(args) {
  *   --approval dangerous|all|off     → approval override for this run
  *   --model <name>                   → model override for this run
  */
-export function parseArgs(argv) {
+export function parseArgs(argv): any {
   const result = { mode: 'run', prompt: null, resumeId: null, approval: null, model: null, json: false, quiet: false, error: null }
   const head = String(argv[0] || '')
   if (head === 'setup') return { ...result, mode: 'setup' }
@@ -1117,7 +1117,7 @@ export async function runConfigCommand(core, parsed) {
  * A scripted run cannot ask a human, so it refuses the risky call and says how to
  * allow it. `--approval off` still means "allow everything" (explicit opt-in).
  */
-export function createOneShotApproval(core, agent, { onBlocked } = {}) {
+export function createOneShotApproval(core, agent, { onBlocked }: any = {}) {
   const mode = core.approvalMode(agent.config?.agentApproval)
   const denied = []
   const requestApproval = async request => {
@@ -1156,7 +1156,7 @@ export function formatOneShotJson(result) {
   })
 }
 
-export async function runOneShot(agent, prompt, { core, json = false, stdout = process.stdout } = {}) {
+export async function runOneShot(agent, prompt, { core, json = false, stdout = process.stdout }: any = {}) {
   const gate = core
     ? createOneShotApproval(core, agent, {
         onBlocked: (name, mode) => process.stderr.write(`Blocked risky tool "${name}" (approval mode: ${mode}, no approval prompt in one-shot mode). Re-run with --approval off to allow it.\n`)
@@ -1184,7 +1184,7 @@ export function isSlashCommandLine(text) {
  * `-p` used to forward anything starting with "/" straight to the model, which then
  * invented command output. Dispatch the real CLI/shared handlers instead.
  */
-export async function runOneShotCommand(core, agent, text, io = {}) {
+export async function runOneShotCommand(core, agent, text, io: any = {}) {
   const out = io.out || process.stdout
   const err = io.err || process.stderr
   const line = String(text || '').trim()
@@ -1230,7 +1230,7 @@ export async function runOneShotCommand(core, agent, text, io = {}) {
  * `config.agentApproval` (that is what `/auto` writes), so the flag was dead.
  * Keep both keys in sync so either reader sees the override.
  */
-export function applyRuntimeOverrides(config, parsed = {}) {
+export function applyRuntimeOverrides(config, parsed: any = {}) {
   if (parsed.approval) {
     config.agentApproval = parsed.approval
     config.approval = parsed.approval
@@ -1242,7 +1242,7 @@ export function applyRuntimeOverrides(config, parsed = {}) {
   return config
 }
 
-export function createCliAgent(core, options = {}) {
+export function createCliAgent(core, options: any = {}) {
   const backgroundReview = options.backgroundReview ?? options.config?.gateway?.background_review ?? true
   return new core.AIAgent({ ...options, backgroundReview })
 }
@@ -1387,5 +1387,5 @@ function invokedAsCli() {
 }
 
 if (invokedAsCli()) {
-  process.exitCode = await main()
+  process.exitCode = Number(await main())
 }

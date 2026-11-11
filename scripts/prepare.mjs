@@ -38,6 +38,11 @@ if (agent.status !== 0) {
   process.exit(agent.status || 1)
 }
 
-const cli = run(join(root, 'vallencli'), ['--check', join(root, 'vallencli', 'src', 'cli.mjs')])
-// vallencli is plain .mjs: a syntax check is enough, and it must never block an install.
-if (cli.status !== 0) console.warn('[prepare] vallencli syntax check reported issues (ignored).')
+// vallencli is TypeScript now: build it with the same tsc, best-effort so an install never fails
+// because a toolchain is missing (the tarball ships vallencli/dist).
+const cliDistEntry = join(root, 'vallencli', 'dist', 'cli.js')
+const cli = run(join(root, 'vallencli'), [tsc, '-p', 'tsconfig.json'])
+if (cli.status !== 0) {
+  if (existsSync(cliDistEntry)) console.warn('[prepare] tsc failed; keeping the existing vallencli/dist.')
+  else console.warn('[prepare] tsc failed and vallencli/dist is missing; the CLI may not start.')
+}

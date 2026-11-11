@@ -1,5 +1,5 @@
 import { createInterface } from 'node:readline/promises'
-import { fetchGatewayModels } from './cli-model-picker.mjs'
+import { fetchGatewayModels } from './cli-model-picker.js'
 
 /**
  * `vallenemperor setup` — first-run wizard.

@@ -48,11 +48,11 @@ export function setTheme(name) {
 const hexToRgb = hex => { const n = parseInt(String(hex).replace('#', ''), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255] }
 const rgbToHex = ([r, g, b]) => `#${[r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`
 
-export function rgbTo256([r, g, b]) {
+export function rgbTo256([r, g, b]: number[]) {
   if (r === g && g === b) return r < 8 ? 16 : r > 248 ? 231 : Math.round((r - 8) / 247 * 24) + 232
   return 16 + 36 * Math.round(r / 255 * 5) + 6 * Math.round(g / 255 * 5) + Math.round(b / 255 * 5)
 }
-export function rgbTo16([r, g, b]) {
+export function rgbTo16([r, g, b]: number[]) {
   const max = Math.max(r, g, b)
   if (max < 40) return 30
   const t = max * 0.55

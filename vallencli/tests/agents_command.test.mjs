@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { createLocalCommandHandler } from '../src/cli-commands.mjs'
+import { createLocalCommandHandler } from '../dist/cli-commands.js'
 
 const core = await import(new URL('../../vallenagent/dist/index.js', import.meta.url).href)
 
@@ -73,8 +73,8 @@ test('/agents clean only touches finished worktrees', async () => {
 })
 
 test('the /agents command is advertised in help and suggestions', async () => {
-  const { HELP } = await import('../src/cli-ui.mjs')
-  const { COMMANDS } = await import('../src/cli-suggest.mjs')
+  const { HELP } = await import('../dist/cli-ui.js')
+  const { COMMANDS } = await import('../dist/cli-suggest.js')
   assert.ok(HELP.includes('/agents'), 'HELP must document /agents')
   assert.ok(COMMANDS.some(entry => entry.name === '/agents'), 'suggestions must include /agents')
 })
