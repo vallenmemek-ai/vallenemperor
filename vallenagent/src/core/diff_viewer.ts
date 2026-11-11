@@ -25,7 +25,9 @@ const HUNK_HEADER = /^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@/
 
 export function parseDiffHunks(diffText: string): DiffHunk[] {
   const hunks: DiffHunk[] = []
-  const lines = String(diffText || '').split('\n')
+  // Windows git emits CRLF; splitting on \n would leave a trailing \r on every line
+  // and the re-applied patch would write CRLF into the file.
+  const lines = String(diffText || '').replace(/\r\n/g, '\n').replace(/\r/g, '').split('\n')
   let file = ''
   let fileHeader: string[] = []
   let current: { header: string; lines: string[] } | null = null
@@ -100,7 +102,7 @@ export function revertHunk(options: {
   const dir = mkdtempSync(join(tmpdir(), 'vallen-hunk-'))
   const patchFile = join(dir, 'hunk.patch')
   try {
-    writeFileSync(patchFile, options.hunk.patch)
+    writeFileSync(patchFile, String(options.hunk.patch).replace(/\r\n/g, '\n'))
     const result = runner(['apply', '-R', '--whitespace=nowarn', patchFile], options.repo)
     const output = `${result.stdout || ''}${result.stderr || ''}`.trim()
     return { ok: result.status === 0, output }

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -33,7 +34,8 @@ test('diagnostics are collected from a real LSP process over stdio', async () =>
   try {
     const file = join(dir, 'sample.py')
     writeFileSync(file, 'def f():\n    return x\n')
-    const server = new URL('./fixtures/fake-lsp-server.mjs', import.meta.url).pathname
+    // .pathname yields '/D:/...' on Windows, which node cannot open; fileURLToPath is correct.
+    const server = fileURLToPath(new URL('./fixtures/fake-lsp-server.mjs', import.meta.url))
     const result = await collectDiagnostics({
       file,
       timeoutMs: 15_000,

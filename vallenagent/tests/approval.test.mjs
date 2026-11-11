@@ -25,7 +25,7 @@ test('normalizeToolPath expands ~ and resolves relative paths against workingDir
   assert.equal(normalizeToolPath('~'), normalizeToolPath(homedir()))
   assert.equal(normalizeToolPath('~/x'), join(homedir(), 'x'))
   // Expected values are built with the host separator so Windows passes too.
-  assert.equal(normalizeToolPath('a/b', '/tmp'), join('/tmp', 'a/b'))
+  assert.equal(normalizeToolPath('a/b', '/tmp'), resolve('/tmp', 'a/b'))
   assert.equal(normalizeToolPath('', '/tmp'), resolve('/tmp'))
 })
 

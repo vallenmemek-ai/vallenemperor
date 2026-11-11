@@ -23,7 +23,7 @@ function project(t, files) {
 test('loadProjectContext picks up instruction files from the project root', t => {
   const root = project(t, { 'VALLEN.md': 'always use pnpm', 'AGENTS.md': 'run tests before commit' })
   const ctx = loadProjectContext(root)
-  const names = ctx.instructions.map(item => item.file.split('/').pop()).sort()
+  const names = ctx.instructions.map(item => item.file.split(/[\\/]/).pop()).sort()
   assert.deepEqual(names, ['AGENTS.md', 'VALLEN.md'])
   assert.match(ctx.promptSection, /always use pnpm/)
   assert.match(ctx.promptSection, /run tests before commit/)

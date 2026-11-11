@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 /**
  * Curator — keep the skill index lean.
@@ -41,7 +41,7 @@ export function archiveSkills(skills: StaleSkill[], archiveDir: string): string[
   mkdirSync(archiveDir, { recursive: true })
   const moved: string[] = []
   for (const skill of skills) {
-    const target = join(archiveDir, skill.path.split('/').pop() || `${skill.name}.md`)
+    const target = join(archiveDir, basename(skill.path) || `${skill.name}.md`)
     try {
       renameSync(skill.path, target)
       moved.push(target)

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -51,7 +51,7 @@ test('subagents are always confined, the main agent only when configured', () =>
     const sub = sandboxPolicyFor({ isSubagent: true, config: { terminal: { cwd } } })
     assert.equal(sub.mode, 'workspace')
     assert.equal(sub.roots.length, 1)
-    assert.equal(sub.roots[0], cwd)
+    assert.equal(realpathSync(sub.roots[0]), realpathSync(cwd), 'macOS reports /private/var for the same dir')
 
     const mainDefault = sandboxPolicyFor({ isSubagent: false, config: { terminal: { cwd } } })
     assert.equal(mainDefault.mode, 'unrestricted')
@@ -59,7 +59,7 @@ test('subagents are always confined, the main agent only when configured', () =>
 
     const mainSandboxed = sandboxPolicyFor({ isSubagent: false, config: { terminal: { cwd }, security: { filesystem: 'workspace' } } })
     assert.equal(mainSandboxed.mode, 'workspace')
-    assert.deepEqual(mainSandboxed.roots, [cwd])
+    assert.deepEqual(mainSandboxed.roots.map(root => realpathSync(root)), [realpathSync(cwd)])
 
     assert.match(formatSandboxStatus(mainDefault), /sandbox: off/)
     assert.match(formatSandboxStatus(mainSandboxed), /Allowed root/)

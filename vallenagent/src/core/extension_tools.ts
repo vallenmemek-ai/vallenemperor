@@ -68,7 +68,8 @@ export async function loadExtensionTools(options: {
     try { files = readdirSync(dir).filter(name => name.endsWith('.mjs') || name.endsWith('.js')) } catch { continue }
     for (const file of files) {
       const path = join(dir, file)
-      const pack = path.split('/extensions/')[1]?.split('/')[0] || 'unknown'
+      // Windows uses backslashes; splitting on '/' alone yields 'unknown'.
+      const pack = path.split(/[\\/]extensions[\\/]/)[1]?.split(/[\\/]/)[0] || 'unknown'
       try {
         const mod = await importer(pathToFileURL(path).href)
         for (const definition of normalizeModule(mod)) {

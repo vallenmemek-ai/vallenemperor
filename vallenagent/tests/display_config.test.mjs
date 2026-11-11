@@ -29,7 +29,7 @@ test('sanitizeControlChars replaces raw control bytes with spaces', () => {
 
 test('getToolEmoji and formatToolStart describe a tool call', () => {
   assert.equal(typeof getToolEmoji('read_file'), 'string')
-  assert.match(formatToolStart('read_file', { path: 'src/a.ts' }), /src\/a\.ts/)
+  assert.match(formatToolStart('read_file', { path: 'src/a.ts' }), /src[\\/]a\.ts/)
 })
 
 test('supportsPromptCache matches capable models and honors the off switch', () => {

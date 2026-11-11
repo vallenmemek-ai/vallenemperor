@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -115,7 +115,7 @@ test('a branch worktree is created outside the repo and removed cleanly', t => {
   assert.ok(info.path.startsWith(home), 'worktrees live under the home dir, not the repo')
   assert.equal(existsSync(join(info.path, 'README.md')), true, 'the worktree has a checkout')
   assert.equal(info.branch, 'vallen/subagent-sa-1')
-  assert.ok(listWorktrees(repo).includes(info.path))
+  assert.ok(listWorktrees(repo).map(path => realpathSync(path)).includes(realpathSync(info.path)), 'git reports the resolved path')
 
   removeSubagentWorktree(info)
   assert.equal(existsSync(info.path), false)

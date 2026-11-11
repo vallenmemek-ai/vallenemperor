@@ -110,7 +110,7 @@ test('runTurn returns the artifact summary for real edits', async t => {
   const result = await agent.runTurn({ message: 'ubah nilai a', surfaceId: 'test' }, {})
   assert.ok(result.artifacts, 'turn result carries artifacts')
   assert.equal(result.completionStatus, 'complete', result.response)
-  assert.ok(result.artifacts.created.some(path => path.endsWith('tests/x.test.mjs')), JSON.stringify(result.artifacts))
+  assert.ok(result.artifacts.created.some(path => path.replace(/\\/g, '/').endsWith('tests/x.test.mjs')), JSON.stringify(result.artifacts))
   assert.ok(result.artifacts.verification.includes('node --test tests/x.test.mjs'))
   assert.match(result.artifacts.summary, /\[Artifacts\]/)
 })
