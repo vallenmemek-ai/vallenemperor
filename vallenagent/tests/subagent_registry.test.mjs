@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -115,13 +115,15 @@ test('a branch worktree is created outside the repo and removed cleanly', t => {
   assert.ok(info.path.startsWith(home), 'worktrees live under the home dir, not the repo')
   assert.equal(existsSync(join(info.path, 'README.md')), true, 'the worktree has a checkout')
   assert.equal(info.branch, 'vallen/subagent-sa-1')
-  // git may report forward slashes or an 8.3 short name; compare normalised paths.
-  const normalise = value => realpathSync(value).replace(/\\/g, '/').toLowerCase()
-  assert.ok(listWorktrees(repo).map(normalise).includes(normalise(info.path)), 'git reports the resolved path')
+  // Windows git can report a different spelling of the same directory (forward
+  // slashes, drive-letter case, 8.3 short name), so compare the directory name.
+  const listed = listWorktrees(repo)
+  assert.ok(listed.length >= 2, 'the repo and the worktree are both listed')
+  assert.ok(listed.some(entry => entry.split(/[\\/]/).pop() === 'sa-1'), 'git lists the worktree')
 
   removeSubagentWorktree(info)
   assert.equal(existsSync(info.path), false)
-  assert.equal(listWorktrees(repo).includes(info.path), false)
+  assert.equal(listWorktrees(repo).some(entry => entry.split(/[\\/]/).pop() === 'sa-1'), false)
 })
 
 test('branch workspaces are refused outside a git repository', t => {

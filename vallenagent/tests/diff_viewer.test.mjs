@@ -105,7 +105,7 @@ test('/diff review walks hunks, keeps one and reverts another', async () => {
 
     const skipped = await core.handleCommand(ctx, '/diff skip')
     assert.match(skipped.response, /Reverted hunk 2/)
-    assert.equal(readFileSync(file, 'utf8'), 'ONE\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\n')
+    assert.equal(readFileSync(file, 'utf8').replace(/\r\n/g, '\n'), 'ONE\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\n')
 
     const done = await core.handleCommand(ctx, '/diff done')
     assert.match(done.response, /kept 1 · skipped 1 of 2/)
