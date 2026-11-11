@@ -38,11 +38,11 @@ export function formatThoughtLine(seconds) {
 
 /** One streamed reasoning line: dim, no frame — the dim bar above opens the block. */
 export function formatReasoningLine(line) {
-  return color(String(line ?? ''), 'dim')
+  return color(String(line ?? ''), ANSI.dim)
 }
 
 export function formatReasoningMoreLines(count) {
-  return color(`  … ${count} more line${count === 1 ? '' : 's'} (/reasoning full)`, 'dim')
+  return color(`  … ${count} more line${count === 1 ? '' : 's'} (/reasoning full)`, ANSI.dim)
 }
 
 export function formatThinkingActivity(elapsedMs, faceIndex = 0, verbIndex = 0, frame = null) {

@@ -74,7 +74,7 @@ const approvalKey = request => (isEditTool(request?.name) ? 'file-edit' : String
 // Destructive shell commands (rm -r, sudo, git push -f, ...) never ride on an "always" grant.
 const isRiskyTerminal = request => request?.name === 'terminal' && isDangerousCommand(request.args?.command)
 const stripEditArgs = args => Object.fromEntries(Object.entries(args && typeof args === 'object' ? args : {}).filter(([key]) => !/^(old|new|content|text|diff|patch)/i.test(key)))
-const DELTA_EVENTS = new Set(['text_delta', 'delta', 'response_delta', 'message_delta', 'content_delta', 'assistant_delta'])
+const DELTA_EVENTS = new Set(['chunk', 'text_delta', 'delta', 'response_delta', 'message_delta', 'content_delta', 'assistant_delta'])
 
 function safeInput(value) { return String(value).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '') }
 
@@ -719,7 +719,7 @@ export async function runCli(options: any = {}) {
     void maybeNotifyUpdate({
       home: process.env.VALLENEMPEROR_HOME || join(homedir(), '.vallenemperor'),
       current: currentVersion(ROOT),
-      print: line => out(`${color(line, 'dim')}\n`)
+      print: line => out(`${color(line, ANSI.dim)}\n`)
     })
     if (interactive && !compactUi) out(`${formatTip()}\n`)
   }
@@ -745,7 +745,7 @@ export async function runCli(options: any = {}) {
     const queue = state.queuedPrompts || []
     if (queue.length) {
       const next = queue.shift()
-      displayLine(color(`Running queued prompt (${queue.length} left): ${String(next).slice(0, 80)}`, 'dim'))
+      displayLine(color(`Running queued prompt (${queue.length} left): ${String(next).slice(0, 80)}`, ANSI.dim))
       setTimeout(() => { void runTurn(next) }, 0)
       return
     }
@@ -761,12 +761,12 @@ export async function runCli(options: any = {}) {
         })
         if (verdict === 'done') {
           agent.updateGoal?.({ status: 'done' })
-          displayLine(color(`Goal reached after ${goal.attempts} continuation(s).`, 'dim'))
+          displayLine(color(`Goal reached after ${goal.attempts} continuation(s).`, ANSI.dim))
           return
         }
         agent.updateGoal?.({ attempts: goal.attempts + 1 })
         const updated = agent.getGoal?.()
-        displayLine(color(`Goal continues (attempt ${updated?.attempts}/${updated?.maxTurns}).`, 'dim'))
+        displayLine(color(`Goal continues (attempt ${updated?.attempts}/${updated?.maxTurns}).`, ANSI.dim))
         setTimeout(() => { void runTurn(core.buildContinuationPrompt(updated), '[goal] continuing…') }, 0)
       } catch { }
     })()
@@ -788,12 +788,21 @@ export async function runCli(options: any = {}) {
     state.activeTurn = (async () => {
       try {
         const result = await agent.runTurn({ message, surfaceId: 'vallenemperor' }, {
+          // Streaming is what makes the reasoning block and the answer appear live (Hermes-style).
+          stream: true,
           requestApproval: request => askApproval(request),
           onEvent: event => {
-            if (event.type === 'reasoning') { appendReasoning(state.reasoning, event.text, displayLine); return }
+            if (event.type === 'reasoning') {
+              if (!state.reasoning.opened && state.reasoning.enabled) {
+                clearRobotLine()
+                displayLine(color('─'.repeat(Math.max(10, termWidth() - 1)), ANSI.dim))
+              }
+              appendReasoning(state.reasoning, event.text, displayLine)
+              return
+            }
             if (interactive && DELTA_EVENTS.has(event.type)) {
               if (!state.reasoning.turnHad) closeThinkingPhase(state.reasoning, Date.now() - state.turnStartedAt, displayLine)
-              else closeReasoning(state.reasoning, displayLine)
+              else closeReasoning(state.reasoning, displayLine, Date.now(), state.turnStartedAt)
               const piece = event.text ?? event.delta ?? event.content ?? event.chunk
               if (typeof piece === 'string' && piece) { state.streamedChars += piece.length; pushStream(piece) }
               return
@@ -839,12 +848,12 @@ export async function runCli(options: any = {}) {
         state.suppressRobot = true
         clearRobotLine()
         closeStream(footer)
-        finishTurn(state.reasoning, Date.now() - state.turnStartedAt, displayLine)
+        finishTurn(state.reasoning, Date.now() - state.turnStartedAt, displayLine, Date.now(), state.turnStartedAt)
         if (result.completionStatus === 'incomplete') displayLine(color('Turn incomplete; check remaining work and errors above.', ANSI.yellow))
         if (!streamed) printResponse(result.response, { markdown: true, footer })
               lastTurnText = String(result?.response || '')
         if (result.artifacts?.summary) displayLine(result.artifacts.summary)
-        if (result.artifacts?.dir) displayLine(color(`artifacts: ${result.artifacts.dir}`, 'dim'))
+        if (result.artifacts?.dir) displayLine(color(`artifacts: ${result.artifacts.dir}`, ANSI.dim))
         state.suppressRobot = false
       } catch (error) {
         state.suppressRobot = false

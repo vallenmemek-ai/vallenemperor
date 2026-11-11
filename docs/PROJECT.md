@@ -371,6 +371,10 @@ Providers that expose reasoning deltas (`reasoning_content` / `reasoning`) are s
 and closed with `∴ Thought for Ns` (dim + italic, whole seconds). Rules:
 
 - The block opens on the **first** reasoning delta and closes when real content arrives, or at turn end.
+- The REPL streams provider output (`stream: true`), which is what makes reasoning text appear live and
+  dim, exactly like Hermes: dim separator → dim reasoning lines → `∴ Thought for Ns` → answer.
+- If a provider delivers reasoning in one burst (block < 1s), the footer falls back to the turn timer so
+  it never says `Thought for 0s` when the model actually thought for several seconds.
 - Complete lines print immediately; a partial line longer than 80 chars is force-flushed so reasoning
   stays realtime.
 - Providers that send **no** reasoning still get a footer, but only if the thinking phase lasted at least

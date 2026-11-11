@@ -51,14 +51,17 @@ export function appendReasoning(state, text, emit, now = Date.now()) {
   return state
 }
 
-export function closeReasoning(state, emit, now = Date.now()) {
+export function closeReasoning(state, emit, now = Date.now(), fallbackStartedAt = 0) {
+  // A provider that delivers reasoning in one burst closes the block in under a second; falling back to
+  // the turn start keeps "Thought for 0s" from being printed when the model really did think for a while.
+  const startedAt = state.startedAt && now - state.startedAt >= 1000 ? state.startedAt : (fallbackStartedAt || state.startedAt)
   if (state.opened) {
     if (state.buffer.trim()) emit(formatReasoningLine(state.buffer))
     state.buffer = ''
-    emit(formatThoughtLine((now - state.startedAt) / 1000))
+    emit(formatThoughtLine((now - startedAt) / 1000))
     state.opened = false
   } else if (state.turnHad) {
-    emit(formatThoughtLine((now - state.startedAt) / 1000))
+    emit(formatThoughtLine((now - startedAt) / 1000))
   }
   if (state.text.trim()) state.last = state.text
   return state
@@ -84,7 +87,7 @@ export function reasoningPreview(text, { full = false, limit = REASONING_PREVIEW
  * phase was slow. The REPL does not stream provider text, so `chunk` events never fire there — without
  * this, a provider that sends no reasoning would never show a `∴ Thought for Ns` line at all.
  */
-export function finishTurn(state, elapsedMs, emit, now = Date.now()) {
-  if (state.turnHad || state.opened) return closeReasoning(state, emit, now)
+export function finishTurn(state, elapsedMs, emit, now = Date.now(), turnStartedAt = 0) {
+  if (state.turnHad || state.opened) return closeReasoning(state, emit, now, turnStartedAt)
   return closeThinkingPhase(state, elapsedMs, emit)
 }

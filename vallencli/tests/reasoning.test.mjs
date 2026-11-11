@@ -102,3 +102,12 @@ test('finishTurn prints a footer even when the provider never streamed', async (
   finishTurn(withReasoning, 5000, reasoningOut.emit, 5000)
   assert.match(reasoningOut.lines[reasoningOut.lines.length - 1], /Thought for 4s/, 'the block footer uses the block timer')
 })
+
+test('a burst-delivered reasoning block falls back to the turn timer instead of "0s"', async () => {
+  const { closeReasoning } = await import('../dist/cli-reasoning.js')
+  const state = createReasoningState()
+  const out = collector()
+  appendReasoning(state, 'one shot of thinking\n', out.emit, 10_000)
+  closeReasoning(state, out.emit, 10_200, 4_000)  // block lasted 0.2s, turn started 6.2s ago
+  assert.match(out.lines[out.lines.length - 1], /Thought for 6s/)
+})
