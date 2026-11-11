@@ -144,7 +144,6 @@ export const COMMAND_REFERENCE: CommandReference[] = [
   { group: 'Kerja', name: '/journey', desc: 'riwayat belajar skill (alias /skills journey)' },
   { group: 'Kerja', name: '/plan', args: '[task|go|next|edit|skip|stop|status]', desc: 'mode rencana + eksekusi bertahap' },
   { group: 'Kerja', name: '/learn', args: '[sumber]', desc: 'ubah sesi/dokumen/direktori jadi skill' },
-  { group: 'Kerja', name: '/journey', desc: 'riwayat belajar skill agent ini' },
   { group: 'Kerja', name: '/grill', args: '[tugas]', desc: 'interogasi rencana sebelum dibangun' },
   { group: 'Kerja', name: '/grill-me', args: '[tugas]', desc: 'wawancara dulu sebelum mulai kerja' },
   { group: 'Kerja', name: '/agents', args: '[runs|available|show <id>|stop <id>|clean]', desc: 'dashboard subagent atau daftar custom agent' },

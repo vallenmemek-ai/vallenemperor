@@ -14,8 +14,8 @@ order — do not guess the architecture:
 5. **[docs/RELEASING.md](docs/RELEASING.md)** — release pipeline and owner approval
 6. **[docs/DECISIONS.md](docs/DECISIONS.md)** — why the code looks the way it does (do not undo these casually)
 7. **[docs/ROADMAP.md](docs/ROADMAP.md)** — the backlog: pick the top unchecked item, tick it when done
-8. **[docs/REFERENCES.md](docs/REFERENCES.md)** — index of every peer we compare against (Hermes, Antigravity, opencode, Claude Code, Codex, Gemini, Aider)
-9. **[docs/REFERENCES.md](docs/REFERENCES.md)** — consolidated peer research (Hermes, Antigravity, opencode, Claude Code, Codex, Gemini, Aider) and the adoption matrix. Read before designing a new feature.
+8. **[docs/REFERENCES.md](docs/REFERENCES.md)** — consolidated peer research (Hermes, Antigravity, opencode, Claude Code, Codex, Gemini, Aider) and the adoption matrix. Read before designing a new feature.
+9. **[docs/GAPS.md](docs/GAPS.md)** — gap audit vs Hermes + the staged plan; tick an item only with a command's output in its evidence table
 
 ## Current status (keep this line honest)
 
