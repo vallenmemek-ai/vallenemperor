@@ -21,7 +21,7 @@ import { dumpReport, insightsReport, listLogs, promptSizeReport } from './cli-di
 import { runSessionsCommand } from './cli-sessions.js'
 import { applyProfile, extractProfile, runProfileCommand } from './cli-profile.js'
 import { runAcpServer } from './cli-acp.js'
-import { appendReasoning, closeReasoning, closeThinkingPhase, createReasoningState, resetReasoning } from './cli-reasoning.js'
+import { appendReasoning, closeReasoning, closeThinkingPhase, createReasoningState, finishTurn, resetReasoning } from './cli-reasoning.js'
 import { backspacePicker, backPicker, createPickerState, enterPicker, fetchGatewayModels, formatModelCatalog, groupModelsByOwner, movePicker, pickerLines, typeInPicker } from './cli-model-picker.js'
 export { HELP, collectHealthChecks, chatBoxRedrawSequence, formatChatBox, formatStatus, formatThinkingActivity } from './cli-ui.js'
 
@@ -826,7 +826,7 @@ export async function runCli(options: any = {}) {
         const streamed = state.streamedChars > 0
         const footer = turnFooter()
         closeStream(footer)
-        closeReasoning(state.reasoning, displayLine)
+        finishTurn(state.reasoning, Date.now() - state.turnStartedAt, displayLine)
         if (result.completionStatus === 'incomplete') displayLine(color('Turn incomplete; check remaining work and errors above.', ANSI.yellow))
         if (!streamed) printResponse(result.response, { markdown: true, footer })
               lastTurnText = String(result?.response || '')

@@ -87,3 +87,18 @@ test('the /reasoning preview shows ten lines unless full is requested', () => {
   assert.equal(full.more, 0)
   assert.deepEqual(reasoningPreview(''), { lines: [], more: 0 })
 })
+
+test('finishTurn prints a footer even when the provider never streamed', async () => {
+  const { finishTurn } = await import('../dist/cli-reasoning.js')
+  const state = createReasoningState()
+  const out = collector()
+  finishTurn(state, 3200, out.emit)
+  assert.equal(out.lines.length, 1, 'the REPL does not stream, so the turn end must close the phase')
+  assert.match(out.lines[0], /Thought for 3s/)
+
+  const withReasoning = createReasoningState()
+  const reasoningOut = collector()
+  appendReasoning(withReasoning, 'deliberating\n', reasoningOut.emit, 1000)
+  finishTurn(withReasoning, 5000, reasoningOut.emit, 5000)
+  assert.match(reasoningOut.lines[reasoningOut.lines.length - 1], /Thought for 4s/, 'the block footer uses the block timer')
+})

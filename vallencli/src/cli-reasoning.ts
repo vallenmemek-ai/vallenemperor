@@ -78,3 +78,13 @@ export function reasoningPreview(text, { full = false, limit = REASONING_PREVIEW
   const shown = full ? lines : lines.slice(0, limit)
   return { lines: shown, more: lines.length - shown.length }
 }
+
+/**
+ * End of turn: close a reasoning block if one opened, otherwise print the footer when the thinking
+ * phase was slow. The REPL does not stream provider text, so `chunk` events never fire there — without
+ * this, a provider that sends no reasoning would never show a `∴ Thought for Ns` line at all.
+ */
+export function finishTurn(state, elapsedMs, emit, now = Date.now()) {
+  if (state.turnHad || state.opened) return closeReasoning(state, emit, now)
+  return closeThinkingPhase(state, elapsedMs, emit)
+}
