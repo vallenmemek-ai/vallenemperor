@@ -14,6 +14,13 @@ metadata:
 
 # Computer Use (universal, any-model, cross-platform)
 
+> **Availability check first.** VallenEmperor does **not** register a `computer_use`
+> tool — its registry has 38 tools and none of them drive the desktop. This skill
+> applies when the tool is actually present (for example Hermes with the `cua-driver`
+> plugin, or a VallenEmperor extension pack that adds it). Confirm with `tool_search`
+> or `tool_describe` before promising any desktop action; if the tool is missing, say so
+> instead of improvising with `terminal` and `xdotool`/`osascript`.
+
 You have a `computer_use` tool that drives the user's desktop in the
 **background** — your actions do NOT move the user's cursor, steal
 keyboard focus, or switch virtual desktops / Spaces. The user can keep
@@ -336,8 +343,8 @@ cua-driver team ships and maintains for every other agent harness.
 cua-driver skills install
 ```
 
-links the pack into `~/.hermes/skills/cua-driver` (Hermes is a detected
-agent; `cua-driver skills status` shows the link state). You'll then have:
+links the pack into `~/.vallenemperor/skills/cua-driver` when VallenEmperor is
+detected; `cua-driver skills status` shows the link state. You'll then have:
 
 - `SKILL.md` — the cross-platform core (snapshot invariant, no-
   foreground contract, click dispatch, AX tree mechanics)

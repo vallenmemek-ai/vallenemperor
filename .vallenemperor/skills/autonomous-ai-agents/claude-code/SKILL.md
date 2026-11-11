@@ -218,10 +218,10 @@ Parse `structured_output` from the JSON result. Claude validates output against 
 ### Session Continuation
 ```
 # Start a task
-terminal(command="claude -p 'Start refactoring the database layer' --output-format json --max-turns 10 > ~/.hermes/cache/scratch/session.json", workdir="/project", timeout=180)
+terminal(command="claude -p 'Start refactoring the database layer' --output-format json --max-turns 10 > ~/.vallenemperor/scratch/session.json", workdir="/project", timeout=180)
 
 # Resume with session ID
-terminal(command="claude -p 'Continue and add connection pooling' --resume $(cat ~/.hermes/cache/scratch/session.json | python -c 'import json,sys; print(json.load(sys.stdin)[\"session_id\"])') --max-turns 5", workdir="/project", timeout=120)
+terminal(command="claude -p 'Continue and add connection pooling' --resume $(cat ~/.vallenemperor/scratch/session.json | python -c 'import json,sys; print(json.load(sys.stdin)[\"session_id\"])') --max-turns 5", workdir="/project", timeout=120)
 
 # Or resume the most recent session in the same directory
 terminal(command="claude -p 'What did you do last time?' --continue --max-turns 1", workdir="/project", timeout=30)
@@ -608,7 +608,7 @@ Configure in `.claude/settings.json` (project) or `~/.claude/settings.json` (glo
       "hooks": [{"type": "command", "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'rm -rf'; then echo 'Blocked!' && exit 2; fi"}]
     }],
     "Stop": [{
-      "hooks": [{"type": "command", "command": "echo 'Claude finished a response' >> ~/.hermes/cache/scratch/claude-activity.log"}]
+      "hooks": [{"type": "command", "command": "echo 'Claude finished a response' >> ~/.vallenemperor/scratch/claude-activity.log"}]
     }]
   }
 }
@@ -727,7 +727,7 @@ Use `/context` in interactive mode to see a colored grid of context usage. Key t
 
 ## Pitfalls & Gotchas
 
-1. **Interactive mode REQUIRES tmux** — Claude Code is a full TUI app. Using `pty=true` alone in Hermes terminal works but tmux gives you `capture-pane` for monitoring and `send-keys` for input, which is essential for orchestration.
+1. **Interactive mode REQUIRES tmux** — Claude Code is a full TUI app. VallenEmperor's `terminal` tool has no `pty` flag, so tmux is mandatory here: it gives you `capture-pane` for monitoring and `send-keys` for input, which is essential for orchestration.
 2. **The `--dangerously-skip-permissions` warning dialog defaults to "No, exit"** — that default is the safe answer; only send Down then Enter when you deliberately opted into the bypass in an isolated environment. Print mode (`-p`) skips the dialog entirely.
 3. **`--max-budget-usd` minimum is ~$0.05** — system prompt cache creation alone costs this much. Setting lower will error immediately.
 4. **`--max-turns` is print-mode only** — ignored in interactive sessions.

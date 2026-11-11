@@ -1,12 +1,12 @@
 ---
 name: vallenemperor
 description: "Use, configure, debug, and extend VallenEmperor."
-version: 1.0.0
+version: 2.0.0
 author: Vallen + VallenEmperor Team
 license: MIT
 metadata:
   category: autonomous-ai-agents
-  triggers: [VallenEmperor, VallenEmperor terminal, vallenagent, vallencli, AI agent]
+  triggers: [VallenEmperor, vallenemperor, vallenagent, vallencli, AI agent, terminal agent]
   compatibility: [linux, macos, windows]
   vallenemperor:
     category: autonomous-ai-agents
@@ -14,85 +14,124 @@ metadata:
 
 # VallenEmperor Skill
 
-Use this guide for VallenEmperor's embedded TypeScript agent and CLI.
+VallenEmperor is a terminal coding agent: a TypeScript core (`vallenagent`) plus a
+TypeScript CLI (`vallencli`) published as one package, `vallenemperor`. There is no
+Electron app and no `vallenterminal` workspace any more — if a document mentions them,
+the document is stale.
 
 ## When to Use
 
-- Run, configure, troubleshoot, or extend VallenEmperor.
-- Change `vallenagent/`, `vallencli/`, agent tools, or VallenEmperor skills.
-- Check whether a VallenEmperor feature exists or works.
+- Run, configure, debug, or extend VallenEmperor.
+- Change `vallenagent/`, `vallencli/`, agent tools, commands, or bundled skills.
+- Check whether a VallenEmperor feature actually exists before promising it.
 
-Don't use for unrelated Hermes Agent setup; load `hermes-agent` instead.
+Load `hermes-agent` instead when the question is about Hermes Agent itself; the two
+runtimes share ideas but not paths or commands.
 
 ## Prerequisites
 
-- Linux, Node.js, npm, and project dependencies.
-- Default model route uses 9router at `http://127.0.0.1:20128/v1`; default model is `ag/gemini-3.8-flash-medium`.
-- Runtime data defaults to `~/.vallenemperor/`. `VALLENEMPEROR_HOME` overrides this root. Provider credentials live in `config.json`; do not print, paste into shell commands, or commit them.
-- Project guides: `AGENTS.md`, `vallenagent/AGENTS.md`, and `vallenterminal/AGENTS.md`. Read relevant files before editing.
+- Node.js ≥ 20, npm, and installed dependencies (`npm ci`).
+- Default provider is `9router` at `http://127.0.0.1:20128/v1`, default model
+  `ag/gemini-3.8-flash-medium`, env key `NINE_ROUTER_API_KEY`. `config set provider`
+  switches presets (`openrouter`, `openai`, `anthropic`, `deepseek`, `9router`, `ollama`).
+- Runtime data lives in `~/.vallenemperor/`; `VALLENEMPEROR_HOME` overrides the root.
+  Layout: `config.json`, `sessions/`, `memories/`, `checkpoints/`, `skills/`,
+  `scratch/`, `artifacts/`, `gateway/`, `cron/`, `logs/`.
+- Provider credentials sit in `config.json` or the environment. Never print them, put
+  them in shell commands, or commit them.
 
 ## How to Run
 
-From repository root:
+From the repository root:
 
 ```bash
-npm run dev       # Build agent and start Electron development mode
-npm start         # Build agent and launch Electron
-npm run typecheck # Typecheck both workspaces
-npm run build     # Build both workspaces
-npm test          # Run agent and terminal test suites
+npm run build      # vallenagent tsc + vallencli tsc (dist/ is what ships)
+npm run typecheck  # both workspaces
+npm test           # vallenagent then vallencli suites
+npm run cli        # build, then start the REPL from source
+node bin/vallenemperor --version   # the packaged launcher
 ```
 
-For installation, inspect `install.sh` first. `--purge` deletes config, API keys, sessions, memories, and themes; never run it without explicit user approval.
+Installed usage: `vallenemperor` (REPL), `vallenemperor -p "prompt"` (one-shot),
+`vallenemperor --json -p "/status"` (machine-readable), `vallenemperor --help`.
+`install.sh` / `install.ps1` only create launchers; `--purge` deletes config, keys,
+sessions and memories, so never run it without explicit approval.
 
 ## Quick Reference
 
-- Agent core: `vallenagent/src/agent.ts`; provider: `providers.ts`; tool schemas/handlers: `builtin_tools.ts`; registry: `tools.ts`.
-- Skill loading/sync: `skills.ts`, `skills_sync.ts`; display and diff formatting: `display.ts`.
-- Persistence: `memory.ts`, `todo.ts`, `session.ts`; gateway: `gateway/`.
-- Electron IPC and slash commands: `vallenterminal/src/main/index.ts`; bridge: `preload/index.ts`; UI: `renderer/main.ts`; IPC names/types: `shared/`.
-- Runtime config: `$VALLENEMPEROR_HOME/config.json` or `~/.vallenemperor/config.json`; skills: `$VALLENEMPEROR_HOME/skills/`; memories and sessions: corresponding `memories/` and `sessions/` directories.
-- Common slash commands: `/help`, `/model`, `/token`, `/tools`, `/skills`, `/themes`, `/theme`, `/stats`, `/memory`, `/todos`, `/sessions`, `/resume`, `/stop`, `/pty` or `/sh`, `/new` or `/reset`, `/clear`.
+| Area | Path |
+|---|---|
+| Core barrel (public API) | `vallenagent/src/index.ts` → `dist/index.js` |
+| Turn loop / agent | `vallenagent/src/agent/agent.ts`, `agent_types.ts` |
+| System prompt | `vallenagent/src/agent/agent_system_prompt.ts` |
+| Background self-review | `vallenagent/src/agent/background_review.ts` |
+| Clarify policy + answers | `vallenagent/src/agent/clarify_policy.ts` |
+| Tool registry | `vallenagent/src/tools/tools.ts` |
+| Tool handlers | `vallenagent/src/tools/builtin_tools/*.ts` |
+| Shared commands (all surfaces) | `vallenagent/src/core/commands.ts` + `core/commands/` |
+| CLI-only commands | `vallencli/src/cli-commands.ts` |
+| Command dropdown | `vallencli/src/cli-suggest.ts` |
+| Help reference | `COMMAND_REFERENCE` in `core/commands.ts` |
+| Rendering | `vallencli/src/cli-ui.ts`, `cli-reasoning.ts`, `cli-markdown.ts` |
+| REPL / arg parsing | `vallencli/src/cli.ts` (builds to `vallencli/dist/cli.js`) |
+| Platform adapter | `vallenagent/src/core/platform.ts` |
+| Gateway (Telegram) | `vallenagent/src/gateway/` |
+| Cron pipeline | `vallenagent/src/core/cron_scheduler.ts`, `gateway/cron_actions.ts` |
+
+Surface facts worth remembering:
+
+- 38 tools are registered; `COMMAND_REFERENCE` documents 76 commands. The registry is:
+  `read_file write_file patch patch_batch apply_patch search_files list_dir repo_map
+  typecheck lsp_diagnostics lsp_servers terminal process_manage execute_code checkpoint
+  schedule session_search session_view clarify memory deep_memory todo_list
+  image_generate vision_analyze browser_exec browser_screenshot browser_record
+  manage_connections delegate_task skills_list skill_view skill_manage tool_search
+  tool_describe tool_call web_search web_extract x_search`.
+  There is **no** `computer_use` tool — desktop automation is not part of this runtime.
+- Commands that change session/model/state live in **core** so CLI, `-p`, gateway and
+  scheduled jobs behave the same. Only commands that need REPL state stay in the CLI.
+- `clarify` blocks on a real prompt in the CLI (numbered choices, multi-select, free
+  text, empty = skip, `batal` = cancel, 5 min timeout). Headless runs still get the
+  "ask in prose" fallback.
+- Background review reports `💾 review: <reason>` when it finishes without a change;
+  its budget counts context *growth*, and hitting it is a skip, not an error.
+- `/auto on` maps to approval mode `off` and disables every gate, including the
+  big-edit preview. `-p` refuses risky tools unless `--approval off` is passed.
+- Scheduled jobs: `local` jobs run in the daemon and write to
+  `~/.vallenemperor/gateway/cron-local.log`; `telegram` jobs need an allowlisted owner.
+  There is no WhatsApp adapter — that delivery is rejected at creation.
 
 ## Procedure
 
-1. Confirm repository root and inspect `git status --short`. Preserve unrelated changes and user data.
-2. Read root `AGENTS.md` plus relevant workspace guide. For feature claims, inspect source and tests; don't rely on stale docs alone.
-3. Trace the complete path before editing: renderer/input → IPC/preload → `AIAgent` or tool handler → status/output renderer. For agent work, inspect `builtin_tools.ts` and registry behavior; for UI work, read `vallenterminal/AGENTS.md` and renderer code.
-4. Make the smallest change that meets request. Reuse installed dependencies and existing patterns. Do not copy Hermes commands, APIs, or guarantees unless VallenEmperor source implements them.
-5. Add or update a behavior test. Run the narrow test first, then `npm run typecheck`, `npm run build`, and `npm test` for cross-package changes.
-6. If change affects Electron rendering or hardware behavior, launch app and verify visible behavior when possible; passing unit tests alone does not prove UI behavior.
-7. Report changed files, exact verification results, and remaining limitations. Never claim an integration is live based only on a tool name or mock response.
-
-## Agent Output and Coding Workflow
-
-- For repository work, use `search_files`/`read_file` to inspect and `patch`/`write_file` to edit. Use `terminal` for commands that must execute: tests, builds, git, and runtime checks. Do not browse or edit files with shell when a dedicated tool is available.
-- `preparing <tool>` means an operation is starting; its following completion line should report result, duration, or error. Preparing lines include a safe, short path, command, pattern, or skill name when available.
-- A `write_file` completion may show `review diff` for a changed existing text file. New, unchanged, binary, oversized, or >20 KB diff cases report why the preview was omitted. A diff is evidence of the proposed change, not proof tests pass.
-- Skill preload progress is reported before model work. The loaded-skill completion appears only after selected skill content has been included in the outgoing model request. `skill_view` remains available for additional linked skill content.
-- For substantial coding work: inspect instructions and worktree; find the relevant implementation and tests; make a focused change; run focused tests, then workspace tests/builds; report exact verification and remaining limits. Do not claim a GUI/IPC path is verified from unit tests alone.
-- Background self-review is asynchronous. Its brief notice reports only confirmed durable skill or memory updates; no-op review stays silent. Review errors must not fail the foreground task.
-
-## Capabilities and Limits
-
-- Agent tools include file operations, shell execution, Python `execute_code`, web search/extraction, memory/todo/session, skills, delegation, image tools, and browser automation. Confirm each tool's current handler and configuration before promising behavior.
-- `browser_exec` rejects named `session` values; don't promise persistent or isolated browser sessions.
-- `clarify` cannot collect structured answers from UI in this runtime. Ask user directly and wait before making a decision that depends on their answer.
-- `manage_connections` does not connect hosted accounts; it reports that hosted connectors are not integrated. Never claim account status or authorization.
-- Background self-review may run after a successful parent-agent turn. A completion notification is not evidence that a proposed memory change was staged for approval; inspect review and memory implementation before promising approval workflow.
-- `/token` writes provider credentials to local config. Keep tokens out of output, tests, screenshots, commits, and reports.
+1. `git status --short` first; preserve unrelated work and never touch `.env`.
+2. Read root `AGENTS.md`, `RULES.md`, and the relevant `docs/` page before editing.
+3. Trace the whole path: input → command/tool dispatch → core → renderer. A tool trace
+   in the terminal is not evidence that another surface behaves the same.
+4. Make the smallest change that meets the request, reusing existing helpers instead of
+   copying Hermes code, commands, or guarantees.
+5. Add or update a test that asserts behaviour, not source text.
+6. Run the narrow test, then `npm run typecheck`, `npm run build`, `npm test`.
+7. Report changed files, exact numbers, and what you could not verify.
 
 ## Pitfalls
 
-- Electron renderer, agent runtime, and ordinary shell are separate surfaces. A tool trace in terminal output does not prove renderer UI works.
-- `npm run dev` rebuilds the agent before starting Electron; restart a running app to load changed code.
-- Protect user-owned data. Do not overwrite `.vallenemperor/skills/custom/`, unrelated skill files, `BUGS.md`, or `update.sh` unless explicitly requested.
-- Intel GMA 4500MHD on Debian can hang with default iHD VA-API driver. Use `LIBVA_DRIVER_NAME=i965` or disable `VaapiVideoDecoder` and `VaapiVideoEncoder` when this specific issue occurs.
-- Treat `install.sh --purge` as destructive; it removes secrets and user state, not just the application.
+- **Stale docs are the main trap.** `vallenterminal`, Electron, `npm run dev`,
+  `src/agent.ts`, `builtin_tools.ts` and `cli*.mjs` are all gone. Verify paths against
+  the tree before quoting them.
+- `-p` has no approval UI: risky tools are refused and the run exits non-zero.
+- `/skills` (and other REPL-only commands) answer "hanya tersedia di REPL interaktif"
+  under `-p` — that is correct, not a bug.
+- Editing `vallenagent/src` requires a rebuild; the CLI loads `vallenagent/dist`.
+- `bin/vallenemperor` must point at `vallencli/dist/cli.js`; pointing at `src/*.ts`
+  breaks the launcher after a clean build.
+- Do not overwrite `~/.vallenemperor/skills/custom/`, user sessions, or `update.sh`
+  unless explicitly asked.
 
 ## Verification
 
 - `git diff --check` exits 0.
-- `npm run typecheck`, `npm run build`, and `npm test` exit 0 for project-wide changes.
-- Regression tests assert user-visible behavior or tool contracts, not merely source text.
-- For visual/IPC work, confirm actual Electron behavior separately; state when GUI verification was not performed.
+- `npm run typecheck`, `npm run build`, `npm test` exit 0; quote the real totals
+  (currently 444 agent + 166 CLI).
+- `node bin/vallenemperor --version` and `node bin/vallenemperor -p "/status"` work
+  after a build — that is the packaged path, not just the source path.
+- For cross-platform claims, say plainly when only Linux was exercised.
