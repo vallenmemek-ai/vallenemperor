@@ -126,6 +126,8 @@ export interface AgentToolApprovalRequest {
 export interface AgentTurnCallbacks {
   onEvent?: (event: AgentTurnEvent) => void
   requestApproval?: (request: AgentToolApprovalRequest) => Promise<boolean>
+  /** Blocks a clarify tool call until the host collects the answers. */
+  onClarify?: (questions: Array<{ question: string; choices?: string[]; multi_select?: boolean }>) => Promise<{ answers: Record<string, string | string[] | null>; outcome: 'submitted' | 'timed_out' | 'cancelled' | 'unavailable' }>
   /** Enable provider streaming; status events alone do not force SSE mode. */
   stream?: boolean
 }

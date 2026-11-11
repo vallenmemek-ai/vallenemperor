@@ -473,6 +473,8 @@ export class AIAgent {
       onReviewComplete: summary => emit({ type: 'review_complete', summary }),
       onReviewError: error => emit({ type: 'review_error', error }),
       onReviewSkipped: reason => emit({ type: 'review_skipped', reason }),
+      // The surface (CLI) owns the prompt; the tool context reads it from here.
+      ...(surface.onClarify ? { onClarify: surface.onClarify } : {}),
       onSubagentProgress: event => emit({ type: 'subagent_progress', ...event }),
       ...(surface.stream ? { onChunk: (chunk: string) => emit({ type: 'chunk', chunk }) } : {}),
       onReasoning: (text: string) => emit({ type: 'reasoning', text }),
